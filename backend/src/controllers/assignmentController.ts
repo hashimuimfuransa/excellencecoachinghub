@@ -16,6 +16,89 @@ interface AuthRequest extends Request {
   };
 }
 
+// Intelligent question organization algorithm
+function organizeQuestionsIntelligently(questions: any[]): any[] {
+  console.log('🧠 Applying intelligent question organization...');
+  
+  // Define difficulty and type priorities
+  const difficultyOrder = { 'easy': 1, 'medium': 2, 'hard': 3 };
+  const typeOrder = { 
+    'multiple_choice': 1, 
+    'numerical': 2, 
+    'true_false': 3, 
+    'short_answer': 4, 
+    'essay': 5 
+  };
+
+  // Group questions by section/topic
+  const questionsBySection = questions.reduce((acc, question) => {
+    const section = question.section || 'general';
+    if (!acc[section]) {
+      acc[section] = [];
+    }
+    acc[section].push(question);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  // Organize each section
+  const organizedSections = Object.keys(questionsBySection).map(section => {
+    const sectionQuestions = questionsBySection[section];
+    
+    // Sort within section: difficulty first, then type variety
+    const sortedQuestions = sectionQuestions.sort((a, b) => {
+      const diffDiff = difficultyOrder[a.difficulty as keyof typeof difficultyOrder] - 
+                      difficultyOrder[b.difficulty as keyof typeof difficultyOrder];
+      if (diffDiff !== 0) return diffDiff;
+      
+      return typeOrder[a.type as keyof typeof typeOrder] - 
+             typeOrder[b.type as keyof typeof typeOrder];
+    });
+
+    return { section, questions: sortedQuestions };
+  });
+
+  // Sort sections by importance (general first, then alphabetical)
+  organizedSections.sort((a, b) => {
+    if (a.section === 'general') return -1;
+    if (b.section === 'general') return 1;
+    return a.section.localeCompare(b.section);
+  });
+
+  // Flatten back to array with better distribution
+  const finalQuestions = organizedSections.flatMap(({ questions }) => 
+    distributeQuestionTypes(questions)
+  );
+
+  console.log(`✅ Questions organized: ${finalQuestions.length} questions across ${organizedSections.length} sections`);
+  return finalQuestions;
+}
+
+// Distribute question types for optimal learning
+function distributeQuestionTypes(questions: any[]): any[] {
+  if (questions.length <= 3) return questions;
+
+  const typeGroups = questions.reduce((acc, q) => {
+    if (!acc[q.type]) acc[q.type] = [];
+    acc[q.type].push(q);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  // Interleave different types for variety
+  const distributed: any[] = [];
+  const types = Object.keys(typeGroups);
+  let maxLength = Math.max(...Object.values(typeGroups).map(arr => arr.length));
+
+  for (let i = 0; i < maxLength; i++) {
+    for (const type of types) {
+      if (typeGroups[type][i]) {
+        distributed.push(typeGroups[type][i]);
+      }
+    }
+  }
+
+  return distributed;
+}
+
 // Direct AI question extraction function (bypasses queue for synchronous processing)
 async function extractQuestionsDirectly(
   documentText: string,
@@ -41,22 +124,50 @@ async function extractQuestionsDirectly(
     ? documentText.substring(0, maxTextLength) + '\n\n[Document truncated for processing...]'
     : documentText;
 
-  const prompt = `Extract questions from this ${assessmentType} document. Return JSON array only:
+  const prompt = `Analyze and extract questions from this ${assessmentType} document with intelligent organization. Return JSON array only:
 
 Document:
 ${truncatedText}
 
 Required JSON format:
-[{"question":"text","type":"multiple_choice|true_false|short_answer|essay","options":["A","B","C","D"],"correctAnswer":"A","points":10,"aiExtracted":true}]
+[{"question":"text","type":"multiple_choice|true_false|short_answer|essay|numerical","options":["A","B","C","D"],"correctAnswer":"A","points":10,"aiExtracted":true,"section":"concept_name","difficulty":"easy|medium|hard","topic":"subject_area"}]
 
-Rules:
-- Extract existing questions exactly as written
-- For content without questions, create comprehension questions
-- Use appropriate point values (5-20 points)
-- Include 4 options for multiple choice
-- Use "true"/"false" for true/false questions
-- Keep questions clear and concise
-- Maximum 20 questions for performance`;
+Advanced Organization Rules:
+1. QUESTION TYPES (prioritize in this order):
+   - multiple_choice: For factual recall and concept understanding (4 options)
+   - numerical: For mathematical calculations and formulas
+   - short_answer: For definitions and brief explanations  
+   - essay: For analysis, synthesis, and critical thinking
+   - true_false: For concept verification (use sparingly)
+
+2. INTELLIGENT POINT ALLOCATION:
+   - Multiple choice: 5-10 points
+   - Numerical: 8-15 points (based on complexity)
+   - Short answer: 10-15 points
+   - Essay: 15-25 points
+   - True/false: 3-5 points
+
+3. CONTENT ORGANIZATION:
+   - Group questions by logical sections/topics
+   - Start with easier concepts, progress to harder ones
+   - Mix question types for comprehensive assessment
+   - Extract section titles from headers/subtitles
+
+4. MATHEMATICAL CONTENT:
+   - Create numerical questions for formulas and calculations
+   - Include units and proper mathematical notation
+   - Provide step-by-step solution hints in explanations
+
+5. QUALITY STANDARDS:
+   - Create 8-20 questions total (optimal learning assessment)
+   - Ensure questions are clear and unambiguous
+   - Include plausible distractors in multiple choice
+   - Cover all major topics in the document
+
+6. DIFFICULTY PROGRESSION:
+   - 40% easy (basic recall)
+   - 40% medium (application/comprehension)
+   - 20% hard (analysis/synthesis)`;
 
   try {
     // Direct call to AI model (same as aiService but without queue)
@@ -85,8 +196,8 @@ Rules:
     const extractedQuestions = JSON.parse(cleanedText);
     console.log(`✅ Direct AI extraction completed: ${extractedQuestions.length} questions`);
     
-    // Validate and normalize questions
-    return extractedQuestions
+    // Validate, normalize, and intelligently organize questions
+    const normalizedQuestions = extractedQuestions
       .filter((q: any) => q.question && q.question.trim().length > 0)
       .map((q: any) => ({
         question: q.question.trim(),
@@ -95,12 +206,17 @@ Rules:
         correctAnswer: q.correctAnswer || undefined,
         points: typeof q.points === 'number' ? q.points : 10,
         aiExtracted: true,
-        section: q.section || undefined,
-        sectionTitle: q.sectionTitle || undefined,
+        section: q.section || 'general',
+        sectionTitle: q.sectionTitle || q.section || 'General Questions',
+        topic: q.topic || 'general',
+        difficulty: q.difficulty || 'medium',
         leftItems: q.leftItems || undefined,
         rightItems: q.rightItems || undefined,
         matchingPairs: q.matchingPairs || undefined
       }));
+
+    // Apply intelligent organization
+    return organizeQuestionsIntelligently(normalizedQuestions);
       
   } catch (error: any) {
     console.error('❌ Direct AI extraction failed:', error);

@@ -291,6 +291,206 @@ const EnhancedAssignmentPage: React.FC = () => {
     );
   };
 
+  // Enhanced question organization with sections
+  const renderOrganizedQuestions = () => {
+    if (!assignment?.extractedQuestions?.length) return null;
+
+    // Group questions by section
+    const questionsBySection = assignment.extractedQuestions.reduce((acc, question, index) => {
+      const section = (question as any).section || 'general';
+      const sectionTitle = (question as any).sectionTitle || 'General Questions';
+      
+      if (!acc[section]) {
+        acc[section] = {
+          title: sectionTitle,
+          questions: []
+        };
+      }
+      
+      acc[section].questions.push({ ...question, originalIndex: index });
+      return acc;
+    }, {} as Record<string, { title: string; questions: any[] }>);
+
+    const sections = Object.keys(questionsBySection);
+    
+    // If only one section, render without section headers
+    if (sections.length === 1 && sections[0] === 'general') {
+      return assignment.extractedQuestions.map((question, index) => 
+        renderQuestion(question, index)
+      );
+    }
+
+    // Render with section organization
+    return sections.map(sectionKey => {
+      const section = questionsBySection[sectionKey];
+      return (
+        <Box key={sectionKey} sx={{ mb: 4 }}>
+          <Accordion defaultExpanded>
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              sx={{ 
+                bgcolor: 'primary.light',
+                color: 'primary.contrastText',
+                '&:hover': { bgcolor: 'primary.main' }
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                  📚 {section.title}
+                </Typography>
+                <Chip 
+                  label={`${section.questions.length} questions`}
+                  size="small" 
+                  sx={{ 
+                    bgcolor: 'background.paper', 
+                    color: 'text.primary',
+                    mr: 2 
+                  }}
+                />
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 0 }}>
+              <Box sx={{ p: 2 }}>
+                {section.questions.map((question, sectionIndex) => {
+                  const globalIndex = question.originalIndex;
+                  const difficulty = (question as any).difficulty || 'medium';
+                  const topic = (question as any).topic || 'general';
+                  
+                  return (
+                    <Card key={question.id} sx={{ mb: 3, position: 'relative' }}>
+                      {/* Difficulty and topic indicators */}
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        top: 8, 
+                        right: 8, 
+                        display: 'flex', 
+                        gap: 1 
+                      }}>
+                        <Chip 
+                          label={difficulty} 
+                          size="small" 
+                          color={
+                            difficulty === 'easy' ? 'success' : 
+                            difficulty === 'hard' ? 'error' : 'warning'
+                          }
+                          variant="outlined"
+                        />
+                        {topic !== 'general' && (
+                          <Chip 
+                            label={topic} 
+                            size="small" 
+                            variant="outlined"
+                          />
+                        )}
+                      </Box>
+                      
+                      <CardContent sx={{ pt: 5 }}>
+                        {renderQuestionContent(question, globalIndex, sectionIndex + 1)}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Box>
+      );
+    });
+  };
+
+  // Extract question content rendering logic
+  const renderQuestionContent = (question: ExtractedQuestion, globalIndex: number, displayIndex: number) => {
+    const answer = answers[question.id];
+
+    return (
+      <>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Typography variant="h6" component="h3">
+            Question {displayIndex}
+          </Typography>
+          <Chip 
+            label={`${question.points} pts`} 
+            size="small" 
+            color="primary" 
+            variant="outlined" 
+          />
+        </Box>
+        
+        <Typography variant="body1" paragraph>
+          {question.question}
+        </Typography>
+
+        {/* Question type specific rendering */}
+        {question.type === 'multiple_choice' && (
+          <FormControl component="fieldset" fullWidth>
+            <RadioGroup
+              value={answer || ''}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+            >
+              {question.options?.map((option, optionIndex) => (
+                <FormControlLabel
+                  key={optionIndex}
+                  value={option}
+                  control={<Radio />}
+                  label={option}
+                />
+              ))}
+            </RadioGroup>
+          </FormControl>
+        )}
+
+        {question.type === 'true_false' && (
+          <FormControl component="fieldset" fullWidth>
+            <RadioGroup
+              value={answer || ''}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              row
+            >
+              <FormControlLabel value="true" control={<Radio />} label="True" />
+              <FormControlLabel value="false" control={<Radio />} label="False" />
+            </RadioGroup>
+          </FormControl>
+        )}
+
+        {question.type === 'numerical' && (
+          <TextField
+            fullWidth
+            type="number"
+            value={answer || ''}
+            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+            placeholder="Enter numerical answer..."
+            variant="outlined"
+            helperText="Enter numbers only"
+          />
+        )}
+
+        {question.type === 'short_answer' && (
+          <TextField
+            fullWidth
+            multiline
+            rows={2}
+            value={answer || ''}
+            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+            placeholder="Enter your answer..."
+            variant="outlined"
+          />
+        )}
+
+        {question.type === 'essay' && (
+          <TextField
+            fullWidth
+            multiline
+            rows={6}
+            value={answer || ''}
+            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+            placeholder="Write your essay response..."
+            variant="outlined"
+          />
+        )}
+      </>
+    );
+  };
+
   const renderSubmissionResults = () => {
     if (!assignment?.submission) return null;
 
@@ -512,9 +712,7 @@ const EnhancedAssignmentPage: React.FC = () => {
               )}
             </Box>
 
-            {assignment.extractedQuestions.map((question, index) => 
-              renderQuestion(question, index)
-            )}
+            {renderOrganizedQuestions()}
 
             {!isSubmitted && canSubmit && (
               <Box sx={{ textAlign: 'center', mt: 3 }}>

@@ -82,7 +82,7 @@ import { useResponsive, getDrawerWidth } from '../../utils/responsive';
 import ProfilePage from '../../pages/Profile/ProfilePage';
 import BottomNavigationBar from '../BottomNavigationBar';
 
-// Responsive styled components
+// Ultra-Modern Responsive styled components
 const ResponsiveAppBar = styled(AppBar, {
   shouldForwardProp: (prop) => prop !== 'drawerWidth',
 })<{ drawerWidth: number }>(({ theme, drawerWidth }) => ({
@@ -94,11 +94,32 @@ const ResponsiveAppBar = styled(AppBar, {
     width: '100%',
     marginLeft: 0,
   },
-  // Attractive gradient navbar styling
-  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%)',
+  // Ultra-modern gradient navbar with glassmorphism
+  background: `
+    linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%),
+    linear-gradient(45deg, rgba(0,0,0,0.1) 0%, rgba(255,255,255,0.05) 100%)
+  `,
+  backdropFilter: 'blur(20px)',
   color: '#ffffff',
-  boxShadow: '0 8px 24px rgba(124, 58, 237, 0.25)',
-  borderBottom: '1px solid rgba(255,255,255,0.12)'
+  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
+  borderBottom: '1px solid rgba(255,255,255,0.15)',
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.1) 100%)',
+    backgroundSize: '200% 100%',
+    animation: 'shimmer 3s ease-in-out infinite',
+    pointerEvents: 'none'
+  },
+  '@keyframes shimmer': {
+    '0%': { backgroundPosition: '-200% 0' },
+    '100%': { backgroundPosition: '200% 0' }
+  }
 }));
 
 const ResponsiveDrawer = styled(Box, {
@@ -110,6 +131,13 @@ const ResponsiveDrawer = styled(Box, {
     '& .MuiDrawer-paper': {
       width: drawerWidth,
       boxSizing: 'border-box',
+      background: `
+        linear-gradient(180deg, #ffffff 0%, #f8fafc 100%),
+        linear-gradient(90deg, rgba(102, 126, 234, 0.02) 0%, rgba(240, 147, 251, 0.02) 100%)
+      `,
+      backdropFilter: 'blur(10px)',
+      borderRight: '1px solid rgba(102, 126, 234, 0.1)',
+      boxShadow: '4px 0 24px rgba(102, 126, 234, 0.08)'
     },
   },
 }));
@@ -365,42 +393,87 @@ const Layout: React.FC = () => {
     { name: 'Mathematics', icon: <Calculate />, color: '#303f9f' }
   ];
 
-  // Drawer content
+  // Enhanced drawer content
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Logo/Brand */}
+      {/* Enhanced Logo/Brand Section */}
       <Box 
         sx={{ 
-          p: { xs: 1.5, sm: 2 }, 
+          p: { xs: 2, sm: 3 }, 
           textAlign: 'center',
-          borderBottom: 1,
-          borderColor: 'divider'
+          borderBottom: '1px solid rgba(102, 126, 234, 0.1)',
+          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(240, 147, 251, 0.05) 100%)',
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
-        <Typography 
-          variant={isMobile ? "subtitle1" : "h6"} 
-          noWrap 
-          component="div" 
-          color="primary"
-          sx={{ mb: 0.5 }}
-        >
-          <img
-            src="/logo.webp"
-            alt="Coaching Hub Logo"
-            style={{ 
-              height: isMobile ? '24px' : '32px', 
-              width: 'auto' 
+        {/* Background Glow */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'radial-gradient(circle at center, rgba(102, 126, 234, 0.1) 0%, transparent 70%)',
+            opacity: 0.5
+          }}
+        />
+        
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Box
+            sx={{
+              mb: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 1,
+              borderRadius: 2,
+              background: 'rgba(255, 255, 255, 0.8)',
+              border: '1px solid rgba(102, 126, 234, 0.2)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 4px 20px rgba(102, 126, 234, 0.15)'
             }}
-          />
-        </Typography>
-        <Typography 
-          variant={isMobile ? "caption" : "body2"} 
-          color="text.secondary"
-          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-        >
+          >
+            <img
+              src="/logo.webp"
+              alt="Excellence Coaching Hub"
+              style={{ 
+                height: isMobile ? '28px' : '40px', 
+                width: 'auto' 
+              }}
+            />
+          </Box>
+          
+          <Typography 
+            variant={isMobile ? "subtitle2" : "h6"} 
+            noWrap 
+            component="div"
+            sx={{
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #667eea 0%, #f093fb 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 1,
+              fontSize: { xs: '0.9rem', sm: '1.1rem' }
+            }}
+          >
+            Excellence Hub
+          </Typography>
+          
+          <Typography 
+            variant="caption"
+            color="text.secondary"
+            sx={{ 
+              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+              fontWeight: 500,
+              opacity: 0.8
+            }}
+          >
           {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'} Portal
         </Typography>
-        
+        </Box>
       </Box>
 
       {/* Navigation Items */}
@@ -439,11 +512,17 @@ const Layout: React.FC = () => {
                     }}
                     disabled={isDisabled}
                 sx={{
-                  minHeight: { xs: 40, sm: 48 },
-                  px: { xs: 1, sm: 2 },
-                  borderRadius: 1,
-                  mx: { xs: 0.5, sm: 1 },
-                  mb: 0.5,
+                  minHeight: { xs: 44, sm: 52 },
+                  px: { xs: 1.5, sm: 2.5 },
+                  borderRadius: 2.5,
+                  mx: { xs: 1, sm: 1.5 },
+                  mb: 1,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  // Base styling with glassmorphism
+                  background: 'rgba(255, 255, 255, 0.6)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(102, 126, 234, 0.1)',
                   // Disabled styling
                   ...(isDisabled ? {
                     opacity: 0.5,
@@ -454,38 +533,71 @@ const Layout: React.FC = () => {
                   } : {}),
                   // Special styling for Live Sessions
                   ...(isLiveSession && !isDisabled && {
-                    background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.1)}, ${alpha(theme.palette.error.main, 0.05)})`,
-                    border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+                    background: `linear-gradient(135deg, rgba(255, 82, 82, 0.15) 0%, rgba(255, 107, 107, 0.08) 100%)`,
+                    border: `1px solid rgba(255, 82, 82, 0.3)`,
+                    boxShadow: '0 4px 20px rgba(255, 82, 82, 0.15)',
                     '&:hover': {
-                      background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.15)}, ${alpha(theme.palette.error.main, 0.08)})`,
-                      borderColor: theme.palette.error.main,
-                      transform: 'translateX(4px)',
+                      background: `linear-gradient(135deg, rgba(255, 82, 82, 0.2) 0%, rgba(255, 107, 107, 0.12) 100%)`,
+                      borderColor: 'rgba(255, 82, 82, 0.5)',
+                      transform: 'translateX(8px) scale(1.02)',
+                      boxShadow: '0 8px 32px rgba(255, 82, 82, 0.25)',
                     },
                   }),
+                  // Selected state with modern gradient
                   '&.Mui-selected': {
-                    backgroundColor: isLiveSession ? 'error.main' : 'primary.main',
-                    color: isLiveSession ? 'error.contrastText' : 'primary.contrastText',
+                    background: isLiveSession 
+                      ? 'linear-gradient(135deg, #f56565 0%, #ef4444 100%)' 
+                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    boxShadow: isLiveSession 
+                      ? '0 8px 32px rgba(245, 101, 101, 0.4)' 
+                      : '0 8px 32px rgba(102, 126, 234, 0.4)',
+                    border: 'none',
+                    transform: 'translateX(4px)',
                     '&:hover': {
-                      backgroundColor: isLiveSession ? 'error.dark' : 'primary.dark',
+                      background: isLiveSession 
+                        ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                        : 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                      transform: 'translateX(8px) scale(1.02)',
                     },
                     '& .MuiListItemIcon-root': {
-                      color: isLiveSession ? 'error.contrastText' : 'primary.contrastText',
+                      color: 'white',
+                    },
+                    // Shimmer effect for selected items
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                      animation: 'slideShimmer 2s infinite',
                     },
                   },
+                  // Regular hover state
                   ...(!isLiveSession && !isDisabled && {
                     '&:hover': {
-                      backgroundColor: 'action.hover',
-                      borderRadius: 1,
+                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(240, 147, 251, 0.05) 100%)',
+                      borderColor: 'rgba(102, 126, 234, 0.3)',
+                      transform: 'translateX(4px)',
+                      boxShadow: '0 4px 20px rgba(102, 126, 234, 0.15)',
                     },
                   }),
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '@keyframes slideShimmer': {
+                    '0%': { left: '-100%' },
+                    '100%': { left: '100%' }
+                  }
                 }}
               >
               <ListItemIcon 
                 sx={{ 
-                  minWidth: { xs: 36, sm: 40 },
+                  minWidth: { xs: 42, sm: 48 },
                   '& .MuiSvgIcon-root': {
-                    fontSize: { xs: '1.2rem', sm: '1.5rem' }
+                    fontSize: { xs: '1.3rem', sm: '1.6rem' },
+                    transition: 'all 0.3s ease',
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
                   }
                 }}
               >
@@ -494,8 +606,10 @@ const Layout: React.FC = () => {
               <ListItemText 
                 primary={item.text}
                 primaryTypographyProps={{
-                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                  fontWeight: isActivePath(item.path) ? 600 : 400
+                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                  fontWeight: isActivePath(item.path) ? 700 : 500,
+                  color: isActivePath(item.path) ? 'inherit' : 'text.primary',
+                  transition: 'all 0.3s ease'
                 }}
               />
               {isDisabled && (

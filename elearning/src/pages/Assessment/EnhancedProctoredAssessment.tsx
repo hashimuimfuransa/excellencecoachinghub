@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -77,6 +77,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { assessmentService, IAssessment, IQuestion } from '../../services/assessmentService';
 import { proctoringService } from '../../services/proctoringService';
+import { OrganizedAssessment } from '../../services/aiAssessmentOrganizerService';
 
 interface ProctoringData {
   isActive: boolean;
@@ -110,7 +111,11 @@ interface AssessmentSection {
 const EnhancedProctoredAssessment: React.FC = () => {
   const { assessmentId } = useParams<{ assessmentId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  
+  // Get organized assessment from location state
+  const organizedAssessment = location.state?.organizedAssessment as OrganizedAssessment | undefined;
   
   // Assessment state
   const [assessment, setAssessment] = useState<IAssessment | null>(null);
@@ -144,6 +149,8 @@ const EnhancedProctoredAssessment: React.FC = () => {
   const [warningMessage, setWarningMessage] = useState('');
   const [assessmentStarted, setAssessmentStarted] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showAiInsights, setShowAiInsights] = useState(false);
+  const [aiEnhanced, setAiEnhanced] = useState(false);
   
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -158,17 +165,42 @@ const EnhancedProctoredAssessment: React.FC = () => {
 
       try {
         setLoading(true);
-        const assessmentData = await assessmentService.getAssessmentById(assessmentId);
-        setAssessment(assessmentData);
         
-        // Organize questions into sections
-        const organizedSections = organizeQuestionsIntoSections(assessmentData.questions);
-        setSections(organizedSections);
-        
-        setTimeRemaining(assessmentData.timeLimit ? assessmentData.timeLimit * 60 : 3600); // Convert to seconds
+        // Check if we have AI-organized assessment data
+        if (organizedAssessment) {
+          console.log('🤖 Using AI-organized assessment data');
+          setAssessment(organizedAssessment.originalAssessment);
+          setAiEnhanced(organizedAssessment.aiOrganized);
+          
+          // Use AI-organized sections instead of default organization
+          const aiSections: AssessmentSection[] = organizedAssessment.sections.map((section, index) => ({
+            id: section.id,
+            title: section.title,
+            description: section.description,
+            questions: section.questions,
+            timeLimit: section.timeAllocation,
+            instructions: section.instructions
+          }));
+          
+          setSections(aiSections);
+          setTimeRemaining(organizedAssessment.estimatedCompletionTime * 60); // Convert to seconds
+          
+        } else {
+          // Fallback to standard assessment loading
+          console.log('📝 Loading standard assessment');
+          const assessmentData = await assessmentService.getAssessmentById(assessmentId);
+          setAssessment(assessmentData);
+          
+          // Organize questions into sections using the existing method
+          const organizedSections = organizeQuestionsIntoSections(assessmentData.questions);
+          setSections(organizedSections);
+          
+          setTimeRemaining(assessmentData.timeLimit ? assessmentData.timeLimit * 60 : 3600);
+        }
         
         // Check if proctoring is required
-        if (assessmentData.requireProctoring || assessmentData.proctoringEnabled) {
+        const currentAssessment = organizedAssessment?.originalAssessment || assessment;
+        if (currentAssessment && (currentAssessment.requireProctoring || currentAssessment.proctoringEnabled)) {
           setProctoringEnabled(true);
         }
         
@@ -181,7 +213,7 @@ const EnhancedProctoredAssessment: React.FC = () => {
     };
 
     loadAssessment();
-  }, [assessmentId]);
+  }, [assessmentId, organizedAssessment]);
 
   // Organize questions into sections based on their section property or create default sections
   const organizeQuestionsIntoSections = (questions: IQuestion[]): AssessmentSection[] => {
@@ -205,13 +237,27 @@ const EnhancedProctoredAssessment: React.FC = () => {
     }));
   };
 
-  const getSectionDescription = (section: string, questionCount: number): string => {
-    const descriptions: Record<string, string> = {
-      'A': `Multiple Choice Questions - ${questionCount} questions`,
-      'B': `Short Answer Questions - ${questionCount} questions`,
-      'C': `Essay Questions - ${questionCount} questions`
-    };
-    return descriptions[section] || `Section ${section} - ${questionCount} questions`;
+  const getSectionDescription = (section: string, sectionQuestions: IQuestion[]): string => {
+    const questionCount = sectionQuestions.length;
+    const questionTypes = sectionQuestions.map(q => q.type);
+    const uniqueTypes = [...new Set(questionTypes)];
+    
+    // Generate description based on actual question types
+    const typeDescriptions = uniqueTypes.map(type => {
+      const count = questionTypes.filter(t => t === type).length;
+      const typeNames: Record<string, string> = {
+        multiple_choice: 'Multiple Choice',
+        multiple_choice_multiple: 'Multiple Choice (Multiple Answers)', 
+        true_false: 'True/False',
+        short_answer: 'Short Answer',
+        essay: 'Essay',
+        fill_in_blank: 'Fill in the Blank',
+        numerical: 'Numerical'
+      };
+      return `${count} ${typeNames[type] || type}`;
+    }).join(', ');
+    
+    return `Section ${section} - ${typeDescriptions} (${questionCount} total)`;
   };
 
   const getSectionInstructions = (section: string): string => {
@@ -788,6 +834,53 @@ const EnhancedProctoredAssessment: React.FC = () => {
               </Alert>
             )}
 
+            {/* AI Enhanced Assessment Notice */}
+            {aiEnhanced && organizedAssessment && (
+              <Alert 
+                severity="success" 
+                sx={{ mt: 4, mb: 4, border: '2px solid', borderColor: 'success.main' }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <AutoAwesome sx={{ mr: 1, color: 'success.main' }} />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                    AI-Enhanced Assessment
+                  </Typography>
+                </Box>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  This assessment has been optimally organized by AI to enhance your learning experience.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Chip 
+                    size="small" 
+                    label={`${sections.length} Sections`} 
+                    color="success" 
+                    variant="outlined" 
+                  />
+                  <Chip 
+                    size="small" 
+                    label={`~${organizedAssessment.estimatedCompletionTime} min`} 
+                    color="success" 
+                    variant="outlined" 
+                  />
+                  <Chip 
+                    size="small" 
+                    label="AI Optimized" 
+                    color="success" 
+                    variant="outlined" 
+                  />
+                </Box>
+                
+                <Button
+                  size="small"
+                  onClick={() => setShowAiInsights(true)}
+                  startIcon={<Psychology />}
+                  sx={{ mt: 2 }}
+                >
+                  View AI Insights & Tips
+                </Button>
+              </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
               <Button
                 variant="contained"
@@ -955,9 +1048,22 @@ const EnhancedProctoredAssessment: React.FC = () => {
 
                 {/* Question */}
                 <Box sx={{ mb: 4 }}>
-                  <Typography variant="h6" sx={{ mb: 1, color: 'primary.main' }}>
-                    Question {currentQuestion + 1} of {currentSectionData.questions.length}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Typography variant="h6" sx={{ color: 'primary.main' }}>
+                      Question {currentQuestion + 1} of {currentSectionData.questions.length}
+                    </Typography>
+                    {currentQuestionData?.difficulty && (
+                      <Chip 
+                        label={currentQuestionData.difficulty}
+                        size="small"
+                        color={
+                          currentQuestionData.difficulty === 'easy' ? 'success' :
+                          currentQuestionData.difficulty === 'hard' ? 'error' : 'warning'
+                        }
+                        sx={{ textTransform: 'capitalize' }}
+                      />
+                    )}
+                  </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                     Points: {currentQuestionData?.points || 1}
                   </Typography>
@@ -1123,6 +1229,184 @@ const EnhancedProctoredAssessment: React.FC = () => {
             startIcon={submitting ? <CircularProgress size={16} /> : <Send />}
           >
             {submitting ? 'Submitting...' : 'Submit Assessment'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* AI Insights Dialog */}
+      <Dialog 
+        open={showAiInsights} 
+        onClose={() => setShowAiInsights(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Psychology color="primary" />
+            <Typography variant="h6" component="div">
+              AI Insights & Study Tips
+            </Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          {organizedAssessment && (
+            <Grid container spacing={3}>
+              {/* Study Recommendations */}
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 2, h: 'fit-content' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                    <School color="primary" />
+                    <Typography variant="h6">Study Recommendations</Typography>
+                  </Box>
+                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                    {organizedAssessment.studyRecommendations.map((recommendation, index) => (
+                      <li key={index}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          {recommendation}
+                        </Typography>
+                      </li>
+                    ))}
+                  </Box>
+                </Paper>
+              </Grid>
+
+              {/* Time Management Tips */}
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 2, h: 'fit-content' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                    <AccessTime color="primary" />
+                    <Typography variant="h6">Time Management</Typography>
+                  </Box>
+                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                    {organizedAssessment.timeManagementTips.map((tip, index) => (
+                      <li key={index}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          {tip}
+                        </Typography>
+                      </li>
+                    ))}
+                  </Box>
+                </Paper>
+              </Grid>
+
+              {/* AI Analysis */}
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 2, h: 'fit-content' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                    <TrendingUp color="success" />
+                    <Typography variant="h6">Your Strengths</Typography>
+                  </Box>
+                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                    {organizedAssessment.aiInsights.strengths.map((strength, index) => (
+                      <li key={index}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          {strength}
+                        </Typography>
+                      </li>
+                    ))}
+                  </Box>
+                </Paper>
+              </Grid>
+
+              {/* Preparation Tips */}
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 2, h: 'fit-content' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                    <Star color="warning" />
+                    <Typography variant="h6">Preparation Tips</Typography>
+                  </Box>
+                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                    {organizedAssessment.aiInsights.preparationTips.map((tip, index) => (
+                      <li key={index}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          {tip}
+                        </Typography>
+                      </li>
+                    ))}
+                  </Box>
+                </Paper>
+              </Grid>
+
+              {/* Difficulty Analysis */}
+              <Grid item xs={12}>
+                <Paper sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                    <Assignment color="info" />
+                    <Typography variant="h6">Assessment Analysis</Typography>
+                  </Box>
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h4" color="success.main" sx={{ fontWeight: 'bold' }}>
+                          {organizedAssessment.difficultyAnalysis.easy}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Easy Questions
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h4" color="warning.main" sx={{ fontWeight: 'bold' }}>
+                          {organizedAssessment.difficultyAnalysis.medium}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Medium Questions
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h4" color="error.main" sx={{ fontWeight: 'bold' }}>
+                          {organizedAssessment.difficultyAnalysis.hard}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Hard Questions
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                    Estimated completion time: {organizedAssessment.estimatedCompletionTime} minutes
+                  </Typography>
+                </Paper>
+              </Grid>
+
+              {/* Overall Instructions */}
+              {organizedAssessment.overallInstructions && (
+                <Grid item xs={12}>
+                  <Alert severity="info">
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                      AI-Generated Instructions
+                    </Typography>
+                    <Typography variant="body2">
+                      {organizedAssessment.overallInstructions}
+                    </Typography>
+                  </Alert>
+                </Grid>
+              )}
+            </Grid>
+          )}
+        </DialogContent>
+        
+        <DialogActions>
+          <Button onClick={() => setShowAiInsights(false)} variant="outlined">
+            Close
+          </Button>
+          <Button 
+            onClick={() => {
+              setShowAiInsights(false);
+              handleStartAssessment();
+            }} 
+            variant="contained"
+            startIcon={<Quiz />}
+          >
+            Start Assessment
           </Button>
         </DialogActions>
       </Dialog>

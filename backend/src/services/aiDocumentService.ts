@@ -57,59 +57,75 @@ export class AIDocumentService {
       console.log(`📄 Document content preview (first 300 chars): ${documentContent.substring(0, 300)}...`);
       
       const prompt = `
-        You are an expert at extracting questions from educational exam documents. This document may contain exam sections (Section A, Section B, Section C, etc.) with various question types.
+        You are an expert at extracting individual questions from educational exam documents. Your task is to parse this document and extract EACH INDIVIDUAL QUESTION separately, not the entire document as one question.
 
-        SCAN FOR ALL THESE PATTERNS:
-        - Questions ending with "?" 
-        - Numbered questions (1., 2., 3., Q1, Q2, etc.)
-        - Section-based questions (Section A: 1., 2., Section B: 1., 2., etc.)
-        - Multiple choice with options: A), B), C), D) or (a), (b), (c), (d) or a., b., c., d.
-        - True/False questions
-        - Fill-in-the-blank questions (____ or "Complete the following")
-        - Essay questions ("Explain", "Discuss", "Describe", "Analyze")
-        - Short answer questions
-        - Instructions like "Choose the correct answer", "Answer all questions"
+        CRITICAL PARSING INSTRUCTIONS:
+        1. NEVER treat the entire document as a single question
+        2. Break down multi-part questions into individual questions
+        3. Each section header (Section A, Section B, etc.) indicates a new group of questions
+        4. Each numbered item (1., 2., 3., Q1, Q2, etc.) is typically a separate question
 
-        EXAM SECTION HANDLING:
-        - Look for "Section A", "Section B", "Section C", "Part A", "Part B", etc.
-        - Extract questions from ALL sections found
-        - Questions may be numbered starting from 1 in each section
-        - Don't skip any section
+        QUESTION IDENTIFICATION PATTERNS:
+        - Direct questions ending with "?"
+        - Numbered items: "1.", "2.", "3.", "Q1)", "Q2)", etc.
+        - Section questions: "Section A: 1.", "Section B: 1.", etc.
+        - Multiple choice: Question followed by A), B), C), D) options
+        - True/False: Questions with T/F or True/False format
+        - Fill-in-blanks: Questions with _____ or "Complete the following"
+        - Essay prompts: "Explain...", "Discuss...", "Describe...", "Analyze..."
 
-        Return questions in JSON format:
+        EXAMPLE PARSING:
+        If document contains:
+        "Section A: Multiple Choice Questions
+        1. What does CPU stand for?
+        a) Central Process Unit
+        b) Central Processing Unit
+        c) Computer Personal Unit
+        
+        2. Which is an input device?
+        a) Monitor
+        b) Keyboard
+        c) Printer"
+        
+        Extract as TWO separate questions, not one.
+
+        JSON FORMAT:
         {
           "questions": [
             {
-              "question": "Complete question text (include section if relevant)",
-              "type": "multiple_choice|multiple_choice_multiple|true_false|short_answer|essay|fill_in_blank|numerical|matching",
-              "options": ["option1", "option2", "option3", "option4"] (for multiple_choice and multiple_choice_multiple),
-              "correctAnswer": "The correct answer if clearly indicated",
-              "points": 10
+              "question": "What does CPU stand for?",
+              "type": "multiple_choice",
+              "section": "A",
+              "options": ["Central Process Unit", "Central Processing Unit", "Computer Personal Unit"],
+              "points": 2,
+              "difficulty": "easy"
+            },
+            {
+              "question": "Which is an input device?",
+              "type": "multiple_choice", 
+              "section": "A",
+              "options": ["Monitor", "Keyboard", "Printer"],
+              "points": 2,
+              "difficulty": "easy"
             }
           ]
         }
 
-        Document content:
+        DOCUMENT TO PARSE:
         ${documentContent}
 
         EXTRACTION RULES:
-        1. Extract EVERY question from ALL sections (A, B, C, etc.)
-        2. For multiple_choice: Extract ALL options (A, B, C, D or 1, 2, 3, 4, etc.) - CRITICAL: Always include the options array
-        3. For multiple_choice_multiple: When question says "select all that apply" or similar
-        4. For true_false: Use "true" or "false" as correct answer
-        5. Clean question text but preserve meaning
-        6. Points: 5 for simple, 10 for medium, 15-20 for complex questions
-        7. If question type unclear, use "short_answer"
-        8. Include section context in question if helpful (e.g., "Section A: What is...")
-        9. Return ONLY valid JSON, no extra text
-        10. If no questions found, return {"questions": []}
+        1. Extract EACH individual question as a separate JSON object
+        2. Include section identifier (A, B, C, etc.) in "section" field
+        3. For multiple choice: Extract clean option text without prefixes (a), b), etc.)
+        4. Points: Auto-assign based on complexity (2-5 easy, 5-10 medium, 10-20 hard)
+        5. Question types: multiple_choice, true_false, short_answer, essay, fill_in_blank, numerical
+        6. Clean question text but preserve full meaning
+        7. If uncertain about type, use "short_answer"
+        8. Return ONLY valid JSON, no extra explanatory text
+        9. If no clear questions found, return {"questions": []}
         
-        CRITICAL FOR MULTIPLE CHOICE:
-        - ALWAYS extract the options into the "options" array
-        - Look for patterns like: A) option1  B) option2  C) option3  D) option4
-        - Or: (a) option1  (b) option2  (c) option3  (d) option4
-        - Or: 1. option1  2. option2  3. option3  4. option4
-        - Even if options are on separate lines, group them with their question
+        CRITICAL: Each numbered item or distinct question prompt should become a separate question object in the array. Do not combine multiple questions into one.
       `;
 
       console.log('📄 Sending request to Enhanced AI Manager...');
@@ -164,13 +180,23 @@ export class AIDocumentService {
         // Get options from different possible properties
         const options = q.options || q.choices || [];
         
+        // Clean up options - remove prefixes like a), b), A), B), etc.
+        const cleanedOptions = options.map((option: string) => {
+          if (typeof option === 'string') {
+            return option.replace(/^[a-zA-Z]\)?\s*/, '').replace(/^\d+\)?\s*/, '').trim();
+          }
+          return option;
+        });
+        
         return {
           question: q.question || `Question ${index + 1}`,
           type: questionType,
-          options: options,
-          choices: options, // Add both for compatibility
+          options: cleanedOptions,
+          choices: cleanedOptions, // Add both for compatibility
           correctAnswer: q.correctAnswer,
-          points: q.points || 10,
+          points: q.points || (q.difficulty === 'easy' ? 5 : q.difficulty === 'hard' ? 15 : 10),
+          section: q.section || 'A',
+          difficulty: q.difficulty || 'medium',
           aiExtracted: true
         };
       });

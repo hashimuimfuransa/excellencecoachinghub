@@ -17,7 +17,12 @@ import {
   Alert,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Stack,
+  Divider,
+  Paper,
+  LinearProgress,
+  IconButton
 } from '@mui/material';
 import {
   School,
@@ -33,7 +38,30 @@ import {
   ExpandMore,
   HelpOutline,
   QuestionAnswer,
-  Email
+  Email,
+  AutoAwesome,
+  Psychology,
+  Speed,
+  Groups,
+  Verified,
+  WorkspacePremium,
+  SmartToy,
+  Analytics,
+  Code,
+  DataUsage,
+  Palette,
+  Business,
+  Language,
+  LocalHospital,
+  Engineering,
+  Functions,
+  RocketLaunch,
+  ElectricBolt,
+  LightbulbOutlined,
+  MenuBook,
+  AutoGraph,
+  Support,
+  Explore
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -41,7 +69,7 @@ import { useQuery } from 'react-query';
 import { courseService } from '../../services/courseService';
 import FloatingContact from '../../components/FloatingContact';
 
-// Modern Hero Section Component
+// Ultra-Modern Hero Section with Contemporary Design
 const HeroSection: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -51,14 +79,63 @@ const HeroSection: React.FC = () => {
   return (
     <Box
       sx={{
-        background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+        background: `
+          linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%),
+          linear-gradient(45deg, rgba(0,0,0,0.8) 0%, transparent 50%, rgba(255,255,255,0.1) 100%)
+        `,
+        backgroundSize: '300% 300%',
+        animation: 'gradientShift 8s ease infinite',
+        '@keyframes gradientShift': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' }
+        },
         color: 'white',
-        py: { xs: 6, md: 10 },
+        pt: { xs: 4, md: 6 },
+        pb: { xs: 8, md: 12 },
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center'
       }}
     >
-      {/* Modern Background Pattern */}
+      {/* Glassmorphism Background Elements */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '10%',
+          right: '5%',
+          width: 200,
+          height: 200,
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          animation: 'float 6s ease-in-out infinite',
+          '@keyframes float': {
+            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+            '50%': { transform: 'translateY(-30px) rotate(180deg)' }
+          }
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '15%',
+          left: '8%',
+          width: 150,
+          height: 150,
+          borderRadius: 3,
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(15px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          animation: 'float 8s ease-in-out infinite reverse',
+          transform: 'rotate(45deg)'
+        }}
+      />
+      
+      {/* Modern Mesh Gradient Overlay */}
       <Box
         sx={{
           position: 'absolute',
@@ -67,106 +144,179 @@ const HeroSection: React.FC = () => {
           right: 0,
           bottom: 0,
           background: `
-            radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%)
+            radial-gradient(circle at 25% 25%, rgba(120, 119, 198, 0.4) 0%, transparent 60%),
+            radial-gradient(circle at 75% 75%, rgba(255, 119, 198, 0.3) 0%, transparent 60%),
+            radial-gradient(circle at 50% 50%, rgba(74, 144, 226, 0.2) 0%, transparent 60%),
+            conic-gradient(from 45deg at 80% 20%, rgba(255, 183, 77, 0.2) 0deg, transparent 120deg),
+            conic-gradient(from 225deg at 20% 80%, rgba(129, 200, 132, 0.2) 0deg, transparent 120deg)
           `,
-          opacity: 0.6
+          opacity: 0.8
         }}
       />
       
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-        <Grid container spacing={4} alignItems="center">
-          <Grid item xs={12} md={6}>
+      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+        <Grid container spacing={6} alignItems="center" sx={{ minHeight: '80vh' }}>
+          <Grid item xs={12} lg={6}>
+            {/* AI-Powered Badge */}
+            <Box sx={{ mb: 4 }}>
+              <Chip
+                icon={<AutoAwesome sx={{ fontSize: 18, color: '#FFD700 !important' }} />}
+                label="🚀 Excellence Coaching Hub"
+                sx={{
+                  bgcolor: 'rgba(255, 215, 0, 0.15)',
+                  color: '#FFD700',
+                  fontWeight: 600,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.9rem',
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  backdropFilter: 'blur(10px)',
+                  '& .MuiChip-icon': { color: '#FFD700' }
+                }}
+              />
+            </Box>
+
             <Typography
               variant="h1"
               component="h1"
               gutterBottom
               sx={{
-                fontWeight: 800,
-                fontSize: { xs: '2.5rem', md: '4rem' },
-                lineHeight: 1.1,
-                mb: 3,
-                background: 'linear-gradient(45deg, #ffffff, #e3f2fd)',
+                fontWeight: 900,
+                fontSize: { xs: '3rem', md: '5.5rem' },
+                lineHeight: 0.9,
+                mb: 4,
+                background: 'linear-gradient(135deg, #ffffff 0%, #e3f2fd 25%, #bbdefb 50%, #90caf9 75%, #64b5f6 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 0 60px rgba(255, 255, 255, 0.5)',
+                fontFamily: 'system-ui, -apple-system, sans-serif'
               }}
             >
-              Learn Without
-              <Box component="span" sx={{ 
-                color: '#64b5f6', 
-                display: 'block',
-                background: 'linear-gradient(45deg, #64b5f6, #42a5f5)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>
-                Limits
+              Empower Your Future
+              <Box 
+                component="span" 
+                sx={{ 
+                  display: 'block',
+                  background: 'linear-gradient(135deg, #FFD700 0%, #FFA726 50%, #FF7043 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  position: 'relative',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: -10,
+                    left: 0,
+                    right: 0,
+                    height: 4,
+                    background: 'linear-gradient(135deg, #FFD700, #FF7043)',
+                    borderRadius: 2,
+                    opacity: 0.7
+                  }
+                }}
+              >
+                with Excellence
               </Box>
             </Typography>
             
             <Typography
-              variant="h5"
+              variant="h4"
               sx={{
-                mb: 4,
-                opacity: 0.9,
+                mb: 6,
+                opacity: 0.95,
                 fontWeight: 400,
-                lineHeight: 1.6,
-                color: '#e3f2fd'
+                lineHeight: 1.5,
+                color: '#f8fafc',
+                maxWidth: 600,
+                fontSize: { xs: '1.3rem', md: '1.6rem' }
               }}
             >
-              Master new skills with world-class courses, expert instructors, and cutting-edge technology. Start your journey today.
+              Join thousands of learners gaining in-demand skills through expert-led online courses, personalized coaching, and real-world assessments.
             </Typography>
             
-            {/* Trust Indicators */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="body2" sx={{ color: '#e3f2fd', mb: 2, opacity: 0.8 }}>
-                Trusted by leading companies worldwide
+            {/* Modern Trust Indicators */}
+            <Paper
+              elevation={0}
+              sx={{
+                mb: 6,
+                p: 3,
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: 3
+              }}
+            >
+              <Typography variant="body2" sx={{ color: '#e3f2fd', mb: 2, opacity: 0.9, fontWeight: 500 }}>
+                🏆 Excellence Coaching Hub - Your Path to Professional Growth
               </Typography>
-              <Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
-                {['Google', 'Microsoft', 'Amazon', 'Meta', 'Netflix'].map((company, index) => (
-                  <Box
+              <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ gap: 1.5 }}>
+                {[
+                  { name: '✅ Expert Instructors', color: '#4CAF50' },
+                  { name: '✅ Live & Recorded Sessions', color: '#2196F3' },
+                  { name: '✅ Weekly Learning Paths', color: '#FF9800' },
+                  { name: '✅ Cloud-Based Materials', color: '#9C27B0' },
+                  { name: '✅ Progress Tracking & Certification', color: '#F44336' }
+                ].map((feature, index) => (
+                  <Paper
                     key={index}
+                    elevation={0}
                     sx={{
-                      px: 2,
-                      py: 1,
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      px: 2.5,
+                      py: 1.2,
+                      bgcolor: 'rgba(255, 255, 255, 0.15)',
                       borderRadius: 2,
                       backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)'
+                      border: `1px solid ${feature.color}40`,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.25)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 8px 25px ${feature.color}30`
+                      }
                     }}
                   >
-                    <Typography variant="body2" sx={{ color: 'white', fontWeight: 500 }}>
-                      {company}
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: 'white', 
+                        fontWeight: 600,
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      {feature.name}
                     </Typography>
-                  </Box>
+                  </Paper>
                 ))}
-              </Box>
-            </Box>
+              </Stack>
+            </Paper>
             
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 4 }}>
+            {/* Modern CTA Buttons */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} sx={{ mb: 6 }}>
               <Button
                 variant="contained"
                 size="large"
+                startIcon={<RocketLaunch />}
                 onClick={() => navigate(isAuthenticated ? '/dashboard' : '/register')}
                 sx={{
-                  bgcolor: '#1976d2',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   px: 4,
-                  py: 1.5,
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                  borderRadius: 2,
+                  py: 2,
+                  fontSize: '1.2rem',
+                  fontWeight: 700,
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
                   '&:hover': {
-                    bgcolor: '#1565c0',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 25px rgba(25, 118, 210, 0.3)'
+                    background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                    transform: 'translateY(-3px)',
+                    boxShadow: '0 12px 40px rgba(102, 126, 234, 0.6)'
                   },
                   transition: 'all 0.3s ease'
                 }}
               >
-                {isAuthenticated ? 'Continue Learning' : 'Start Learning Free'}
+                {isAuthenticated ? 'Continue Learning' : 'Start Learning Today'}
               </Button>
               
               <Button
@@ -174,137 +324,224 @@ const HeroSection: React.FC = () => {
                 size="large"
                 startIcon={<PlayArrow />}
                 sx={{
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                  borderColor: 'rgba(255, 255, 255, 0.6)',
                   color: 'white',
                   px: 4,
-                  py: 1.5,
-                  fontSize: '1.1rem',
-                  borderRadius: 2,
+                  py: 2,
+                  fontSize: '1.2rem',
+                  fontWeight: 600,
+                  borderRadius: 3,
+                  borderWidth: 2,
+                  textTransform: 'none',
+                  backdropFilter: 'blur(10px)',
+                  bgcolor: 'rgba(255, 255, 255, 0.1)',
                   '&:hover': {
-                    borderColor: '#64b5f6',
-                    color: '#64b5f6',
-                    bgcolor: 'rgba(100, 181, 246, 0.1)'
-                  }
+                    borderColor: '#FFD700',
+                    color: '#FFD700',
+                    bgcolor: 'rgba(255, 215, 0, 0.1)',
+                    transform: 'translateY(-3px)',
+                    borderWidth: 2
+                  },
+                  transition: 'all 0.3s ease'
                 }}
               >
                 Watch Demo
               </Button>
-            </Box>
+            </Stack>
             
-            {/* Enhanced Stats */}
-            <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#64b5f6' }}>
-                  50K+
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                  Active Learners
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#64b5f6' }}>
-                  3,000+
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                  Courses
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#64b5f6' }}>
-                  4.8★
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                  Average Rating
-                </Typography>
-              </Box>
-            </Box>
+            {/* Enhanced Stats with Progress Animations */}
+            <Grid container spacing={4}>
+              {[
+                { value: '50K+', label: 'Active Learners', icon: Groups, color: '#4CAF50' },
+                { value: '200+', label: 'Expert Courses', icon: MenuBook, color: '#FF9800' },
+                { value: '95%', label: 'Completion Rate', icon: TrendingUp, color: '#2196F3' }
+              ].map((stat, index) => (
+                <Grid item xs={4} key={index}>
+                  <Box 
+                    sx={{ 
+                      textAlign: 'center',
+                      p: 2,
+                      borderRadius: 2,
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-5px)',
+                        bgcolor: 'rgba(255, 255, 255, 0.15)'
+                      }
+                    }}
+                  >
+                    <stat.icon sx={{ fontSize: 24, color: stat.color, mb: 1 }} />
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: stat.color, mb: 0.5 }}>
+                      {stat.value}
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.9, fontSize: '0.75rem' }}>
+                      {stat.label}
+                    </Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
           </Grid>
           
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} lg={6}>
             <Box
               sx={{
                 position: 'relative',
-                textAlign: 'center',
-                display: { xs: 'none', md: 'block' }
+                height: { xs: 300, md: 500 },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              {/* Modern Floating Elements */}
+              {/* Ultra-Modern 3D Floating Cards */}
               <Box
                 sx={{
                   position: 'relative',
-                  height: 400,
-                  '& .floating-element': {
+                  width: '100%',
+                  height: '100%',
+                  perspective: '1000px',
+                  '& .floating-card': {
                     position: 'absolute',
-                    animation: 'float 6s ease-in-out infinite',
-                    '@keyframes float': {
-                      '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
-                      '50%': { transform: 'translateY(-20px) rotate(5deg)' }
+                    borderRadius: 4,
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.2)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      transform: 'translateY(-15px) rotateY(5deg) scale(1.05)',
+                      boxShadow: '0 30px 80px rgba(0, 0, 0, 0.3)'
                     }
                   }
                 }}
               >
-                <Card
-                  className="floating-element"
+                {/* AI Learning Card */}
+                <Paper
+                  className="floating-card"
+                  elevation={0}
                   sx={{
-                    top: 20,
-                    left: 20,
+                    top: '10%',
+                    right: '5%',
+                    width: 200,
+                    p: 3,
+                    bgcolor: 'rgba(102, 126, 234, 0.15)',
+                    border: '1px solid rgba(102, 126, 234, 0.3)',
+                    animation: 'float 6s ease-in-out infinite',
+                    '@keyframes float': {
+                      '0%, 100%': { transform: 'translateY(0px) rotateY(0deg)' },
+                      '50%': { transform: 'translateY(-25px) rotateY(10deg)' }
+                    }
+                  }}
+                >
+                  <Box sx={{ textAlign: 'center' }}>
+                    <People sx={{ fontSize: 40, color: '#667eea', mb: 2 }} />
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', mb: 1 }}>
+                      Expert Instructors
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                      Professional Coaching
+                    </Typography>
+                  </Box>
+                </Paper>
+
+                {/* Interactive Sessions Card */}
+                <Paper
+                  className="floating-card"
+                  elevation={0}
+                  sx={{
+                    top: '30%',
+                    left: '10%',
                     width: 180,
-                    animationDelay: '0s',
-                    bgcolor: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: 3,
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                    p: 3,
+                    bgcolor: 'rgba(255, 107, 107, 0.15)',
+                    border: '1px solid rgba(255, 107, 107, 0.3)',
+                    animation: 'float 8s ease-in-out infinite',
+                    animationDelay: '2s'
                   }}
                 >
-                  <CardContent sx={{ p: 2 }}>
-                    <School sx={{ fontSize: 32, color: '#1976d2', mb: 1 }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#333' }}>
-                      AI-Powered Learning
+                  <Box sx={{ textAlign: 'center' }}>
+                    <VideoCall sx={{ fontSize: 40, color: '#ff6b6b', mb: 2 }} />
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', mb: 1 }}>
+                      Live & Recorded
                     </Typography>
-                  </CardContent>
-                </Card>
-                
-                <Card
-                  className="floating-element"
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                      Flexible Learning
+                    </Typography>
+                  </Box>
+                </Paper>
+
+                {/* Certification Card */}
+                <Paper
+                  className="floating-card"
+                  elevation={0}
                   sx={{
-                    top: 120,
-                    right: 40,
-                    width: 160,
-                    animationDelay: '2s',
-                    bgcolor: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: 3,
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                    bottom: '20%',
+                    right: '10%',
+                    width: 190,
+                    p: 3,
+                    bgcolor: 'rgba(255, 193, 7, 0.15)',
+                    border: '1px solid rgba(255, 193, 7, 0.3)',
+                    animation: 'float 10s ease-in-out infinite',
+                    animationDelay: '4s'
                   }}
                 >
-                  <CardContent sx={{ p: 2 }}>
-                    <VideoCall sx={{ fontSize: 32, color: '#9c27b0', mb: 1 }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#333' }}>
-                      Live Sessions
+                  <Box sx={{ textAlign: 'center' }}>
+                    <WorkspacePremium sx={{ fontSize: 40, color: '#ffc107', mb: 2 }} />
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', mb: 1 }}>
+                      Certification
                     </Typography>
-                  </CardContent>
-                </Card>
-                
-                <Card
-                  className="floating-element"
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                      Progress Tracking
+                    </Typography>
+                  </Box>
+                </Paper>
+
+                {/* Progress Analytics Card */}
+                <Paper
+                  className="floating-card"
+                  elevation={0}
                   sx={{
-                    bottom: 40,
-                    left: 60,
-                    width: 170,
-                    animationDelay: '4s',
-                    bgcolor: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: 3,
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                    bottom: '10%',
+                    left: '5%',
+                    width: 175,
+                    p: 3,
+                    bgcolor: 'rgba(76, 175, 80, 0.15)',
+                    border: '1px solid rgba(76, 175, 80, 0.3)',
+                    animation: 'float 7s ease-in-out infinite',
+                    animationDelay: '1s'
                   }}
                 >
-                  <CardContent sx={{ p: 2 }}>
-                    <EmojiEvents sx={{ fontSize: 32, color: '#f57c00', mb: 1 }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#333' }}>
-                      Certificates
+                  <Box sx={{ textAlign: 'center' }}>
+                    <MenuBook sx={{ fontSize: 40, color: '#4caf50', mb: 2 }} />
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', mb: 1 }}>
+                      Weekly Paths
                     </Typography>
-                  </CardContent>
-                </Card>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                      Structured Learning
+                    </Typography>
+                  </Box>
+                </Paper>
+
+                {/* Central Glow Effect */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: 100,
+                    height: 100,
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                    animation: 'pulse 4s ease-in-out infinite',
+                    '@keyframes pulse': {
+                      '0%, 100%': { transform: 'translate(-50%, -50%) scale(1)' },
+                      '50%': { transform: 'translate(-50%, -50%) scale(1.2)' }
+                    }
+                  }}
+                />
               </Box>
             </Box>
           </Grid>
@@ -314,165 +551,120 @@ const HeroSection: React.FC = () => {
   );
 };
 
-// Categories Section Component
+// Modern Categories Section with Enhanced Design
 const CategoriesSection: React.FC = () => {
   const navigate = useNavigate();
   
   const categories = [
-    { name: 'Computer Science', icon: '💻', color: '#1976d2', count: '1,200+ courses' },
-    { name: 'Business & Management', icon: '📊', color: '#388e3c', count: '800+ courses' },
-    { name: 'Data Science', icon: '📈', color: '#f57c00', count: '600+ courses' },
-    { name: 'Design & Creative', icon: '🎨', color: '#9c27b0', count: '500+ courses' },
-    { name: 'Languages', icon: '🌍', color: '#d32f2f', count: '400+ courses' },
-    { name: 'Health & Medicine', icon: '🏥', color: '#00796b', count: '300+ courses' },
-    { name: 'Engineering', icon: '⚙️', color: '#5d4037', count: '700+ courses' },
-    { name: 'Mathematics', icon: '🔢', color: '#303f9f', count: '350+ courses' }
-  ];
-
-  return (
-    <Box sx={{ py: 8, bgcolor: 'background.default' }}>
-      <Container maxWidth="lg">
-        <Box sx={{ textAlign: 'center', mb: 6 }}>
-          <Typography
-            variant="h3"
-            component="h2"
-            gutterBottom
-            sx={{ fontWeight: 700, color: 'text.primary' }}
-          >
-            Explore by Category
-          </Typography>
-          <Typography
-            variant="h6"
-            sx={{ color: 'text.secondary', maxWidth: 600, mx: 'auto' }}
-          >
-            Discover courses across different fields and find what interests you most
-          </Typography>
-        </Box>
-
-        <Grid container spacing={3}>
-          {categories.map((category, index) => (
-            <Grid item xs={6} md={3} key={index}>
-              <Card
-                sx={{
-                  height: '100%',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: `0 12px 40px ${category.color}20`,
-                    borderColor: category.color
-                  }
-                }}
-                onClick={() => navigate(`/courses?category=${encodeURIComponent(category.name)}`)}
-              >
-                <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography
-                    variant="h2"
-                    sx={{ mb: 2, fontSize: '3rem' }}
-                  >
-                    {category.icon}
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    component="h3"
-                    gutterBottom
-                    sx={{ 
-                      fontWeight: 600,
-                      color: category.color,
-                      mb: 1
-                    }}
-                  >
-                    {category.name}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    {category.count}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-
-        <Box sx={{ textAlign: 'center', mt: 4 }}>
-          <Button
-            variant="outlined"
-            size="large"
-            onClick={() => navigate('/courses')}
-            sx={{
-              px: 4,
-              py: 1.5,
-              fontSize: '1.1rem',
-              borderWidth: 2,
-              '&:hover': {
-                borderWidth: 2,
-                transform: 'translateY(-2px)'
-              }
-            }}
-          >
-            View All Categories
-          </Button>
-        </Box>
-      </Container>
-    </Box>
-  );
-};
-
-// Features Section Component
-const FeaturesSection: React.FC = () => {
-  const features = [
-    {
-      icon: <School sx={{ fontSize: 50 }} />,
-      title: 'AI-Powered Learning',
-      description: 'Personalized learning paths powered by artificial intelligence to optimize your educational journey.',
-      color: '#1976d2',
-      gradient: 'linear-gradient(135deg, #1976d2, #42a5f5)'
+    { 
+      name: 'Business Leadership & Communication', 
+      icon: Business, 
+      color: '#667eea', 
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      count: '50+ courses',
+      description: 'Leadership, Strategy, Communication Skills'
     },
-    {
-      icon: <VideoCall sx={{ fontSize: 50 }} />,
-      title: 'Live Interactive Sessions',
-      description: 'Join real-time classes with expert instructors and collaborate with fellow students worldwide.',
-      color: '#9c27b0',
-      gradient: 'linear-gradient(135deg, #9c27b0, #ba68c8)'
+    { 
+      name: 'Digital Marketing Mastery', 
+      icon: TrendingUp, 
+      color: '#4facfe', 
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      count: '35+ courses',
+      description: 'Social Media, SEO, Content Marketing'
     },
-    {
-      icon: <Quiz sx={{ fontSize: 50 }} />,
-      title: 'Smart Assessments',
-      description: 'Adaptive quizzes and exams that adjust to your learning pace and provide instant feedback.',
-      color: '#f57c00',
-      gradient: 'linear-gradient(135deg, #f57c00, #ffb74d)'
+    { 
+      name: 'Personal Growth & Productivity', 
+      icon: Psychology, 
+      color: '#f093fb', 
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      count: '40+ courses',
+      description: 'Goal Setting, Time Management, Mindfulness'
     },
-    {
-      icon: <Security sx={{ fontSize: 50 }} />,
-      title: 'Secure Proctoring',
-      description: 'Advanced AI proctoring ensures exam integrity while maintaining a comfortable testing environment.',
-      color: '#388e3c',
-      gradient: 'linear-gradient(135deg, #388e3c, #66bb6a)'
+    { 
+      name: 'Tech Skills for Modern Work', 
+      icon: Code, 
+      color: '#43e97b', 
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      count: '30+ courses',
+      description: 'Programming, Data Analysis, Digital Tools'
     },
-    {
-      icon: <EmojiEvents sx={{ fontSize: 50 }} />,
-      title: 'Gamified Learning',
-      description: 'Earn badges, points, and certificates as you progress through your learning milestones.',
-      color: '#d32f2f',
-      gradient: 'linear-gradient(135deg, #d32f2f, #ef5350)'
+    { 
+      name: 'Public Speaking & Confidence', 
+      icon: QuestionAnswer, 
+      color: '#fa709a', 
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      count: '25+ courses',
+      description: 'Presentation Skills, Confidence Building'
     },
-    {
-      icon: <TrendingUp sx={{ fontSize: 50 }} />,
-      title: 'Progress Analytics',
-      description: 'Detailed insights into your learning progress with actionable recommendations for improvement.',
-      color: '#7b1fa2',
-      gradient: 'linear-gradient(135deg, #7b1fa2, #ab47bc)'
+    { 
+      name: 'Academic Coaching', 
+      icon: School, 
+      color: '#a8edea', 
+      gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+      count: '45+ courses',
+      description: 'Study Skills, Research Methods, Exam Prep'
+    },
+    { 
+      name: 'Professional Development', 
+      icon: WorkspacePremium, 
+      color: '#fdbb2d', 
+      gradient: 'linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%)',
+      count: '60+ courses',
+      description: 'Career Advancement, Networking, Skills'
+    },
+    { 
+      name: 'Business Coaching', 
+      icon: Analytics, 
+      color: '#ff9a9e', 
+      gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
+      count: '35+ courses',
+      description: 'Entrepreneurship, Business Strategy, Finance'
     }
   ];
 
   return (
-    <Box sx={{ py: 12, bgcolor: 'grey.50' }}>
-      <Container maxWidth="lg">
+    <Box 
+      sx={{ 
+        py: 12, 
+        background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Background Pattern */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          opacity: 0.05,
+          backgroundImage: `
+            radial-gradient(circle at 25% 25%, #667eea 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, #f093fb 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, #4facfe 0%, transparent 50%)
+          `
+        }}
+      />
+
+      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
         <Box sx={{ textAlign: 'center', mb: 10 }}>
+          <Box sx={{ mb: 3 }}>
+            <Chip
+              icon={<LightbulbOutlined />}
+              label="🎯 Choose Your Path"
+              sx={{
+                bgcolor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                fontSize: '0.9rem',
+                border: '1px solid rgba(102, 126, 234, 0.2)'
+              }}
+            />
+          </Box>
           <Typography
             variant="h2"
             component="h2"
@@ -480,14 +672,15 @@ const FeaturesSection: React.FC = () => {
             sx={{ 
               fontWeight: 800, 
               color: 'text.primary',
-              fontSize: { xs: '2rem', md: '3rem' },
-              background: 'linear-gradient(45deg, #1976d2, #9c27b0)',
+              fontSize: { xs: '2.5rem', md: '3.5rem' },
+              background: 'linear-gradient(135deg, #667eea 0%, #f093fb 50%, #4facfe 100%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
+              WebkitTextFillColor: 'transparent',
+              mb: 3
             }}
           >
-            Why Choose Excellence Hub?
+            Explore Our Top Programs
           </Typography>
           <Typography
             variant="h5"
@@ -495,74 +688,74 @@ const FeaturesSection: React.FC = () => {
               color: 'text.secondary', 
               maxWidth: 700, 
               mx: 'auto',
-              fontWeight: 400,
-              lineHeight: 1.6
+              lineHeight: 1.6,
+              fontWeight: 400
             }}
           >
-            Experience the future of education with our cutting-edge platform designed for modern learners
+            Discover the skills that shape the future — from leadership to technology, academic success to business mastery.
           </Typography>
         </Box>
 
         <Grid container spacing={4}>
-          {features.map((feature, index) => (
-            <Grid item xs={12} md={6} lg={4} key={index}>
-              <Card
+          {categories.map((category, index) => (
+            <Grid item xs={12} sm={6} lg={3} key={index}>
+              <Paper
+                elevation={0}
                 sx={{
                   height: '100%',
+                  cursor: 'pointer',
                   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                  position: 'relative',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  borderRadius: 4,
                   overflow: 'hidden',
+                  position: 'relative',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(10px)',
                   '&:hover': {
                     transform: 'translateY(-12px) scale(1.02)',
-                    boxShadow: `0 20px 60px ${feature.color}30`,
-                    '& .feature-icon': {
-                      transform: 'scale(1.1) rotate(5deg)',
-                    },
-                    '& .feature-gradient': {
+                    boxShadow: '0 25px 80px rgba(0,0,0,0.15)',
+                    borderColor: category.color,
+                    '& .category-gradient': {
                       opacity: 1,
+                      transform: 'scale(1.1)'
+                    },
+                    '& .category-icon': {
+                      transform: 'scale(1.2) rotate(10deg)',
+                      color: '#fff'
                     }
-                  },
-                  border: 'none',
-                  borderRadius: 3
+                  }
                 }}
+                onClick={() => navigate(`/courses?category=${encodeURIComponent(category.name)}`)}
               >
                 {/* Gradient Overlay */}
                 <Box
-                  className="feature-gradient"
+                  className="category-gradient"
                   sx={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: feature.gradient,
+                    background: category.gradient,
                     opacity: 0,
-                    transition: 'opacity 0.4s ease'
+                    transition: 'all 0.4s ease',
+                    transform: 'scale(0.8)',
+                    borderRadius: 4
                   }}
                 />
                 
-                <CardContent sx={{ 
-                  p: 4, 
-                  textAlign: 'center',
-                  position: 'relative',
-                  zIndex: 1,
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center'
-                }}>
-                  <Box
-                    className="feature-icon"
-                    sx={{
-                      color: feature.color,
-                      mb: 3,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      transition: 'all 0.4s ease'
-                    }}
-                  >
-                    {feature.icon}
+                <CardContent sx={{ p: 4, textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ mb: 3 }}>
+                    <category.icon
+                      className="category-icon"
+                      sx={{
+                        fontSize: 48,
+                        color: category.color,
+                        transition: 'all 0.4s ease'
+                      }}
+                    />
                   </Box>
+                  
                   <Typography
                     variant="h5"
                     component="h3"
@@ -570,23 +763,345 @@ const FeaturesSection: React.FC = () => {
                     sx={{ 
                       fontWeight: 700,
                       color: 'text.primary',
-                      mb: 2
+                      mb: 2,
+                      position: 'relative',
+                      zIndex: 2
                     }}
                   >
-                    {feature.title}
+                    {category.name}
                   </Typography>
+                  
+                  <Typography
+                    variant="body2"
+                    sx={{ 
+                      color: 'text.secondary',
+                      mb: 2,
+                      lineHeight: 1.5,
+                      position: 'relative',
+                      zIndex: 2
+                    }}
+                  >
+                    {category.description}
+                  </Typography>
+                  
+                  <Chip
+                    label={category.count}
+                    size="small"
+                    sx={{
+                      bgcolor: `${category.color}15`,
+                      color: category.color,
+                      fontWeight: 600,
+                      border: `1px solid ${category.color}30`,
+                      position: 'relative',
+                      zIndex: 2
+                    }}
+                  />
+                </CardContent>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+
+        <Box sx={{ textAlign: 'center', mt: 8 }}>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<ElectricBolt />}
+            onClick={() => navigate('/courses')}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              px: 6,
+              py: 2,
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              borderRadius: 3,
+              textTransform: 'none',
+              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                transform: 'translateY(-3px)',
+                boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Explore All Categories
+          </Button>
+        </Box>
+      </Container>
+    </Box>
+  );
+};
+
+// Next-Gen Features Section with Advanced Design
+const FeaturesSection: React.FC = () => {
+  const features = [
+    {
+      icon: People,
+      title: 'Expert Instructors',
+      description: 'Learn from industry professionals and certified coaches with real-world experience and proven track records.',
+      color: '#667eea',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      badge: 'Expert Learning'
+    },
+    {
+      icon: VideoCall,
+      title: 'Live & Recorded Sessions',
+      description: 'Join interactive live classes or access comprehensive recorded sessions anytime, anywhere at your own pace.',
+      color: '#f093fb',
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      badge: 'Flexible Learning'
+    },
+    {
+      icon: MenuBook,
+      title: 'Weekly Learning Paths',
+      description: 'Follow structured weekly learning plans designed for optimal knowledge retention and skill development.',
+      color: '#4facfe',
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      badge: 'Structured Progress'
+    },
+    {
+      icon: Support,
+      title: 'Cloud-Based Materials',
+      description: 'Access all course materials, resources, and tools from our secure cloud platform on any device.',
+      color: '#43e97b',
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      badge: 'Always Available'
+    },
+    {
+      icon: Analytics,
+      title: 'Progress Tracking & Certification',
+      description: 'Monitor your learning journey with detailed analytics and earn recognized certificates upon completion.',
+      color: '#fa709a',
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      badge: 'Measurable Results'
+    },
+    {
+      icon: Psychology,
+      title: 'Personalized Coaching',
+      description: 'Receive individual coaching sessions tailored to your goals, challenges, and learning preferences.',
+      color: '#a8edea',
+      gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+      badge: 'Individual Focus'
+    }
+  ];
+
+  return (
+    <Box 
+      sx={{ 
+        py: 15, 
+        background: `
+          linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%),
+          linear-gradient(45deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 100%)
+        `,
+        color: 'white',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Animated Background Elements */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `
+            radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(255, 255, 255, 0.05) 0%, transparent 50%)
+          `,
+          animation: 'shimmer 8s ease-in-out infinite',
+          '@keyframes shimmer': {
+            '0%, 100%': { opacity: 0.3 },
+            '50%': { opacity: 0.8 }
+          }
+        }}
+      />
+
+      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ textAlign: 'center', mb: 12 }}>
+          <Box sx={{ mb: 4 }}>
+            <Chip
+              icon={<AutoAwesome sx={{ color: '#FFD700 !important' }} />}
+              label="✨ Next-Generation Features"
+              sx={{
+                bgcolor: 'rgba(255, 215, 0, 0.15)',
+                color: '#FFD700',
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                fontSize: '0.95rem',
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                backdropFilter: 'blur(20px)'
+              }}
+            />
+          </Box>
+          <Typography
+            variant="h2"
+            component="h2"
+            gutterBottom
+            sx={{ 
+              fontWeight: 900, 
+              fontSize: { xs: '2.5rem', md: '4rem' },
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textShadow: '0 0 60px rgba(255, 255, 255, 0.3)',
+              mb: 4
+            }}
+          >
+            Why Excellence Coaching Hub?
+          </Typography>
+          <Typography
+            variant="h4"
+            sx={{ 
+              color: 'rgba(255, 255, 255, 0.9)', 
+              maxWidth: 800, 
+              mx: 'auto',
+              fontWeight: 400,
+              lineHeight: 1.6,
+              fontSize: { xs: '1.2rem', md: '1.5rem' }
+            }}
+          >
+            Excellence Coaching Hub is a modern eLearning platform built to empower students, professionals, and organizations with practical, high-quality learning experiences.
+          </Typography>
+        </Box>
+
+        <Grid container spacing={5}>
+          {features.map((feature, index) => (
+            <Grid item xs={12} md={6} lg={4} key={index}>
+              <Paper
+                elevation={0}
+                sx={{
+                  height: '100%',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: 4,
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&:hover': {
+                    transform: 'translateY(-15px) rotateY(5deg) scale(1.02)',
+                    boxShadow: '0 30px 80px rgba(0, 0, 0, 0.3)',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    '& .feature-gradient': {
+                      opacity: 1,
+                      transform: 'scale(1.1) rotate(5deg)'
+                    },
+                    '& .feature-icon': {
+                      transform: 'scale(1.3) rotate(15deg)',
+                      filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.5))'
+                    },
+                    '& .feature-badge': {
+                      transform: 'scale(1.1)',
+                      boxShadow: '0 8px 25px rgba(255, 215, 0, 0.4)'
+                    }
+                  }
+                }}
+              >
+                {/* Dynamic Gradient Overlay */}
+                <Box
+                  className="feature-gradient"
+                  sx={{
+                    position: 'absolute',
+                    top: -50,
+                    left: -50,
+                    right: -50,
+                    bottom: -50,
+                    background: feature.gradient,
+                    opacity: 0,
+                    transition: 'all 0.4s ease',
+                    transform: 'scale(0.8) rotate(-5deg)',
+                    borderRadius: 6,
+                    filter: 'blur(40px)'
+                  }}
+                />
+                
+                <CardContent sx={{ 
+                  p: 5, 
+                  textAlign: 'center',
+                  position: 'relative',
+                  zIndex: 1,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}>
+                  <Box>
+                    {/* Feature Badge */}
+                    <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+                      <Chip
+                        className="feature-badge"
+                        label={feature.badge}
+                        size="small"
+                        sx={{
+                          bgcolor: 'rgba(255, 215, 0, 0.2)',
+                          color: '#FFD700',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          border: '1px solid rgba(255, 215, 0, 0.3)',
+                          transition: 'all 0.3s ease'
+                        }}
+                      />
+                    </Box>
+
+                    {/* Feature Icon */}
+                    <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
+                      <Box
+                        sx={{
+                          p: 3,
+                          borderRadius: '50%',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          backdropFilter: 'blur(20px)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <feature.icon
+                          className="feature-icon"
+                          sx={{
+                            fontSize: 40,
+                            color: feature.color,
+                            transition: 'all 0.4s ease'
+                          }}
+                        />
+                      </Box>
+                    </Box>
+
+                    <Typography
+                      variant="h4"
+                      component="h3"
+                      gutterBottom
+                      sx={{ 
+                        fontWeight: 700,
+                        color: 'white',
+                        mb: 3,
+                        fontSize: { xs: '1.3rem', md: '1.5rem' }
+                      }}
+                    >
+                      {feature.title}
+                    </Typography>
+                  </Box>
+
                   <Typography
                     variant="body1"
                     sx={{ 
-                      color: 'text.secondary', 
+                      color: 'rgba(255, 255, 255, 0.85)', 
                       lineHeight: 1.7,
-                      fontSize: '1rem'
+                      fontSize: '1rem',
+                      fontWeight: 400
                     }}
                   >
                     {feature.description}
                   </Typography>
                 </CardContent>
-              </Card>
+              </Paper>
             </Grid>
           ))}
         </Grid>
@@ -595,7 +1110,7 @@ const FeaturesSection: React.FC = () => {
   );
 };
 
-// Featured Courses Section Component
+// Ultra-Modern Featured Courses Section with Enhanced Design
 const FeaturedCoursesSection: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
@@ -629,36 +1144,151 @@ const FeaturedCoursesSection: React.FC = () => {
   const featuredCourses = coursesData?.courses || [];
 
   return (
-    <Box sx={{ py: 10, bgcolor: 'grey.50' }}>
-      <Container maxWidth="lg">
-        <>
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography
-              variant="h3"
-              component="h2"
-              gutterBottom
-              sx={{ fontWeight: 700, color: 'text.primary' }}
-            >
-              {isAuthenticated && user?.role === 'student' ? 'My Enrolled Courses' : 'Featured Courses'}
-            </Typography>
-            <Typography
-              variant="h6"
-              sx={{ color: 'text.secondary', maxWidth: 600, mx: 'auto', mb: 4 }}
-            >
-              {isAuthenticated && user?.role === 'student' 
-                ? 'Continue your learning journey with your enrolled courses'
-                : 'Discover our most popular courses taught by industry experts'
-              }
-            </Typography>
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => navigate('/courses')}
-              sx={{ mb: 4 }}
-            >
-              View All Courses
-            </Button>
+    <Box 
+      sx={{ 
+        py: 12, 
+        background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Floating Geometric Elements */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '10%',
+          right: '5%',
+          width: 120,
+          height: 120,
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #667eea, #764ba2)',
+          opacity: 0.1,
+          animation: 'float 8s ease-in-out infinite'
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '20%',
+          left: '8%',
+          width: 80,
+          height: 80,
+          borderRadius: 2,
+          background: 'linear-gradient(135deg, #f093fb, #f5576c)',
+          opacity: 0.1,
+          animation: 'float 6s ease-in-out infinite reverse'
+        }}
+      />
+
+      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ textAlign: 'center', mb: 10 }}>
+          <Box sx={{ mb: 4 }}>
+            <Chip
+              icon={<MenuBook sx={{ color: '#667eea !important' }} />}
+              label={isAuthenticated && user?.role === 'student' ? "🎓 My Learning Path" : "⭐ Featured Courses"}
+              sx={{
+                bgcolor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                fontSize: '0.95rem',
+                border: '1px solid rgba(102, 126, 234, 0.2)'
+              }}
+            />
           </Box>
+          
+          <Typography
+            variant="h2"
+            component="h2"
+            gutterBottom
+            sx={{ 
+              fontWeight: 800, 
+              color: 'text.primary',
+              fontSize: { xs: '2.5rem', md: '3.5rem' },
+              background: 'linear-gradient(135deg, #667eea 0%, #f093fb 50%, #4facfe 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 4
+            }}
+          >
+            {isAuthenticated && user?.role === 'student' ? 'Continue Your Journey' : 'Trending Courses'}
+          </Typography>
+          
+          <Typography
+            variant="h5"
+            sx={{ 
+              color: 'text.secondary', 
+              maxWidth: 700, 
+              mx: 'auto', 
+              mb: 6,
+              lineHeight: 1.6,
+              fontWeight: 400
+            }}
+          >
+            {isAuthenticated && user?.role === 'student' 
+              ? 'Pick up where you left off and accelerate your learning with personalized recommendations'
+              : 'Explore our most popular courses designed by industry experts and loved by learners worldwide'
+            }
+          </Typography>
+          
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} justifyContent="center" sx={{ mb: 4 }}>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<Explore />}
+              onClick={() => navigate('/courses')}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                px: 4,
+                py: 1.5,
+                fontSize: '1.1rem',
+                fontWeight: 600,
+                borderRadius: 3,
+                textTransform: 'none',
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              Explore All Courses
+            </Button>
+            
+            {!isAuthenticated && (
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<RocketLaunch />}
+                onClick={() => navigate('/register')}
+                sx={{
+                  borderColor: 'rgba(102, 126, 234, 0.5)',
+                  color: '#667eea',
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  borderRadius: 3,
+                  borderWidth: 2,
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: '#667eea',
+                    bgcolor: 'rgba(102, 126, 234, 0.05)',
+                    transform: 'translateY(-3px)',
+                    borderWidth: 2
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                Start Learning Free
+              </Button>
+            )}
+          </Stack>
+        </Box>
 
           {/* Loading State */}
           {isLoading && (
@@ -674,276 +1304,585 @@ const FeaturedCoursesSection: React.FC = () => {
             </Alert>
           )}
 
-          {/* Courses Grid */}
+          {/* Enhanced Courses Grid */}
           {!isLoading && !error && (
-            <Grid container spacing={4}>
+            <>
+            <Grid container spacing={5}>
               {featuredCourses.length === 0 ? (
                 <Grid item xs={12}>
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="h6" color="text.secondary">
-                      No courses available at the moment.
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      textAlign: 'center',
+                      py: 8,
+                      px: 4,
+                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(240, 147, 251, 0.1) 100%)',
+                      borderRadius: 4,
+                      border: '1px solid rgba(102, 126, 234, 0.2)'
+                    }}
+                  >
+                    <MenuBook sx={{ fontSize: 60, color: '#667eea', mb: 3, opacity: 0.7 }} />
+                    <Typography variant="h5" color="text.primary" sx={{ fontWeight: 600, mb: 2 }}>
+                      No courses available at the moment
                     </Typography>
-                  </Box>
+                    <Typography variant="body1" color="text.secondary">
+                      Check back soon for exciting new learning opportunities!
+                    </Typography>
+                  </Paper>
                 </Grid>
               ) : (
                 featuredCourses.map((course) => (
-                <Grid item xs={12} md={6} lg={4} key={course._id}>
-                  <Card
+                <Grid item xs={12} sm={6} lg={4} key={course._id}>
+                  <Paper
+                    elevation={0}
                     sx={{
                       height: '100%',
                       display: 'flex',
                       flexDirection: 'column',
-                      transition: 'all 0.3s ease',
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                      border: '1px solid rgba(0, 0, 0, 0.08)',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      backdropFilter: 'blur(10px)',
+                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      cursor: 'pointer',
                       '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
-                      },
-                      cursor: 'pointer'
+                        transform: 'translateY(-12px) scale(1.02)',
+                        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.15)',
+                        border: '1px solid rgba(102, 126, 234, 0.3)',
+                        '& .course-image': {
+                          transform: 'scale(1.1)',
+                        },
+                        '& .course-overlay': {
+                          opacity: 1,
+                        }
+                      }
                     }}
                     onClick={() => navigate(`/courses/${course._id}`)}
                   >
-                    <CardMedia
-                      component="div"
+                    {/* Course Image/Thumbnail */}
+                    <Box
                       sx={{
-                        height: 200,
-                        background: course.thumbnail 
-                          ? `url(${course.thumbnail})` 
-                          : `linear-gradient(45deg, ${
-                              course.category.toLowerCase().includes('programming') || course.category.toLowerCase().includes('web') 
-                                ? '#667eea, #764ba2' 
-                                : course.category.toLowerCase().includes('data') || course.category.toLowerCase().includes('science')
-                                ? '#f093fb, #f5576c' 
-                                : '#4facfe, #00f2fe'
-                            })`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '3rem'
+                        height: 220,
+                        position: 'relative',
+                        overflow: 'hidden'
                       }}
                     >
-                      {!course.thumbnail && (
-                        course.category.toLowerCase().includes('programming') || course.category.toLowerCase().includes('web') 
-                          ? '💻' 
-                          : course.category.toLowerCase().includes('data') || course.category.toLowerCase().includes('science')
-                          ? '📊' 
-                          : '📚'
-                      )}
-                    </CardMedia>
+                      <CardMedia
+                        className="course-image"
+                        component="div"
+                        sx={{
+                          height: '100%',
+                          background: course.thumbnail 
+                            ? `url(${course.thumbnail})` 
+                            : `linear-gradient(135deg, ${
+                                course.category.toLowerCase().includes('programming') || course.category.toLowerCase().includes('web') 
+                                  ? '#667eea 0%, #764ba2 100%' 
+                                  : course.category.toLowerCase().includes('data') || course.category.toLowerCase().includes('science')
+                                  ? '#f093fb 0%, #f5576c 100%' 
+                                  : '#4facfe 0%, #00f2fe 100%'
+                              })`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '4rem',
+                          transition: 'transform 0.4s ease',
+                          position: 'relative'
+                        }}
+                      >
+                        {!course.thumbnail && (
+                          course.category.toLowerCase().includes('programming') || course.category.toLowerCase().includes('web') 
+                            ? '💻' 
+                            : course.category.toLowerCase().includes('data') || course.category.toLowerCase().includes('science')
+                            ? '📊' 
+                            : '📚'
+                        )}
+                      </CardMedia>
+                      
+                      {/* Gradient Overlay */}
+                      <Box
+                        className="course-overlay"
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%)',
+                          opacity: 0,
+                          transition: 'opacity 0.4s ease',
+                          display: 'flex',
+                          alignItems: 'flex-end',
+                          p: 3
+                        }}
+                      >
+                        <PlayArrow 
+                          sx={{ 
+                            color: 'white', 
+                            fontSize: 48,
+                            filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))'
+                          }} 
+                        />
+                      </Box>
+                    </Box>
 
-                    <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <CardContent sx={{ flexGrow: 1, p: 4, pb: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                         <Chip
                           label={course.category}
                           size="small"
-                          color="primary"
-                          sx={{ mr: 1 }}
+                          sx={{
+                            bgcolor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            fontWeight: 600,
+                            border: '1px solid rgba(102, 126, 234, 0.2)',
+                            '& .MuiChip-label': { fontSize: '0.8rem' }
+                          }}
                         />
                         <Chip
                           label={course.level.charAt(0).toUpperCase() + course.level.slice(1)}
                           size="small"
-                          variant="outlined"
+                          sx={{
+                            bgcolor: 'rgba(240, 147, 251, 0.1)',
+                            color: '#f093fb',
+                            fontWeight: 600,
+                            border: '1px solid rgba(240, 147, 251, 0.2)',
+                            '& .MuiChip-label': { fontSize: '0.8rem' }
+                          }}
                         />
                       </Box>
 
                       <Typography
-                        variant="h6"
+                        variant="h5"
                         component="h3"
                         gutterBottom
                         sx={{ 
-                          fontWeight: 600, 
+                          fontWeight: 700, 
                           lineHeight: 1.3,
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
+                          overflow: 'hidden',
+                          color: 'text.primary',
+                          mb: 2,
+                          fontSize: '1.3rem'
                         }}
                       >
                         {course.title}
                       </Typography>
 
                       <Typography
-                        variant="body2"
+                        variant="body1"
                         sx={{ 
                           color: 'text.secondary', 
-                          mb: 2, 
+                          mb: 3, 
                           lineHeight: 1.6,
                           display: '-webkit-box',
                           WebkitLineClamp: 3,
                           WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
+                          overflow: 'hidden',
+                          fontSize: '0.95rem'
                         }}
                       >
                         {course.description}
                       </Typography>
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <Avatar sx={{ width: 32, height: 32, mr: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                        <Avatar 
+                          sx={{ 
+                            width: 40, 
+                            height: 40, 
+                            mr: 2,
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            fontWeight: 600
+                          }}
+                        >
                           {course.instructor && course.instructor.firstName && course.instructor.lastName 
                             ? `${course.instructor.firstName[0]}${course.instructor.lastName[0]}`
                             : 'IN'
                           }
                         </Avatar>
+                        <Box>
+                          <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 600, mb: 0.5 }}>
+                            {course.instructor && course.instructor.firstName 
+                              ? `${course.instructor.firstName} ${course.instructor.lastName}`
+                              : 'Expert Instructor'
+                            }
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            Course Instructor
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                        <Rating 
+                          value={course.rating || 0} 
+                          precision={0.1} 
+                          size="small" 
+                          readOnly 
+                          sx={{ mr: 2 }}
+                        />
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mr: 1 }}>
+                          {course.rating ? course.rating.toFixed(1) : 'New'}
+                        </Typography>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          {course.instructor && course.instructor.firstName 
-                            ? `${course.instructor.firstName} ${course.instructor.lastName}`
-                            : 'Unknown Instructor'
-                          }
+                          ({course.enrollmentCount || 0} students)
                         </Typography>
                       </Box>
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <Rating value={course.rating || 0} precision={0.1} size="small" readOnly />
-                        <Typography variant="body2" sx={{ ml: 1, color: 'text.secondary' }}>
-                          {course.rating ? course.rating.toFixed(1) : 'New'} ({course.enrollmentCount || 0} students)
-                        </Typography>
-                      </Box>
+                      <Divider sx={{ mb: 3 }} />
 
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Box>
                           {course.price > 0 ? (
                             <Typography
-                              variant="h6"
-                              sx={{ fontWeight: 700, color: 'primary.main' }}
+                              variant="h5"
+                              sx={{ 
+                                fontWeight: 800, 
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                backgroundClip: 'text',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent'
+                              }}
                             >
                               ${course.price}
                             </Typography>
                           ) : (
                             <Typography
-                              variant="h6"
-                              sx={{ fontWeight: 700, color: 'success.main' }}
+                              variant="h5"
+                              sx={{ 
+                                fontWeight: 800, 
+                                background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                                backgroundClip: 'text',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent'
+                              }}
                             >
                               FREE
                             </Typography>
                           )}
                         </Box>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          {course.duration}h
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <TrendingUp sx={{ fontSize: 18, color: 'text.secondary', mr: 0.5 }} />
+                          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                            {course.duration}h course
+                          </Typography>
+                        </Box>
                       </Box>
                     </CardContent>
-                  </Card>
+                  </Paper>
                 </Grid>
               ))
             )}
           </Grid>
-        )}
         </>
+      )}
       </Container>
     </Box>
   );
 };
 
-// Testimonials Section Component
+// Ultra-Modern Testimonials Section with Enhanced Design
 const TestimonialsSection: React.FC = () => {
   const testimonials = [
     {
-      name: 'Alex Thompson',
-      role: 'Software Engineer at Google',
+      name: 'John Uwimana',
+      role: 'Business Development Manager',
+      company: 'Local Enterprise, Kigali',
       avatar: '/images/avatar1.jpg',
       rating: 5,
-      text: 'Excellence Hub transformed my career! The AI-powered learning paths helped me land my dream job at Google. The instructors are world-class and the content is always up-to-date.'
+      text: 'Excellence Coaching Hub transformed the way I learn — I finally completed a course that gave me practical confidence in my career. The weekly structure made learning manageable.',
+      achievement: 'Career Growth: Leadership Role Promotion',
+      color: '#4285F4'
     },
     {
-      name: 'Maria Garcia',
-      role: 'Data Scientist at Microsoft',
+      name: 'Marie Kamikazi',
+      role: 'Digital Marketing Specialist',
+      company: 'Tech Startup, Rwanda',
       avatar: '/images/avatar2.jpg',
       rating: 5,
-      text: 'The data science course was incredible. The hands-on projects and real-world applications made complex concepts easy to understand. Highly recommend!'
+      text: 'Their weekly course structure made learning manageable and consistent. The expert instructors provided practical skills that I could immediately apply to my work.',
+      achievement: 'Skills Gained: Digital Marketing Expertise',
+      color: '#00A4EF'
     },
     {
-      name: 'David Kim',
-      role: 'Digital Marketing Manager',
+      name: 'James Nsabimana',
+      role: 'Academic Coordinator',
+      company: 'Professional Learner',
       avatar: '/images/avatar3.jpg',
       rating: 5,
-      text: 'As a busy professional, the flexible learning schedule and mobile app made it possible for me to upskill while working full-time. The ROI has been amazing!'
+      text: 'As a professional, I found the coaching approach incredibly effective. The cloud-based materials and progress tracking made continuous learning accessible anytime.',
+      achievement: 'Impact: Improved teaching methodology',
+      color: '#FF9900'
     }
   ];
 
   return (
-    <Box sx={{ py: 10, bgcolor: 'background.default' }}>
-      <Container maxWidth="lg">
-        <Box sx={{ textAlign: 'center', mb: 8 }}>
+    <Box 
+      sx={{ 
+        py: 15, 
+        background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Animated Background Elements */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '15%',
+          right: '5%',
+          width: 100,
+          height: 100,
+          borderRadius: '50%',
+          background: 'rgba(102, 126, 234, 0.1)',
+          animation: 'float 10s ease-in-out infinite'
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '10%',
+          left: '10%',
+          width: 80,
+          height: 80,
+          borderRadius: 3,
+          background: 'rgba(240, 147, 251, 0.1)',
+          animation: 'float 8s ease-in-out infinite reverse'
+        }}
+      />
+
+      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ textAlign: 'center', mb: 12 }}>
+          <Box sx={{ mb: 4 }}>
+            <Chip
+              icon={<Star sx={{ color: '#FFD700 !important' }} />}
+              label="💬 Success Stories"
+              sx={{
+                bgcolor: 'rgba(255, 215, 0, 0.15)',
+                color: '#FFD700',
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                fontSize: '0.95rem',
+                border: '1px solid rgba(255, 215, 0, 0.3)'
+              }}
+            />
+          </Box>
+          
           <Typography
-            variant="h3"
+            variant="h2"
             component="h2"
             gutterBottom
-            sx={{ fontWeight: 700, color: 'text.primary' }}
+            sx={{ 
+              fontWeight: 800, 
+              color: 'text.primary',
+              fontSize: { xs: '2.5rem', md: '3.5rem' },
+              background: 'linear-gradient(135deg, #667eea 0%, #f093fb 50%, #4facfe 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 4
+            }}
           >
-            What Our Students Say
+            What Our Learners Say
           </Typography>
+          
           <Typography
-            variant="h6"
-            sx={{ color: 'text.secondary', maxWidth: 600, mx: 'auto' }}
+            variant="h5"
+            sx={{ 
+              color: 'text.secondary', 
+              maxWidth: 800, 
+              mx: 'auto',
+              lineHeight: 1.6,
+              fontWeight: 400,
+              mb: 2
+            }}
           >
-            Join thousands of successful learners who have transformed their careers
+            Real stories from learners who have transformed their careers through Excellence Coaching Hub
+          </Typography>
+          
+          <Typography
+            variant="body1"
+            sx={{ 
+              color: 'text.secondary', 
+              maxWidth: 600, 
+              mx: 'auto',
+              opacity: 0.8
+            }}
+          >
+            Real stories from real people who trusted us with their future
           </Typography>
         </Box>
 
-        <Grid container spacing={4}>
+        <Grid container spacing={5}>
           {testimonials.map((testimonial, index) => (
-            <Grid item xs={12} md={4} key={index}>
-              <Card
+            <Grid item xs={12} lg={4} key={index}>
+              <Paper
+                elevation={0}
                 sx={{
                   height: '100%',
-                  p: 3,
-                  textAlign: 'center',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'all 0.3s ease',
+                  p: 5,
+                  borderRadius: 4,
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    borderColor: 'primary.main',
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
+                    transform: 'translateY(-15px) scale(1.02)',
+                    boxShadow: '0 30px 80px rgba(0, 0, 0, 0.15)',
+                    border: `1px solid ${testimonial.color}50`,
+                    '& .testimonial-gradient': {
+                      opacity: 1,
+                      transform: 'scale(1.1)'
+                    },
+                    '& .testimonial-avatar': {
+                      transform: 'scale(1.1)',
+                      boxShadow: `0 15px 40px ${testimonial.color}40`
+                    }
                   }
                 }}
               >
-                <Avatar
+                {/* Background Gradient */}
+                <Box
+                  className="testimonial-gradient"
                   sx={{
-                    width: 80,
-                    height: 80,
-                    mx: 'auto',
-                    mb: 2,
-                    bgcolor: 'primary.main'
+                    position: 'absolute',
+                    top: -50,
+                    left: -50,
+                    right: -50,
+                    bottom: -50,
+                    background: `radial-gradient(circle, ${testimonial.color}20 0%, transparent 70%)`,
+                    opacity: 0,
+                    transition: 'all 0.4s ease',
+                    transform: 'scale(0.8)',
+                    borderRadius: 6
                   }}
-                >
-                  {testimonial.name.split(' ').map(n => n[0]).join('')}
-                </Avatar>
-
-                <Rating
-                  value={testimonial.rating}
-                  readOnly
-                  sx={{ mb: 2 }}
                 />
 
-                <Typography
-                  variant="body1"
-                  sx={{
-                    mb: 3,
-                    fontStyle: 'italic',
-                    lineHeight: 1.7,
-                    color: 'text.secondary'
-                  }}
-                >
-                  "{testimonial.text}"
-                </Typography>
+                <Box sx={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                  {/* Company Badge */}
+                  <Box sx={{ mb: 3 }}>
+                    <Chip
+                      label={testimonial.company}
+                      size="small"
+                      sx={{
+                        bgcolor: `${testimonial.color}15`,
+                        color: testimonial.color,
+                        fontWeight: 600,
+                        border: `1px solid ${testimonial.color}30`,
+                        fontSize: '0.75rem'
+                      }}
+                    />
+                  </Box>
 
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 600, mb: 0.5 }}
-                >
-                  {testimonial.name}
-                </Typography>
+                  {/* Enhanced Avatar */}
+                  <Avatar
+                    className="testimonial-avatar"
+                    sx={{
+                      width: 90,
+                      height: 90,
+                      mx: 'auto',
+                      mb: 3,
+                      background: `linear-gradient(135deg, ${testimonial.color} 0%, ${testimonial.color}CC 100%)`,
+                      fontSize: '2rem',
+                      fontWeight: 700,
+                      border: '3px solid rgba(255, 255, 255, 0.8)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.4s ease'
+                    }}
+                  >
+                    {testimonial.name.split(' ').map(n => n[0]).join('')}
+                  </Avatar>
 
-                <Typography
-                  variant="body2"
-                  sx={{ color: 'text.secondary' }}
-                >
-                  {testimonial.role}
-                </Typography>
-              </Card>
+                  {/* Rating */}
+                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+                    <Rating
+                      value={testimonial.rating}
+                      readOnly
+                      size="small"
+                      sx={{ 
+                        '& .MuiRating-iconFilled': {
+                          color: '#FFD700'
+                        }
+                      }}
+                    />
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                      5.0
+                    </Typography>
+                  </Box>
+
+                  {/* Testimonial Text */}
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      mb: 4,
+                      fontStyle: 'italic',
+                      lineHeight: 1.7,
+                      color: 'text.primary',
+                      fontSize: '1rem',
+                      position: 'relative',
+                      '&:before': {
+                        content: '"',
+                        position: 'absolute',
+                        top: -20,
+                        left: -10,
+                        fontSize: '4rem',
+                        color: testimonial.color,
+                        opacity: 0.3,
+                        fontFamily: 'serif'
+                      }
+                    }}
+                  >
+                    {testimonial.text}
+                  </Typography>
+
+                  {/* Achievement Badge */}
+                  <Box sx={{ mb: 3 }}>
+                    <Chip
+                      label={testimonial.achievement}
+                      size="small"
+                      sx={{
+                        bgcolor: 'rgba(76, 175, 80, 0.1)',
+                        color: '#4CAF50',
+                        fontWeight: 600,
+                        border: '1px solid rgba(76, 175, 80, 0.2)',
+                        fontSize: '0.75rem'
+                      }}
+                    />
+                  </Box>
+
+                  {/* Name and Role */}
+                  <Typography
+                    variant="h6"
+                    sx={{ 
+                      fontWeight: 700, 
+                      mb: 1,
+                      color: 'text.primary'
+                    }}
+                  >
+                    {testimonial.name}
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    sx={{ 
+                      color: 'text.secondary',
+                      fontWeight: 500,
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    {testimonial.role}
+                  </Typography>
+                </Box>
+              </Paper>
             </Grid>
           ))}
         </Grid>
@@ -952,26 +1891,61 @@ const TestimonialsSection: React.FC = () => {
   );
 };
 
-// Statistics Section Component
+// Ultra-Modern Statistics Section with Data Visualization
 const StatisticsSection: React.FC = () => {
   const stats = [
-    { number: '50,000+', label: 'Active Students', icon: <People />, color: '#64b5f6' },
-    { number: '1,200+', label: 'Expert Instructors', icon: <School />, color: '#81c784' },
-    { number: '5,000+', label: 'Courses Available', icon: <Quiz />, color: '#ffb74d' },
-    { number: '98%', label: 'Success Rate', icon: <EmojiEvents />, color: '#f06292' }
+    { 
+      number: '50K+', 
+      label: 'Active Learners', 
+      icon: <Groups />, 
+      color: '#667eea',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      description: 'Students and professionals growing daily',
+      growth: '+150%'
+    },
+    { 
+      number: '100+', 
+      label: 'Expert Instructors', 
+      icon: <School />, 
+      color: '#4CAF50',
+      gradient: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+      description: 'Industry professionals & certified coaches',
+      growth: '+80%'
+    },
+    { 
+      number: '320+', 
+      label: 'Quality Courses', 
+      icon: <MenuBook />, 
+      color: '#FF9800',
+      gradient: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
+      description: 'Comprehensive academic & professional programs',
+      growth: '+200%'
+    },
+    { 
+      number: '95%', 
+      label: 'Success Rate', 
+      icon: <EmojiEvents />, 
+      color: '#f093fb',
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      description: 'Course completion & learner satisfaction',
+      growth: '+12%'
+    }
   ];
 
   return (
     <Box
       sx={{
-        py: 12,
-        background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+        py: 15,
+        background: `
+          linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%),
+          linear-gradient(45deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%)
+        `,
         color: 'white',
         position: 'relative',
         overflow: 'hidden'
       }}
     >
-      {/* Background Pattern */}
+      {/* Dynamic Background Elements */}
       <Box
         sx={{
           position: 'absolute',
@@ -980,95 +1954,235 @@ const StatisticsSection: React.FC = () => {
           right: 0,
           bottom: 0,
           background: `
-            radial-gradient(circle at 20% 80%, rgba(100, 181, 246, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(255, 183, 77, 0.1) 0%, transparent 50%)
+            radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 60%),
+            radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 60%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 60%)
           `,
-          opacity: 0.6
+          animation: 'shimmer 10s ease-in-out infinite',
+          '@keyframes shimmer': {
+            '0%, 100%': { opacity: 0.3 },
+            '50%': { opacity: 0.8 }
+          }
         }}
       />
+
+      {/* Floating Particles */}
+      {[...Array(6)].map((_, i) => (
+        <Box
+          key={i}
+          sx={{
+            position: 'absolute',
+            width: 4,
+            height: 4,
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.6)',
+            top: `${Math.random() * 100}%`,
+            left: `${Math.random() * 100}%`,
+            animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+            animationDelay: `${Math.random() * 2}s`
+          }}
+        />
+      ))}
       
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-        <Box sx={{ textAlign: 'center', mb: 8 }}>
+      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ textAlign: 'center', mb: 12 }}>
+          <Box sx={{ mb: 4 }}>
+            <Chip
+              icon={<TrendingUp sx={{ color: '#FFD700 !important' }} />}
+              label="📈 Our Impact"
+              sx={{
+                bgcolor: 'rgba(255, 215, 0, 0.15)',
+                color: '#FFD700',
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                fontSize: '0.95rem',
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                backdropFilter: 'blur(20px)'
+              }}
+            />
+          </Box>
+          
           <Typography
             variant="h2"
             component="h2"
             gutterBottom
             sx={{ 
-              fontWeight: 800, 
+              fontWeight: 900, 
               color: 'white',
-              fontSize: { xs: '2rem', md: '3rem' }
+              fontSize: { xs: '2.5rem', md: '4rem' },
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textShadow: '0 0 60px rgba(255, 255, 255, 0.3)',
+              mb: 4
             }}
           >
-            Join Our Global Community
+            Powering Dreams Globally
           </Typography>
+          
           <Typography
-            variant="h5"
+            variant="h4"
             sx={{ 
-              color: '#e3f2fd', 
-              maxWidth: 600, 
+              color: 'rgba(255, 255, 255, 0.9)', 
+              maxWidth: 800, 
               mx: 'auto',
-              opacity: 0.9
+              opacity: 0.95,
+              lineHeight: 1.6,
+              fontSize: { xs: '1.2rem', md: '1.5rem' }
             }}
           >
-            Be part of a thriving ecosystem of learners and educators
+            Join a thriving ecosystem of learners, educators, and innovators transforming the future of education
           </Typography>
         </Box>
 
-        <Grid container spacing={4}>
+        <Grid container spacing={5}>
           {stats.map((stat, index) => (
-            <Grid item xs={6} md={3} key={index}>
-              <Box 
+            <Grid item xs={6} lg={3} key={index}>
+              <Paper
+                elevation={0}
                 sx={{ 
                   textAlign: 'center',
-                  p: 3,
-                  borderRadius: 3,
-                  transition: 'all 0.3s ease',
+                  p: 4,
+                  borderRadius: 4,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    transform: 'translateY(-8px)',
-                    bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(10px)'
+                    transform: 'translateY(-15px) scale(1.05)',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    boxShadow: '0 30px 80px rgba(0, 0, 0, 0.3)',
+                    '& .stat-gradient': {
+                      opacity: 1,
+                      transform: 'scale(1.2)'
+                    },
+                    '& .stat-icon': {
+                      transform: 'scale(1.2) rotate(10deg)',
+                      filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.5))'
+                    },
+                    '& .stat-growth': {
+                      opacity: 1,
+                      transform: 'translateY(0)'
+                    }
                   }
                 }}
               >
-                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
-                  <Box
-                    sx={{
-                      p: 2,
-                      borderRadius: '50%',
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)'
+                {/* Background Gradient */}
+                <Box
+                  className="stat-gradient"
+                  sx={{
+                    position: 'absolute',
+                    top: -50,
+                    left: -50,
+                    right: -50,
+                    bottom: -50,
+                    background: stat.gradient,
+                    opacity: 0.1,
+                    transition: 'all 0.4s ease',
+                    transform: 'scale(0.8)',
+                    borderRadius: 6,
+                    filter: 'blur(30px)'
+                  }}
+                />
+
+                <Box sx={{ position: 'relative', zIndex: 1 }}>
+                  {/* Growth Indicator */}
+                  <Box 
+                    className="stat-growth"
+                    sx={{ 
+                      position: 'absolute',
+                      top: -10,
+                      right: -10,
+                      opacity: 0,
+                      transform: 'translateY(-10px)',
+                      transition: 'all 0.4s ease'
                     }}
                   >
-                    {React.cloneElement(stat.icon, { 
-                      sx: { 
-                        fontSize: 40, 
-                        color: stat.color 
-                      } 
-                    })}
+                    <Chip
+                      label={stat.growth}
+                      size="small"
+                      sx={{
+                        bgcolor: 'rgba(76, 175, 80, 0.2)',
+                        color: '#4CAF50',
+                        fontWeight: 600,
+                        fontSize: '0.7rem',
+                        border: '1px solid rgba(76, 175, 80, 0.3)'
+                      }}
+                    />
                   </Box>
+
+                  {/* Enhanced Icon */}
+                  <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
+                    <Box
+                      sx={{
+                        p: 3,
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        backdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        position: 'relative'
+                      }}
+                    >
+                      {React.cloneElement(stat.icon, { 
+                        className: 'stat-icon',
+                        sx: { 
+                          fontSize: 48, 
+                          color: stat.color,
+                          transition: 'all 0.4s ease',
+                          filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))'
+                        } 
+                      })}
+                    </Box>
+                  </Box>
+
+                  {/* Number with Animation */}
+                  <Typography
+                    variant="h1"
+                    sx={{ 
+                      fontWeight: 900, 
+                      mb: 2,
+                      background: stat.gradient,
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      fontSize: { xs: '2.5rem', md: '3.5rem' },
+                      textShadow: '0 0 30px rgba(255, 255, 255, 0.3)',
+                      position: 'relative'
+                    }}
+                  >
+                    {stat.number}
+                  </Typography>
+
+                  {/* Label */}
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      color: 'white',
+                      fontWeight: 700,
+                      mb: 2,
+                      fontSize: { xs: '1.1rem', md: '1.3rem' }
+                    }}
+                  >
+                    {stat.label}
+                  </Typography>
+
+                  {/* Description */}
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      fontSize: '0.9rem',
+                      lineHeight: 1.5
+                    }}
+                  >
+                    {stat.description}
+                  </Typography>
                 </Box>
-                <Typography
-                  variant="h2"
-                  sx={{ 
-                    fontWeight: 800, 
-                    mb: 1, 
-                    color: stat.color,
-                    fontSize: { xs: '2rem', md: '3rem' }
-                  }}
-                >
-                  {stat.number}
-                </Typography>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    opacity: 0.9,
-                    fontWeight: 500
-                  }}
-                >
-                  {stat.label}
-                </Typography>
-              </Box>
+              </Paper>
             </Grid>
           ))}
         </Grid>
@@ -1077,7 +2191,7 @@ const StatisticsSection: React.FC = () => {
   );
 };
 
-// Call to Action Section Component
+// Ultra-Modern CTA Section with Interactive Elements
 const CTASection: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -1085,14 +2199,17 @@ const CTASection: React.FC = () => {
   return (
     <Box 
       sx={{ 
-        py: 12, 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        py: 15, 
+        background: `
+          linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%),
+          linear-gradient(45deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%)
+        `,
         color: 'white',
         position: 'relative',
         overflow: 'hidden'
       }}
     >
-      {/* Background Pattern */}
+      {/* Dynamic Background Effects */}
       <Box
         sx={{
           position: 'absolute',
@@ -1101,236 +2218,415 @@ const CTASection: React.FC = () => {
           right: 0,
           bottom: 0,
           background: `
-            radial-gradient(circle at 30% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%)
+            radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%)
           `,
-          opacity: 0.8
+          animation: 'shimmer 12s ease-in-out infinite',
+          '@keyframes shimmer': {
+            '0%, 100%': { opacity: 0.4 },
+            '50%': { opacity: 1 }
+          }
+        }}
+      />
+
+      {/* Floating Elements */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '15%',
+          right: '10%',
+          width: 120,
+          height: 120,
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          animation: 'float 8s ease-in-out infinite'
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '20%',
+          left: '8%',
+          width: 100,
+          height: 100,
+          borderRadius: 3,
+          background: 'rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(15px)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          animation: 'float 10s ease-in-out infinite reverse',
+          transform: 'rotate(45deg)'
         }}
       />
       
-      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         <Box sx={{ textAlign: 'center' }}>
+          <Box sx={{ mb: 4 }}>
+            <Chip
+              icon={<RocketLaunch sx={{ color: '#FFD700 !important' }} />}
+              label="🎯 Start Your Journey"
+              sx={{
+                bgcolor: 'rgba(255, 215, 0, 0.15)',
+                color: '#FFD700',
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                fontSize: '0.95rem',
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                backdropFilter: 'blur(20px)'
+              }}
+            />
+          </Box>
+
           <Typography
-            variant="h2"
+            variant="h1"
             component="h2"
             gutterBottom
             sx={{ 
-              fontWeight: 800, 
+              fontWeight: 900, 
               color: 'white', 
-              mb: 3,
-              fontSize: { xs: '2rem', md: '3rem' }
+              mb: 4,
+              fontSize: { xs: '2.5rem', md: '4.5rem' },
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textShadow: '0 0 60px rgba(255, 255, 255, 0.4)',
+              lineHeight: 1.1
             }}
           >
-            Ready to Transform Your Future?
+            Start Your Journey to
+            <Box component="span" sx={{ display: 'block' }}>
+              Excellence Today!
+            </Box>
           </Typography>
 
           <Typography
-            variant="h5"
+            variant="h4"
             sx={{ 
-              color: '#e3f2fd', 
-              mb: 6, 
+              color: 'rgba(255, 255, 255, 0.95)', 
+              mb: 8, 
               lineHeight: 1.6,
-              maxWidth: 600,
+              maxWidth: 800,
               mx: 'auto',
-              opacity: 0.9
+              fontSize: { xs: '1.3rem', md: '1.7rem' },
+              fontWeight: 400
             }}
           >
-            Join millions of learners worldwide and unlock your potential with our comprehensive courses, expert instructors, and cutting-edge technology.
+            Join thousands of learners gaining in-demand skills through expert-led courses, personalized coaching, and comprehensive learning experiences.
           </Typography>
 
-          <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap', mb: 6 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} justifyContent="center" sx={{ mb: 8 }}>
             <Button
               variant="contained"
               size="large"
+              startIcon={<ElectricBolt />}
               onClick={() => navigate(isAuthenticated ? '/dashboard' : '/register')}
               sx={{
-                px: 6,
-                py: 2,
-                fontSize: '1.2rem',
-                fontWeight: 700,
-                bgcolor: '#FFD700',
+                px: 8,
+                py: 3,
+                fontSize: '1.4rem',
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #FFD700 0%, #FFC107 100%)',
                 color: '#000',
-                borderRadius: 3,
+                borderRadius: 4,
+                textTransform: 'none',
+                boxShadow: '0 12px 40px rgba(255, 215, 0, 0.4)',
                 '&:hover': {
-                  bgcolor: '#FFC107',
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 40px rgba(255, 215, 0, 0.4)'
+                  background: 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)',
+                  transform: 'translateY(-5px) scale(1.05)',
+                  boxShadow: '0 20px 60px rgba(255, 215, 0, 0.6)'
                 },
-                transition: 'all 0.3s ease'
+                transition: 'all 0.4s ease'
               }}
             >
-              {isAuthenticated ? 'Continue Learning' : 'Start Learning Free'}
+              {isAuthenticated ? 'Continue Learning' : 'Join Now'}
             </Button>
 
             <Button
               variant="outlined"
               size="large"
+              startIcon={<Explore />}
               onClick={() => navigate('/courses')}
               sx={{
-                px: 6,
-                py: 2,
-                fontSize: '1.2rem',
-                fontWeight: 600,
-                borderWidth: 2,
-                borderColor: 'rgba(255, 255, 255, 0.5)',
+                px: 8,
+                py: 3,
+                fontSize: '1.4rem',
+                fontWeight: 700,
+                borderWidth: 3,
+                borderColor: 'rgba(255, 255, 255, 0.8)',
                 color: 'white',
-                borderRadius: 3,
+                borderRadius: 4,
+                textTransform: 'none',
+                backdropFilter: 'blur(20px)',
+                background: 'rgba(255, 255, 255, 0.1)',
                 '&:hover': {
-                  borderWidth: 2,
-                  borderColor: 'white',
-                  bgcolor: 'rgba(255, 255, 255, 0.1)',
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 40px rgba(255, 255, 255, 0.2)'
+                  borderWidth: 3,
+                  borderColor: '#FFD700',
+                  color: '#FFD700',
+                  background: 'rgba(255, 215, 0, 0.1)',
+                  transform: 'translateY(-5px) scale(1.05)',
+                  boxShadow: '0 20px 60px rgba(255, 215, 0, 0.3)'
                 },
-                transition: 'all 0.3s ease'
+                transition: 'all 0.4s ease'
               }}
             >
-              Browse Courses
+              Explore Courses
             </Button>
-          </Box>
+          </Stack>
 
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            gap: 4, 
-            flexWrap: 'wrap',
-            p: 4,
-            bgcolor: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: 3,
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CheckCircle sx={{ color: '#4caf50' }} />
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>Free 7-day trial</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CheckCircle sx={{ color: '#4caf50' }} />
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>No credit card required</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CheckCircle sx={{ color: '#4caf50' }} />
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>Cancel anytime</Typography>
-            </Box>
-          </Box>
+          <Paper
+            elevation={0}
+            sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: { xs: 2, md: 6 }, 
+              flexWrap: 'wrap',
+              p: 5,
+              bgcolor: 'rgba(255, 255, 255, 0.15)',
+              borderRadius: 4,
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Background Glow */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%)',
+                opacity: 0.6
+              }}
+            />
+            
+            {[
+              { icon: CheckCircle, text: 'Free 14-day trial', color: '#4CAF50' },
+              { icon: Verified, text: 'No credit card required', color: '#2196F3' },
+              { icon: AutoAwesome, text: 'Cancel anytime', color: '#FF9800' },
+              { icon: WorkspacePremium, text: 'Money-back guarantee', color: '#9C27B0' }
+            ].map((feature, index) => (
+              <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, position: 'relative', zIndex: 1 }}>
+                <feature.icon sx={{ color: feature.color, fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'white', fontSize: { xs: '1rem', md: '1.2rem' } }}>
+                  {feature.text}
+                </Typography>
+              </Box>
+            ))}
+          </Paper>
         </Box>
       </Container>
     </Box>
   );
 };
 
-// Modern FAQ Section Component
+// Ultra-Modern FAQ Section with Enhanced Interactivity
 const FAQSection: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const faqs = [
     {
-      question: "How do I get started with online learning?",
-      answer: "Getting started is easy! Simply create an account, browse our course catalog, and enroll in any course that interests you. You'll have immediate access to all course materials and can learn at your own pace."
+      question: "How do I get started with Excellence Coaching Hub?",
+      answer: "Getting started is simple! Browse our course catalog, choose your program, and enroll. Follow our structured weekly learning paths designed for optimal knowledge retention and skill development.",
+      icon: RocketLaunch,
+      color: '#667eea'
     },
     {
-      question: "Are the courses self-paced or scheduled?",
-      answer: "Most of our courses are self-paced, allowing you to learn at your convenience. However, we also offer live sessions and scheduled courses for interactive learning experiences."
+      question: "What makes Excellence Coaching Hub different?",
+      answer: "We offer expert instructors, live & recorded sessions, weekly learning paths, cloud-based materials, and progress tracking with certification. Our approach combines academic coaching, professional courses, and business coaching.",
+      icon: AutoAwesome,
+      color: '#f093fb'
     },
     {
-      question: "What types of certificates do you offer?",
-      answer: "We offer completion certificates for all courses, professional certificates for specialized programs, and industry-recognized certifications that can boost your career prospects."
+      question: "What types of courses do you offer?",
+      answer: "We provide business leadership & communication, digital marketing mastery, personal growth & productivity, tech skills for modern work, public speaking & confidence, academic coaching, professional development, and business coaching programs.",
+      icon: MenuBook,
+      color: '#4CAF50'
     },
     {
-      question: "Can I access courses on mobile devices?",
-      answer: "Yes! Our platform is fully responsive and optimized for mobile devices. You can access all course content, participate in discussions, and take assessments from your smartphone or tablet."
+      question: "Can I access materials anytime, anywhere?",
+      answer: "Yes! All course materials and resources are stored in our secure cloud platform, accessible on any device. You can learn at your own pace with both live sessions and recorded content available 24/7.",
+      icon: Support,
+      color: '#FF9800'
     },
     {
-      question: "What if I need help during my course?",
-      answer: "We provide multiple support channels including 24/7 chat support, discussion forums, instructor office hours, and comprehensive help documentation to ensure your learning success."
+      question: "Do you provide certificates upon completion?",
+      answer: "Absolutely! Monitor your learning journey with detailed progress tracking and earn recognized certificates upon successful course completion. These certificates demonstrate your newly acquired skills and knowledge.",
+      icon: Verified,
+      color: '#2196F3'
     },
     {
-      question: "Do you offer refunds?",
-      answer: "Yes, we offer a 30-day money-back guarantee for all courses. If you're not satisfied with your learning experience, you can request a full refund within 30 days of enrollment."
+      question: "What kind of support do instructors provide?",
+      answer: "Our expert instructors are industry professionals and certified coaches with real-world experience. You receive personalized coaching sessions tailored to your goals, challenges, and learning preferences.",
+      icon: Psychology,
+      color: '#9C27B0'
     }
   ];
 
   return (
-    <Box sx={{ py: 8, bgcolor: 'background.default' }}>
-      <Container maxWidth="lg">
-        <Box sx={{ textAlign: 'center', mb: 6 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-            <HelpOutline sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
-            <Typography
-              variant="h3"
-              component="h2"
-              gutterBottom
-              sx={{ 
-                fontWeight: 700, 
-                color: 'text.primary',
-                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
+    <Box 
+      sx={{ 
+        py: 12, 
+        background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Background Elements */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '5%',
+          right: '3%',
+          width: 150,
+          height: 150,
+          borderRadius: '50%',
+          background: 'rgba(102, 126, 234, 0.05)',
+          animation: 'float 12s ease-in-out infinite'
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '5%',
+          left: '5%',
+          width: 120,
+          height: 120,
+          borderRadius: 3,
+          background: 'rgba(240, 147, 251, 0.05)',
+          animation: 'float 10s ease-in-out infinite reverse'
+        }}
+      />
+
+      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ textAlign: 'center', mb: 10 }}>
+          <Box sx={{ mb: 4 }}>
+            <Chip
+              icon={<HelpOutline sx={{ color: '#667eea !important' }} />}
+              label="❓ Got Questions?"
+              sx={{
+                bgcolor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                fontSize: '0.95rem',
+                border: '1px solid rgba(102, 126, 234, 0.2)'
               }}
-            >
-              Frequently Asked Questions
-            </Typography>
+            />
           </Box>
+
           <Typography
-            variant="h6"
+            variant="h2"
+            component="h2"
+            gutterBottom
             sx={{ 
-              color: 'text.secondary', 
-              maxWidth: 600, 
-              mx: 'auto',
-              fontSize: { xs: '1rem', md: '1.1rem' }
+              fontWeight: 800, 
+              color: 'text.primary',
+              fontSize: { xs: '2.5rem', md: '3.5rem' },
+              background: 'linear-gradient(135deg, #667eea 0%, #f093fb 50%, #4facfe 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 4
             }}
           >
-            Find answers to common questions about our platform, courses, and learning experience
+            Everything You Need to Know
+          </Typography>
+          
+          <Typography
+            variant="h5"
+            sx={{ 
+              color: 'text.secondary', 
+              maxWidth: 800, 
+              mx: 'auto',
+              fontSize: { xs: '1.1rem', md: '1.3rem' },
+              lineHeight: 1.6,
+              fontWeight: 400
+            }}
+          >
+            Get instant answers to common questions about our cutting-edge learning platform and transformative educational experience
           </Typography>
         </Box>
 
         <Grid container spacing={3}>
-          <Grid item xs={12} md={8} sx={{ mx: 'auto' }}>
+          <Grid item xs={12} lg={10} sx={{ mx: 'auto' }}>
             {faqs.map((faq, index) => (
               <Accordion
                 key={index}
                 sx={{
-                  mb: 2,
-                  borderRadius: 3,
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                  border: '1px solid rgba(0, 0, 0, 0.05)',
+                  mb: 3,
+                  borderRadius: 4,
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                  overflow: 'hidden',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease',
                   '&:before': {
                     display: 'none'
                   },
                   '&.Mui-expanded': {
-                    margin: '0 0 16px 0',
-                    boxShadow: '0 8px 32px rgba(25, 118, 210, 0.15)',
-                    border: '1px solid rgba(25, 118, 210, 0.2)'
+                    margin: '0 0 24px 0',
+                    boxShadow: `0 12px 48px ${faq.color}20`,
+                    border: `1px solid ${faq.color}30`,
+                    transform: 'translateY(-2px)'
+                  },
+                  '&:hover': {
+                    boxShadow: `0 12px 48px ${faq.color}15`,
+                    border: `1px solid ${faq.color}20`
                   }
                 }}
               >
                 <AccordionSummary
-                  expandIcon={<ExpandMore sx={{ color: 'primary.main' }} />}
+                  expandIcon={<ExpandMore sx={{ color: faq.color, fontSize: 28 }} />}
                   sx={{
-                    py: 2,
-                    px: 3,
+                    py: 3,
+                    px: 4,
+                    minHeight: 80,
                     '&.Mui-expanded': {
-                      minHeight: 'auto',
-                      backgroundColor: 'rgba(25, 118, 210, 0.02)'
+                      minHeight: 80,
+                      backgroundColor: `${faq.color}08`
                     },
                     '& .MuiAccordionSummary-content': {
-                      margin: '12px 0',
+                      margin: '16px 0',
                       '&.Mui-expanded': {
-                        margin: '12px 0'
+                        margin: '16px 0'
                       }
                     }
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <QuestionAnswer sx={{ color: 'primary.main', mr: 2, fontSize: 24 }} />
-                    <Typography
-                      variant="h6"
+                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <Box
                       sx={{
-                        fontWeight: 600,
+                        p: 2,
+                        borderRadius: '50%',
+                        background: `${faq.color}15`,
+                        border: `1px solid ${faq.color}30`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mr: 3,
+                        minWidth: 56,
+                        height: 56
+                      }}
+                    >
+                      <faq.icon sx={{ color: faq.color, fontSize: 28 }} />
+                    </Box>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: 700,
                         color: 'text.primary',
-                        fontSize: { xs: '1rem', md: '1.1rem' }
+                        fontSize: { xs: '1.1rem', md: '1.3rem' },
+                        lineHeight: 1.3
                       }}
                     >
                       {faq.question}
@@ -1339,74 +2635,141 @@ const FAQSection: React.FC = () => {
                 </AccordionSummary>
                 <AccordionDetails
                   sx={{
-                    px: 3,
-                    pb: 3,
+                    px: 4,
+                    pb: 4,
                     pt: 0
                   }}
                 >
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color: 'text.secondary',
-                      lineHeight: 1.7,
-                      fontSize: { xs: '0.9rem', md: '1rem' },
-                      pl: 4
-                    }}
-                  >
-                    {faq.answer}
-                  </Typography>
+                  <Box sx={{ pl: 9 }}>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color: 'text.secondary',
+                        lineHeight: 1.8,
+                        fontSize: { xs: '1rem', md: '1.1rem' },
+                        fontWeight: 400
+                      }}
+                    >
+                      {faq.answer}
+                    </Typography>
+                  </Box>
                 </AccordionDetails>
               </Accordion>
             ))}
           </Grid>
         </Grid>
 
-        <Box sx={{ textAlign: 'center', mt: 6 }}>
-          <Typography variant="h6" sx={{ mb: 3, color: 'text.primary', fontWeight: 600 }}>
-            Still have questions?
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Button
-              variant="outlined"
-              startIcon={<Email />}
+        <Box sx={{ textAlign: 'center', mt: 10 }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 6,
+              borderRadius: 4,
+              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(240, 147, 251, 0.1) 100%)',
+              border: '1px solid rgba(102, 126, 234, 0.2)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Background Glow */}
+            <Box
               sx={{
-                px: 3,
-                py: 1.5,
-                borderRadius: 3,
-                borderColor: 'primary.main',
-                color: 'primary.main',
-                fontWeight: 600,
-                '&:hover': {
-                  borderColor: 'primary.dark',
-                  backgroundColor: 'rgba(25, 118, 210, 0.04)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 12px rgba(25, 118, 210, 0.2)'
-                },
-                transition: 'all 0.3s ease'
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%)',
+                opacity: 0.6
               }}
-            >
-              Contact Support
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<HelpOutline />}
-              sx={{
-                px: 3,
-                py: 1.5,
-                borderRadius: 3,
-                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
-                fontWeight: 600,
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #1565c0 0%, #7b1fa2 100%)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)'
-                },
-                transition: 'all 0.3s ease'
-              }}
-            >
-              Help Center
-            </Button>
-          </Box>
+            />
+            
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              <Typography variant="h4" sx={{ mb: 2, color: 'text.primary', fontWeight: 700 }}>
+                Still have questions?
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', maxWidth: 600, mx: 'auto' }}>
+                Our expert support team is available 24/7 to help you succeed
+              </Typography>
+              
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} justifyContent="center">
+                <Button
+                  variant="outlined"
+                  size="large"
+                  startIcon={<Email />}
+                  sx={{
+                    px: 6,
+                    py: 2,
+                    borderRadius: 3,
+                    borderColor: '#667eea',
+                    borderWidth: 2,
+                    color: '#667eea',
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    textTransform: 'none',
+                    '&:hover': {
+                      borderColor: '#667eea',
+                      borderWidth: 2,
+                      backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                      transform: 'translateY(-3px)',
+                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Contact Support
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<HelpOutline />}
+                  sx={{
+                    px: 6,
+                    py: 2,
+                    borderRadius: 3,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    textTransform: 'none',
+                    boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                      transform: 'translateY(-3px)',
+                      boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Visit Help Center
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<QuestionAnswer />}
+                  sx={{
+                    px: 6,
+                    py: 2,
+                    borderRadius: 3,
+                    background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    textTransform: 'none',
+                    boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #45a049 0%, #388e3c 100%)',
+                      transform: 'translateY(-3px)',
+                      boxShadow: '0 12px 40px rgba(76, 175, 80, 0.4)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Live Chat
+                </Button>
+              </Stack>
+            </Box>
+          </Paper>
         </Box>
       </Container>
     </Box>

@@ -19,6 +19,7 @@ export interface IAssessmentDocument extends Document {
     correctAnswer?: string;
     points: number;
     section?: string;
+    difficulty?: 'easy' | 'medium' | 'hard';
     mathEquation?: string;
   }>;
   randomizeQuestions: boolean;
@@ -39,6 +40,8 @@ export interface IAssessmentDocument extends Document {
     options?: string[];
     correctAnswer?: string;
     points: number;
+    section?: string;
+    difficulty?: 'easy' | 'medium' | 'hard';
     aiExtracted: boolean;
   }>;
   

@@ -9,47 +9,61 @@ import { OAuth2Client } from 'google-auth-library';
 
 // Generate JWT token
 const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET!, {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   });
 };
 
 // Generate refresh token
 const generateRefreshToken = (userId: string): string => {
-  return jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET!, {
+  if (!process.env.JWT_REFRESH_SECRET) {
+    throw new Error('JWT_REFRESH_SECRET is not configured');
+  }
+  return jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d'
   });
 };
 
 // Send token response
-const sendTokenResponse = (user: IUserDocument, statusCode: number, res: Response): void => {
-  const token = generateToken(user._id);
-  const refreshToken = generateRefreshToken(user._id);
+const sendTokenResponse = async (user: IUserDocument, statusCode: number, res: Response): Promise<void> => {
+  try {
+    const token = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
-  // Update last login
-  user.lastLogin = new Date();
-  user.save();
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
 
-  res.status(statusCode).json({
-    success: true,
-    data: {
-      user: {
-        _id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        avatar: user.avatar,
-        isEmailVerified: user.isEmailVerified,
-        isActive: user.isActive,
-        lastLogin: user.lastLogin,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      },
-      token,
-      refreshToken
-    }
-  });
+    res.status(statusCode).json({
+      success: true,
+      data: {
+        user: {
+          _id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          avatar: user.avatar,
+          isEmailVerified: user.isEmailVerified,
+          isActive: user.isActive,
+          lastLogin: user.lastLogin,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
+        },
+        token,
+        refreshToken
+      }
+    });
+  } catch (error: any) {
+    console.error('❌ Error in sendTokenResponse:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate authentication tokens'
+    });
+  }
 };
 
 // @desc    Register user
@@ -176,7 +190,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       // Don't fail registration if email fails
     }
 
-    sendTokenResponse(user, 201, res);
+    await sendTokenResponse(user, 201, res);
   } catch (error) {
     next(error);
   }
@@ -244,7 +258,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    sendTokenResponse(user, 200, res);
+    await sendTokenResponse(user, 200, res);
   } catch (error) {
     next(error);
   }
@@ -461,7 +475,7 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
 
     await user.save();
 
-    sendTokenResponse(user, 200, res);
+    await sendTokenResponse(user, 200, res);
   } catch (error) {
     next(error);
   }
@@ -544,7 +558,7 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
       }
 
       // User exists and registration is complete - log them in
-      sendTokenResponse(user, 200, res);
+      await sendTokenResponse(user, 200, res);
     } else {
       // New user - needs role selection
       res.status(200).json({
@@ -695,7 +709,7 @@ export const googleCompleteRegistration = async (req: Request, res: Response, ne
     }
 
     // Send token response
-    sendTokenResponse(user, 201, res);
+    await sendTokenResponse(user, 201, res);
   } catch (error: any) {
     // Handle duplicate key error
     if (error.code === 11000) {
@@ -783,10 +797,15 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
 // @route   POST /api/auth/google/exchange-code
 // @access  Public
 export const googleExchangeCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  console.log('🚀 START: Google Exchange Code endpoint called');
+  console.log('📝 Request body keys:', Object.keys(req.body));
+  console.log('📝 Request headers:', req.headers);
+  
   try {
     const { idToken, platform } = req.body;
 
     if (!idToken) {
+      console.log('❌ No ID token provided');
       res.status(400).json({
         success: false,
         error: 'Google ID token is required'
@@ -823,9 +842,18 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
     }
 
     // Initialize Google OAuth2 client
-    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    console.log('🔧 Initializing OAuth2Client...');
+    let client;
+    try {
+      client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+      console.log('✅ OAuth2Client initialized successfully');
+    } catch (clientError: any) {
+      console.error('❌ Failed to initialize OAuth2Client:', clientError);
+      throw new Error(`OAuth2Client initialization failed: ${clientError.message}`);
+    }
 
     // Verify the ID token with Google using official library
+    console.log('🔍 Starting token verification...');
     let payload;
     try {
       const ticket = await client.verifyIdToken({
@@ -875,12 +903,27 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
 
     // Use the same logic as the existing googleAuth function
     const email = payload.email;
-    let user = await User.findOne({ email });
+    console.log('🔍 Searching for user with email:', email);
+    
+    let user;
+    try {
+      user = await User.findOne({ email });
+      console.log('🔍 Database query result:', user ? 'User found' : 'User not found');
+    } catch (dbError: any) {
+      console.error('❌ Database query error:', dbError);
+      throw new Error(`Database error: ${dbError.message}`);
+    }
 
     if (user) {
       // Existing user - log them in
       console.log('✅ Existing user found, logging in');
-      sendTokenResponse(user, 200, res);
+      console.log('🔍 User details:', {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive
+      });
+      await sendTokenResponse(user, 200, res);
     } else {
       // New user - require role selection
       console.log('🆕 New user detected, requiring role selection');
@@ -901,10 +944,44 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
       });
     }
   } catch (error: any) {
-    console.error('❌ Google ID token validation failed:', error);
-    res.status(500).json({
+    console.error('❌ CRITICAL ERROR in Google Exchange Code:', error);
+    console.error('🔍 Error name:', error.name);
+    console.error('🔍 Error message:', error.message);
+    console.error('🔍 Error stack:', error.stack);
+    console.error('🔍 Error code:', error.code);
+    console.error('🔍 Full error object:', JSON.stringify(error, null, 2));
+    
+    // Provide specific error messages based on error type
+    let errorMessage = 'Failed to validate Google ID token';
+    let statusCode = 500;
+    
+    if (error.message) {
+      if (error.message.includes('Token used too early') || error.message.includes('Token used too late')) {
+        errorMessage = 'Google token has expired or is not yet valid. Please try signing in again.';
+        statusCode = 400;
+      } else if (error.message.includes('audience')) {
+        errorMessage = 'Invalid token audience. Please check your Google OAuth configuration.';
+        statusCode = 400;
+      } else if (error.message.includes('issuer')) {
+        errorMessage = 'Invalid token issuer. Token was not issued by Google.';
+        statusCode = 400;
+      } else if (error.message.includes('signature')) {
+        errorMessage = 'Invalid token signature. Please try signing in again.';
+        statusCode = 400;
+      } else if (error.message.includes('format')) {
+        errorMessage = 'Invalid token format. Please try signing in again.';
+        statusCode = 400;
+      } else if (error.name === 'MongoError' || error.name === 'ValidationError') {
+        errorMessage = 'Database error occurred during authentication. Please try again.';
+        statusCode = 500;
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    res.status(statusCode).json({
       success: false,
-      error: error.message || 'Failed to validate Google ID token'
+      error: errorMessage
     });
   }
 };

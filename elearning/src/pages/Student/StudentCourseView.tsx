@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container,
   Typography,
@@ -79,28 +79,21 @@ const StudentCourseView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
+  const loadCourseData = useCallback(async () => {
+    if (!courseId) return;
 
-  // Load course data
-  useEffect(() => {
-    if (courseId) {
-      loadCourseData();
-    }
-  }, [courseId]);
-
-  const loadCourseData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Load course and weeks in parallel
       const [course, weeksData, progressData] = await Promise.all([
-        courseService.getCourseById(courseId!),
-        weekService.getCourseWeeks(courseId!),
-        progressService.getStudentCourseProgress(courseId!)
+        courseService.getCourseById(courseId),
+        weekService.getCourseWeeks(courseId),
+        progressService.getStudentCourseProgress(courseId)
       ]);
 
       setCourseData(course);
-      setWeeks(weeksData.filter(week => week.isPublished)); // Only show published weeks
+      setWeeks(weeksData.filter(week => week.isPublished));
       setProgress(progressData);
     } catch (err: any) {
       console.error('Error loading course data:', err);
@@ -108,7 +101,11 @@ const StudentCourseView: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    loadCourseData();
+  }, [loadCourseData]);
 
   // Helper functions
   const getWeekProgress = (weekId: string): WeekProgress | undefined => {
@@ -166,18 +163,19 @@ const StudentCourseView: React.FC = () => {
   };
 
   const handleWeekToggle = (weekId: string) => {
-    setExpandedWeek(expandedWeek === weekId ? null : weekId);
+    setExpandedWeek(prevWeek => (prevWeek === weekId ? null : weekId));
   };
 
-  const getOverallProgress = () => {
+  const getOverallProgress = useMemo(() => {
     if (progress.weekProgresses.length === 0) return 0;
     const totalProgress = progress.weekProgresses.reduce((sum, wp) => sum + wp.progressPercentage, 0);
     return Math.round(totalProgress / progress.weekProgresses.length);
-  };
+  }, [progress.weekProgresses]);
 
-  const getCompletedWeeks = () => {
-    return progress.weekProgresses.filter(wp => wp.weekCompleted).length;
-  };
+  const getCompletedWeeks = useMemo(
+    () => progress.weekProgresses.filter(wp => wp.weekCompleted).length,
+    [progress.weekProgresses]
+  );
 
   if (loading) {
     return (

@@ -5,6 +5,45 @@ import { Course } from '../models/Course';
 import { aiService } from '../services/aiService';
 import mongoose from 'mongoose';
 
+// Helper function to organize extracted questions into proper format
+function organizeExtractedQuestions(extractedQuestions: any[]): any[] {
+  console.log('🔧 Organizing extracted questions...');
+  
+  // Convert extracted questions to assessment question format
+  const organized = extractedQuestions.map((eq, index) => ({
+    id: eq.id || `q_${index}`,
+    question: eq.question,
+    type: eq.type,
+    options: eq.options || [],
+    correctAnswer: eq.correctAnswer,
+    points: eq.points || 10,
+    section: eq.section || 'A',
+    difficulty: eq.difficulty || 'medium'
+  }));
+
+  // Sort by section first, then by difficulty (easy -> medium -> hard)
+  organized.sort((a, b) => {
+    // First sort by section
+    if (a.section !== b.section) {
+      return a.section.localeCompare(b.section);
+    }
+    
+    // Then sort by difficulty within section
+    const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
+    const aOrder = difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 2;
+    const bOrder = difficultyOrder[b.difficulty as keyof typeof difficultyOrder] || 2;
+    
+    return aOrder - bOrder;
+  });
+
+  console.log(`✅ Organized ${organized.length} questions by section and difficulty`);
+  organized.forEach((q, index) => {
+    console.log(`  ${index + 1}. Section ${q.section} (${q.difficulty}): ${q.question.substring(0, 50)}...`);
+  });
+  
+  return organized;
+}
+
 // Get available assessments for student
 export const getStudentAssessments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -216,8 +255,27 @@ export const startAssessment = async (req: Request, res: Response, next: NextFun
       await submission.save();
     }
 
-    // Prepare questions (randomize if needed)
-    let questions = [...assessment.questions];
+    // Prepare questions from either manual questions or AI-extracted questions
+    let questions = [];
+    
+    // If assessment has extractedQuestions from AI, use those and organize them
+    if (assessment.extractedQuestions && assessment.extractedQuestions.length > 0) {
+      console.log(`📚 Using ${assessment.extractedQuestions.length} AI-extracted questions`);
+      
+      // Convert extractedQuestions to proper question format and organize them
+      questions = organizeExtractedQuestions(assessment.extractedQuestions);
+      
+    } else if (assessment.questions && assessment.questions.length > 0) {
+      console.log(`📚 Using ${assessment.questions.length} manual questions`);
+      questions = [...assessment.questions];
+    } else {
+      console.warn('⚠️ Assessment has no questions available');
+      res.status(400).json({
+        success: false,
+        error: 'Assessment has no questions available'
+      });
+      return;
+    }
     if (assessment.randomizeQuestions) {
       questions = questions.sort(() => Math.random() - 0.5);
     }
@@ -237,6 +295,7 @@ export const startAssessment = async (req: Request, res: Response, next: NextFun
       options: q.options,
       points: q.points,
       section: q.section,
+      difficulty: q.difficulty,
       mathEquation: q.mathEquation
     }));
 
@@ -272,6 +331,25 @@ export const saveAssessmentProgress = async (req: Request, res: Response, next: 
     const { answers, timeSpent } = req.body;
     const studentId = req.user?.id;
 
+    console.log(`🔄 Saving assessment progress for submission: ${submissionId}, student: ${studentId}`);
+    console.log(`📝 Progress data - Answers: ${answers?.length}, Time spent: ${timeSpent}`);
+
+    if (!studentId) {
+      res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+      return;
+    }
+
+    if (!submissionId) {
+      res.status(400).json({
+        success: false,
+        error: 'Submission ID is required'
+      });
+      return;
+    }
+
     const submission = await AssessmentSubmission.findOne({
       _id: submissionId,
       student: studentId,
@@ -279,23 +357,51 @@ export const saveAssessmentProgress = async (req: Request, res: Response, next: 
     });
 
     if (!submission) {
+      console.log(`❌ Submission not found or not in draft status - ID: ${submissionId}, Student: ${studentId}`);
+      
+      // Check if submission exists but belongs to different student
+      const existingSubmission = await AssessmentSubmission.findOne({ _id: submissionId });
+      if (existingSubmission) {
+        if (existingSubmission.student.toString() !== studentId) {
+          res.status(403).json({
+            success: false,
+            error: 'Access denied - submission belongs to another student'
+          });
+          return;
+        } else if (existingSubmission.status !== SubmissionStatus.DRAFT) {
+          res.status(409).json({
+            success: false,
+            error: `Cannot save progress - submission status is ${existingSubmission.status}`
+          });
+          return;
+        }
+      }
+      
       res.status(404).json({
         success: false,
-        error: 'Submission not found or already submitted'
+        error: 'Assessment submission not found'
       });
       return;
     }
 
     // Update answers and time spent
-    submission.answers = answers;
-    submission.timeSpent = timeSpent || 0;
+    submission.answers = answers || submission.answers || [];
+    submission.timeSpent = timeSpent || submission.timeSpent || 0;
     await submission.save();
+
+    console.log(`✅ Assessment progress saved successfully - Submission: ${submissionId}`);
 
     res.status(200).json({
       success: true,
-      message: 'Progress saved successfully'
+      message: 'Progress saved successfully',
+      data: {
+        submissionId: submission._id,
+        answersCount: submission.answers?.length || 0,
+        timeSpent: submission.timeSpent
+      }
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('❌ Error saving assessment progress:', error);
     next(error);
   }
 };

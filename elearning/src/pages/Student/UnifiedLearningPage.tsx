@@ -54,7 +54,8 @@ import {
   Person,
   Dashboard,
   Refresh,
-  AccessTime
+  AccessTime,
+  AutoAwesome
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService, ICourse } from '../../services/courseService';
@@ -66,6 +67,11 @@ import LiveSessionStatus from '../../components/Student/LiveSessionStatus';
 import { useLocation } from 'react-router-dom';
 import { liveSessionService } from '../../services/liveSessionService';
 import { recordedSessionService } from '../../services/recordedSessionService';
+import { 
+  aiAssessmentOrganizerService, 
+  OrganizedAssessment, 
+  AssessmentOrganizationRequest 
+} from '../../services/aiAssessmentOrganizerService';
 
 // Interface for the actual backend response
 interface CourseProgressResponse {
@@ -172,6 +178,8 @@ const UnifiedLearningPage: React.FC = () => {
   const [assignments, setAssignments] = useState<AssignmentType[]>([]);
   const [availableAssessments, setAvailableAssessments] = useState<Set<string>>(new Set());
   const [unseenRecordings, setUnseenRecordings] = useState<number>(0);
+  const [organizingAssessment, setOrganizingAssessment] = useState<Set<string>>(new Set());
+  const [organizationProgress, setOrganizationProgress] = useState<Record<string, string>>({});
   const liveSectionRef = React.useRef<HTMLDivElement | null>(null);
 
   const loadCourseData = async () => {
@@ -382,15 +390,204 @@ const UnifiedLearningPage: React.FC = () => {
     });
   };
 
-  const handleTakeAssessment = (assessmentId: string) => {
+  const handleTakeAssessment = async (assessmentId: string) => {
     const assessment = assessments.find(a => a._id === assessmentId);
-    if (assessment && isAssessmentAvailable(assessment)) {
-      navigate(`/student/quiz/${assessmentId}`);
+    if (!assessment || !isAssessmentAvailable(assessment)) {
+      return;
+    }
+
+    try {
+      // Show loading state for this specific assessment
+      setOrganizingAssessment(prev => new Set(prev).add(assessmentId));
+      setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'Initializing...' }));
+      
+      console.log('🤖 Starting AI assessment organization for:', assessment.title);
+      
+      // Check if we have a cached organized assessment first
+      setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'Checking cache...' }));
+      let organizedAssessment = await aiAssessmentOrganizerService.getCachedOrganizedAssessment(assessmentId);
+      
+      if (organizedAssessment) {
+        console.log('📦 Using cached organized assessment');
+        setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'Loading cached assessment...' }));
+        // Navigate immediately with cached data
+        navigate(`/assessment/${assessmentId}/take`, { 
+          state: { 
+            organizedAssessment,
+            fromUnifiedLearning: true 
+          } 
+        });
+        return;
+      }
+      
+      // If no cache, show progress indication and organize with AI
+      console.log('🔄 Organizing assessment with AI - this may take up to 30 seconds...');
+      setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'Analyzing questions...' }));
+      
+      // Create organization request with available context
+      const organizationRequest: AssessmentOrganizationRequest = {
+        assessmentId,
+        courseContext: {
+          courseTitle: course?.title,
+          currentWeek: getCurrentWeekNumber(),
+          completedTopics: getCompletedTopics()
+        },
+        studentProfile: {
+          preferredLearningStyle: user?.preferences?.learningStyle || 'visual',
+          // Add more student profile data if available
+        }
+      };
+
+      // Set a timeout to prevent indefinite waiting
+      const organizationPromise = Promise.resolve().then(async () => {
+        setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'AI analyzing questions...' }));
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate progress
+        
+        setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'Creating sections...' }));
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate progress
+        
+        setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'Generating study tips...' }));
+        const result = await aiAssessmentOrganizerService.organizeAssessment(organizationRequest);
+        
+        setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'Finalizing...' }));
+        return result;
+      });
+      
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error('AI organization timeout')), 45000); // 45 second timeout
+      });
+
+      try {
+        // Race between AI organization and timeout
+        organizedAssessment = await Promise.race([organizationPromise, timeoutPromise]);
+        
+        if (organizedAssessment) {
+          // Cache the organized assessment for future use
+          aiAssessmentOrganizerService.cacheOrganizedAssessment(organizedAssessment);
+          console.log('✅ Assessment organization complete: AI Enhanced');
+          setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'Ready to start!' }));
+        } else {
+          throw new Error('Organization returned null');
+        }
+        
+      } catch (timeoutError) {
+        console.warn('⏰ AI organization taking too long, proceeding with fallback');
+        setOrganizationProgress(prev => ({ ...prev, [assessmentId]: 'Creating fallback...' }));
+        throw timeoutError;
+      }
+      
+      // Navigate to assessment with organized data
+      navigate(`/assessment/${assessmentId}/take`, { 
+        state: { 
+          organizedAssessment,
+          fromUnifiedLearning: true 
+        } 
+      });
+      
+    } catch (error) {
+      console.error('❌ Error organizing assessment:', error);
+      
+      // Create a quick fallback organized assessment to maintain enhanced UI
+      try {
+        console.log('🔄 Creating fallback enhanced assessment...');
+        const basicAssessment = await assessmentService.getAssessmentById(assessmentId);
+        const fallbackOrganizedAssessment = await createQuickFallbackOrganization(basicAssessment);
+        
+        console.log('✅ Using fallback enhanced assessment');
+        navigate(`/assessment/${assessmentId}/take`, { 
+          state: { 
+            organizedAssessment: fallbackOrganizedAssessment,
+            fromUnifiedLearning: true 
+          } 
+        });
+        
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed, proceeding with standard assessment');
+        navigate(`/assessment/${assessmentId}/take`);
+      }
+      
+    } finally {
+      // Remove loading state
+      setOrganizingAssessment(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(assessmentId);
+        return newSet;
+      });
     }
   };
 
+  // Create a quick fallback organization when AI fails
+  const createQuickFallbackOrganization = async (assessment: IAssessment): Promise<OrganizedAssessment> => {
+    // Group questions into logical sections
+    const sections = organizeQuestionsIntoSections(assessment.questions).map(section => ({
+      id: section.id,
+      title: section.title,
+      description: section.description || `Section with ${section.questions.length} questions`,
+      questions: section.questions,
+      timeAllocation: Math.ceil(section.questions.length * 2), // 2 minutes per question
+      difficulty: 'medium' as const,
+      instructions: section.instructions || 'Answer all questions in this section carefully.',
+      objectives: [`Complete ${section.questions.length} questions in this section`],
+      suggestedApproach: 'Read each question carefully and select the best answer.'
+    }));
+
+    const totalQuestions = assessment.questions.length;
+    const estimatedTime = Math.ceil(totalQuestions * 2); // 2 minutes per question
+
+    return {
+      originalAssessment: assessment,
+      aiOrganized: false, // Mark as fallback, not AI-organized
+      organizationTimestamp: new Date().toISOString(),
+      sections,
+      overallInstructions: 'This assessment has been organized to help you succeed. Take your time and read each question carefully.',
+      studyRecommendations: [
+        'Review course materials before starting',
+        'Read each question carefully before answering',
+        'Manage your time effectively across all sections',
+        'Double-check your answers before submitting'
+      ],
+      timeManagementTips: [
+        `You have approximately ${Math.ceil(estimatedTime / totalQuestions)} minutes per question`,
+        'Start with questions you find easier',
+        'Don\'t spend too long on any single question',
+        'Save time for review at the end'
+      ],
+      difficultyAnalysis: {
+        easy: Math.floor(totalQuestions * 0.3),
+        medium: Math.floor(totalQuestions * 0.5),
+        hard: Math.ceil(totalQuestions * 0.2)
+      },
+      estimatedCompletionTime: estimatedTime,
+      aiInsights: {
+        strengths: ['Systematic question organization', 'Clear section structure'],
+        challenges: ['Time management', 'Question complexity'],
+        preparationTips: [
+          'Review your course notes',
+          'Practice similar question types',
+          'Ensure you have a quiet environment'
+        ]
+      }
+    };
+  };
+
+  const getCurrentWeekNumber = (): number => {
+    // Calculate current week based on course start date or progress
+    const completedWeeks = weeks.filter(week => getWeekProgress(week._id) === 100).length;
+    return completedWeeks + 1;
+  };
+
+  const getCompletedTopics = (): string[] => {
+    // Extract completed topics from completed materials
+    const completedMaterials = weeks
+      .flatMap(week => week.materials)
+      .filter(material => isMaterialCompleted(material._id));
+    
+    return completedMaterials.map(material => material.title || material.type).slice(0, 10);
+  };
+
   const handleTakeAssignment = (assignmentId: string) => {
-    navigate(`/student/assignment/${assignmentId}`);
+    // Use the correct assignment taking route within the dashboard
+    navigate(`/dashboard/student/assignment/${assignmentId}`);
   };
 
   if (!isAuthenticated) {
@@ -1015,14 +1212,16 @@ const UnifiedLearningPage: React.FC = () => {
                     <Grid item xs={12} sm={6} md={4} key={assessment._id}>
                       <Card 
                         sx={{ 
-                          cursor: 'pointer',
+                          cursor: organizingAssessment.has(assessment._id) ? 'wait' : 'pointer',
                           transition: 'all 0.3s ease',
+                          opacity: organizingAssessment.has(assessment._id) ? 0.8 : 1,
                           '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: 4
-                          }
+                            transform: organizingAssessment.has(assessment._id) ? 'none' : 'translateY(-2px)',
+                            boxShadow: organizingAssessment.has(assessment._id) ? 1 : 4
+                          },
+                          position: 'relative'
                         }}
-                        onClick={() => handleTakeAssessment(assessment._id)}
+                        onClick={() => !organizingAssessment.has(assessment._id) && handleTakeAssessment(assessment._id)}
                       >
                         <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -1035,6 +1234,68 @@ const UnifiedLearningPage: React.FC = () => {
                               {assessment.title}
                             </Typography>
                           </Box>
+                          
+                          {/* AI Organization Status */}
+                          {organizingAssessment.has(assessment._id) && (
+                            <Box sx={{ 
+                              display: 'flex', 
+                              flexDirection: 'column',
+                              gap: 1, 
+                              mb: 1, 
+                              p: 1.5, 
+                              backgroundColor: 'rgba(25, 118, 210, 0.1)', 
+                              borderRadius: 1,
+                              border: '1px solid rgba(25, 118, 210, 0.2)'
+                            }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CircularProgress size={16} />
+                                <Typography 
+                                  variant="caption" 
+                                  color="primary"
+                                  fontWeight="medium"
+                                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                                >
+                                  AI is enhancing your assessment...
+                                </Typography>
+                              </Box>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ 
+                                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                                  fontStyle: 'italic'
+                                }}
+                              >
+                                • Analyzing questions and organizing sections<br/>
+                                • Creating personalized study tips<br/>
+                                • Optimizing difficulty progression<br/>
+                                <strong>This may take up to 45 seconds...</strong>
+                              </Typography>
+                            </Box>
+                          )}
+                          
+                          {/* AI Enhancement Indicator */}
+                          {!organizingAssessment.has(assessment._id) && (
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 0.5, 
+                              mb: 1 
+                            }}>
+                              <AutoAwesome sx={{ fontSize: 14, color: 'primary.main' }} />
+                              <Typography 
+                                variant="caption" 
+                                color="primary"
+                                sx={{ 
+                                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                                  fontWeight: 'medium'
+                                }}
+                              >
+                                AI-Enhanced Assessment
+                              </Typography>
+                            </Box>
+                          )}
+                          
                           <Typography 
                             variant="body2" 
                             color="text.secondary"

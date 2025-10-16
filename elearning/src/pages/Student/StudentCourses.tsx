@@ -75,6 +75,7 @@ import LearningTips from '../../components/Student/LearningTips';
 import HelpButton from '../../components/Student/HelpButton';
 import { studentProfileService } from '../../services/studentProfileService';
 import { UserRole } from '../../shared/types';
+import LearningInterestPopup from '../../components/Student/LearningInterestPopup';
 
 // Styled Components for better visual appeal
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -203,7 +204,7 @@ const StudentCourses: React.FC = () => {
   const buttonSize = isSmallMobile ? 'small' : isMobile ? 'medium' : 'large';
 
   // State management
-  const [tabValue, setTabValue] = useState(0);
+  const [tabValue, setTabValue] = useState(1); // Default to Discover Courses tab
   const [enrolledCourses, setEnrolledCourses] = useState<ICourse[]>([]);
   const [availableCourses, setAvailableCourses] = useState<ICourse[]>([]);
   const [enrollments, setEnrollments] = useState<IEnrollment[]>([]);
@@ -224,6 +225,14 @@ const StudentCourses: React.FC = () => {
   });
   const [showProfileAlert, setShowProfileAlert] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  // Learning interest popup state
+  const [showInterestPopup, setShowInterestPopup] = useState(false);
+  const [learningInterests, setLearningInterests] = useState<any>(null);
+  const [hasCompletedInterestSetup, setHasCompletedInterestSetup] = useState(false);
+  const [showInterestSuccess, setShowInterestSuccess] = useState(false);
+
+
 
   // Load courses
   const loadCourses = async () => {
@@ -289,9 +298,77 @@ const StudentCourses: React.FC = () => {
     loadCourses();
   }, [tabValue, searchTerm, categoryFilter]);
 
+  // Handle URL parameters for tab and interests
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    const interestsParam = urlParams.get('interests');
+    
+    // Set tab if specified in URL
+    if (tabParam === 'discover') {
+      setTabValue(0);
+    }
+    
+    // Apply interests if provided in URL
+    if (interestsParam) {
+      try {
+        const interests = JSON.parse(decodeURIComponent(interestsParam));
+        setLearningInterests(interests);
+        applyInterestFilters(interests);
+        
+        // Clean up URL parameters
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+      } catch (error) {
+        console.error('Error parsing interests from URL:', error);
+      }
+    }
+  }, []);
+
   // Load profile completion on component mount
   useEffect(() => {
     loadProfileCompletion();
+  }, [user]);
+
+  // Handle learning interest popup - runs on component mount
+  useEffect(() => {
+    console.log('🎯 Component mounted, checking popup');
+    
+    // Check if student has completed interest setup
+    const hasSetup = localStorage.getItem('learningInterestsCompleted');
+    console.log('🎯 Has setup:', hasSetup);
+    
+    if (!hasSetup) {
+      console.log('🎯 No setup found, showing popup');
+      // Show popup for new students or visitors
+      setShowInterestPopup(true);
+    } else {
+      console.log('🎯 Setup found, loading interests');
+      setHasCompletedInterestSetup(true);
+      // Load saved interests
+      const savedInterests = localStorage.getItem('learningInterests');
+      if (savedInterests) {
+        setLearningInterests(JSON.parse(savedInterests));
+      }
+    }
+  }, []); // Run only on mount
+
+  // Handle learning interest popup for students
+  useEffect(() => {
+    console.log('🎯 User useEffect triggered');
+    console.log('🎯 User:', user);
+    
+    // This effect runs when user changes, but we already handled the initial popup above
+    if (user) {
+      const hasSetup = localStorage.getItem('learningInterestsCompleted');
+      if (hasSetup) {
+        setHasCompletedInterestSetup(true);
+        const savedInterests = localStorage.getItem('learningInterests');
+        if (savedInterests) {
+          setLearningInterests(JSON.parse(savedInterests));
+        }
+      }
+    }
   }, [user]);
 
   // Listen for profile update events to refresh completion status
@@ -394,6 +471,76 @@ const StudentCourses: React.FC = () => {
     setCategoryFilter('');
   };
 
+  // Handle learning interest popup completion
+  const handleInterestComplete = (data: any) => {
+    setLearningInterests(data);
+    setHasCompletedInterestSetup(true);
+    setShowInterestPopup(false);
+    
+    // Save to localStorage
+    localStorage.setItem('learningInterests', JSON.stringify(data));
+    localStorage.setItem('learningInterestsCompleted', 'true');
+    
+    // Apply filters based on interests
+    applyInterestFilters(data);
+    
+    // Navigate to Discover Courses tab (tab index 0)
+    setTabValue(0);
+    
+    // Show success message
+    setShowInterestSuccess(true);
+    setTimeout(() => setShowInterestSuccess(false), 5000);
+  };
+
+  // Apply filters based on learning interests
+  const applyInterestFilters = (interests: any) => {
+    if (!interests) return;
+    
+    // Map learning categories to course categories
+    const categoryMapping: { [key: string]: string } = {
+      'professional': 'Professional Development',
+      'business': 'Business',
+      'academic': 'Education',
+      'technical': 'Technology',
+      'creative': 'Design',
+      'healthcare': 'Healthcare'
+    };
+    
+    // Set category filter based on selected categories
+    if (interests.categories && interests.categories.length > 0) {
+      const mappedCategories = interests.categories
+        .map((cat: string) => categoryMapping[cat])
+        .filter(Boolean);
+      
+      if (mappedCategories.length > 0) {
+        setCategoryFilter(mappedCategories[0]); // Set first category as default
+      }
+    }
+    
+    // Set search term based on specific interests
+    if (interests.specificInterests && interests.specificInterests.length > 0) {
+      const searchTerms = interests.specificInterests.slice(0, 3).join(' ');
+      setSearchTerm(searchTerms);
+    }
+    
+    // Set level filter based on experience level
+    if (interests.experienceLevel) {
+      const levelMapping: { [key: string]: string } = {
+        'beginner': 'Beginner',
+        'intermediate': 'Intermediate',
+        'advanced': 'Advanced'
+      };
+      // Note: We'll need to add level filtering to the course search if not already present
+    }
+  };
+
+  // Handle popup close
+  const handleInterestClose = () => {
+    setShowInterestPopup(false);
+    // Mark as completed even if closed without completion
+    localStorage.setItem('learningInterestsCompleted', 'true');
+  };
+
   return (
     <Box sx={{ 
       bgcolor: 'background.default', 
@@ -494,11 +641,11 @@ const StudentCourses: React.FC = () => {
                 }}
               >
                 <ListItemIcon>
-                  <MenuBook />
+                  <Explore />
                 </ListItemIcon>
                 <ListItemText 
-                  primary="My Learning" 
-                  secondary="View enrolled courses"
+                  primary="Discover Courses" 
+                  secondary="Browse available courses"
                 />
               </ListItem>
               <ListItem
@@ -511,11 +658,11 @@ const StudentCourses: React.FC = () => {
                 }}
               >
                 <ListItemIcon>
-                  <Explore />
+                  <MenuBook />
                 </ListItemIcon>
                 <ListItemText 
-                  primary="Discover Courses" 
-                  secondary="Browse available courses"
+                  primary="My Learning" 
+                  secondary="View enrolled courses"
                 />
               </ListItem>
             </List>
@@ -718,6 +865,49 @@ const StudentCourses: React.FC = () => {
         </Fade>
       )}
 
+      {/* Learning Interest Setup Button for Students */}
+      {user?.role === UserRole.STUDENT && hasCompletedInterestSetup && (
+        <Box sx={{ mb: 3, textAlign: 'center' }}>
+          <ActionButton
+            variant="outlined"
+            startIcon={<Star />}
+            onClick={() => setShowInterestPopup(true)}
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.dark',
+                backgroundColor: 'primary.main',
+                color: 'white',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Update Learning Interests
+          </ActionButton>
+          
+          {/* Test Button - Remove in production */}
+          <ActionButton
+            variant="text"
+            onClick={() => {
+              localStorage.removeItem('learningInterestsCompleted');
+              localStorage.removeItem('learningInterests');
+              setHasCompletedInterestSetup(false);
+              setShowInterestPopup(true);
+            }}
+            sx={{ ml: 2, fontSize: '0.8rem', color: 'red' }}
+          >
+            Test Popup
+          </ActionButton>
+          
+        </Box>
+      )}
+
       {/* Quick Stats */}
       {enrolledCourses.length > 0 && (
         <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: { xs: 3, md: 4 } }}>
@@ -838,9 +1028,9 @@ const StudentCourses: React.FC = () => {
             }}
           >
             <Tab 
-              icon={<MenuBook />} 
+              icon={<Explore />} 
               iconPosition="start"
-              label="📚 My Learning" 
+              label="🔍 Discover Courses" 
               sx={{ 
                 '&.Mui-selected': { 
                   color: 'primary.main',
@@ -849,9 +1039,9 @@ const StudentCourses: React.FC = () => {
               }}
             />
             <Tab 
-              icon={<Explore />} 
+              icon={<MenuBook />} 
               iconPosition="start"
-              label="🔍 Discover Courses" 
+              label="📚 My Learning" 
               sx={{ 
                 '&.Mui-selected': { 
                   color: 'primary.main',
@@ -872,9 +1062,9 @@ const StudentCourses: React.FC = () => {
           bgcolor: tabValue === 0 ? alpha(theme.palette.primary.main, 0.1) : alpha(theme.palette.secondary.main, 0.1)
         }}>
           <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
-            {tabValue === 0 ? <MenuBook /> : <Explore />}
+            {tabValue === 0 ? <Explore /> : <MenuBook />}
             <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-              {tabValue === 0 ? '📚 My Learning' : '🔍 Discover Courses'}
+              {tabValue === 0 ? '🔍 Discover Courses' : '📚 My Learning'}
             </Typography>
           </Stack>
         </Paper>
@@ -898,7 +1088,7 @@ const StudentCourses: React.FC = () => {
         </Zoom>
       )}
 
-      {/* Enrolled Courses Tab */}
+      {/* Discover Courses Tab */}
       <TabPanel value={tabValue} index={0}>
         {loading ? (
           <Box display="flex" flexDirection="column" alignItems="center" py={8}>
@@ -1108,7 +1298,7 @@ const StudentCourses: React.FC = () => {
         )}
       </TabPanel>
 
-      {/* Browse Courses Tab */}
+      {/* My Learning Tab */}
       <TabPanel value={tabValue} index={1}>
         {/* Header */}
         <Box sx={{ mb: 4, textAlign: 'center' }}>
@@ -1119,6 +1309,88 @@ const StudentCourses: React.FC = () => {
             Find the perfect course to expand your knowledge and skills
           </Typography>
         </Box>
+
+        {/* Success Message */}
+        {showInterestSuccess && (
+          <Fade in={true}>
+            <Alert 
+              severity="success" 
+              sx={{ 
+                mb: 4, 
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(139, 195, 74, 0.1) 100%)',
+                border: '1px solid rgba(76, 175, 80, 0.2)'
+              }}
+              onClose={() => setShowInterestSuccess(false)}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                🎉 Great! We've personalized your course recommendations
+              </Typography>
+              <Typography variant="body2">
+                Based on your interests, we're showing you the most relevant courses. You can always adjust your preferences using the "Update Learning Interests" button above.
+              </Typography>
+            </Alert>
+          </Fade>
+        )}
+
+        {/* Interest-based Filtering Banner */}
+        {learningInterests && (categoryFilter || searchTerm) && (
+          <Fade in={true}>
+            <Paper sx={{ 
+              mb: 4, 
+              p: 3, 
+              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+              border: '1px solid rgba(102, 126, 234, 0.2)',
+              borderRadius: 3
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                    color: 'white'
+                  }}>
+                    <Star />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>
+                      🎯 Personalized for You
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Showing courses based on your learning interests
+                      {categoryFilter && ` • ${categoryFilter}`}
+                      {searchTerm && ` • "${searchTerm}"`}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    setCategoryFilter('');
+                    setSearchTerm('');
+                    setLearningInterests(null);
+                  }}
+                  sx={{ 
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    '&:hover': {
+                      backgroundColor: 'primary.main',
+                      color: 'white'
+                    }
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </Box>
+            </Paper>
+          </Fade>
+        )}
 
         {/* Search and Filters */}
         <Paper sx={{ 
@@ -1501,6 +1773,33 @@ const StudentCourses: React.FC = () => {
 
       {/* Floating Help Button */}
       <HelpButton />
+
+      {/* Learning Interest Popup */}
+      <LearningInterestPopup
+        open={showInterestPopup}
+        onClose={handleInterestClose}
+        onComplete={handleInterestComplete}
+      />
+      
+      {/* Debug Info - Remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <Box sx={{ 
+          position: 'fixed', 
+          top: 10, 
+          right: 10, 
+          bgcolor: 'rgba(0,0,0,0.8)', 
+          color: 'white', 
+          p: 1, 
+          borderRadius: 1,
+          fontSize: '0.7rem',
+          zIndex: 9999
+        }}>
+          <div>Popup: {showInterestPopup ? 'OPEN' : 'CLOSED'}</div>
+          <div>Setup: {hasCompletedInterestSetup ? 'YES' : 'NO'}</div>
+          <div>User: {user ? 'LOGGED IN' : 'NOT LOGGED IN'}</div>
+        </Box>
+      )}
+      
       
       </Container>
     </Box>

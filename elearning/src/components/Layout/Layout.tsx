@@ -808,7 +808,7 @@ const Layout: React.FC = () => {
             />
           </Box>
 
-          {/* Explore Categories Button */}
+          {/* Explore Categories Button - Desktop */}
           <Button
             variant="contained"
             startIcon={<Explore />}
@@ -862,6 +862,34 @@ const Layout: React.FC = () => {
           >
             Explore
           </Button>
+
+          {/* Explore Categories Button - Mobile */}
+          <IconButton
+            onClick={handleExploreClick}
+            sx={{
+              mr: 1,
+              display: { xs: 'flex', sm: 'none' },
+              width: 40,
+              height: 40,
+              borderRadius: 2,
+              background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
+              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)',
+                boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
+                transform: 'translateY(-1px)',
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+                boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)',
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <Explore sx={{ color: 'white', fontSize: 20 }} />
+          </IconButton>
 
           {/* Profile Menu */}
           <Tooltip title="Account settings">
@@ -1061,43 +1089,124 @@ const Layout: React.FC = () => {
           }
         }}
       >
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#333' }}>
-            Explore Learning Categories
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 3, color: '#666' }}>
-            Choose a category to discover courses that match your interests
-          </Typography>
+        <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+          {/* Header Section */}
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Box sx={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #4caf50 0%, #2196f3 100%)',
+              mb: 2,
+              boxShadow: '0 8px 25px rgba(76, 175, 80, 0.3)'
+            }}>
+              <Explore sx={{ fontSize: 28, color: 'white' }} />
+            </Box>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                mb: 1, 
+                fontWeight: 700, 
+                background: 'linear-gradient(135deg, #333 0%, #666 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
+              Explore Learning Categories
+            </Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: '#666', 
+                fontSize: '0.95rem',
+                maxWidth: 400,
+                mx: 'auto',
+                lineHeight: 1.6
+              }}
+            >
+              Discover courses that match your interests and career goals
+            </Typography>
+          </Box>
           
-          <Grid container spacing={2}>
+          {/* Categories Grid */}
+          <Grid container spacing={2.5}>
             {courseCategories.map((category, index) => (
-              <Grid item xs={6} sm={4} key={index}>
+              <Grid item xs={6} sm={4} md={3} key={index}>
                 <Button
                   fullWidth
                   variant="outlined"
-                  startIcon={category.icon}
                   onClick={() => handleCategoryClick(category.name)}
                   sx={{
-                    p: 2,
+                    p: 2.5,
                     height: 'auto',
+                    minHeight: 100,
                     flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    textAlign: 'left',
-                    borderColor: category.color,
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    borderRadius: 3,
+                    border: `2px solid ${category.color}20`,
+                    background: `linear-gradient(135deg, ${category.color}08 0%, ${category.color}15 100%)`,
                     color: category.color,
+                    position: 'relative',
+                    overflow: 'hidden',
                     '&:hover': {
-                      backgroundColor: `${category.color}10`,
+                      background: `linear-gradient(135deg, ${category.color}15 0%, ${category.color}25 100%)`,
                       borderColor: category.color,
-                      transform: 'translateY(-2px)',
-                      boxShadow: `0 4px 12px ${category.color}30`
+                      transform: 'translateY(-4px) scale(1.02)',
+                      boxShadow: `0 12px 30px ${category.color}40`,
+                      '&::before': {
+                        opacity: 1,
+                      }
                     },
-                    transition: 'all 0.2s ease'
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: `linear-gradient(135deg, ${category.color}10 0%, transparent 50%)`,
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    {category.icon}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    mb: 1.5,
+                    p: 1,
+                    borderRadius: '50%',
+                    background: `${category.color}15`,
+                    width: 48,
+                    height: 48,
+                    position: 'relative',
+                    zIndex: 1
+                  }}>
+                    {React.cloneElement(category.icon, { 
+                      sx: { 
+                        fontSize: 24, 
+                        color: category.color,
+                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                      } 
+                    })}
                   </Box>
-                  <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.2 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      lineHeight: 1.3,
+                      fontSize: '0.85rem',
+                      position: 'relative',
+                      zIndex: 1
+                    }}
+                  >
                     {category.name}
                   </Typography>
                 </Button>
@@ -1105,19 +1214,39 @@ const Layout: React.FC = () => {
             ))}
           </Grid>
           
-          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #eee' }}>
+          {/* Footer Section */}
+          <Box sx={{ 
+            mt: 4, 
+            pt: 3, 
+            borderTop: '1px solid rgba(0,0,0,0.08)',
+            background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(33, 150, 243, 0.05) 100%)',
+            borderRadius: 2,
+            p: 2
+          }}>
             <Button
               fullWidth
               variant="contained"
+              size="large"
+              startIcon={<Explore />}
               onClick={() => {
                 handleExploreClose();
                 navigate('/courses');
               }}
               sx={{
-                bgcolor: '#1976d2',
+                background: 'linear-gradient(135deg, #4caf50 0%, #2196f3 100%)',
+                boxShadow: '0 8px 25px rgba(76, 175, 80, 0.3)',
+                borderRadius: 2,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                letterSpacing: '0.5px',
                 '&:hover': {
-                  bgcolor: '#1565c0'
-                }
+                  background: 'linear-gradient(135deg, #45a049 0%, #1976d2 100%)',
+                  boxShadow: '0 12px 35px rgba(76, 175, 80, 0.4)',
+                  transform: 'translateY(-2px)',
+                },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               View All Courses

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -68,6 +68,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useQuery } from 'react-query';
 import { courseService } from '../../services/courseService';
 import FloatingContact from '../../components/FloatingContact';
+import HomeLearningInterestPopup from '../../components/Home/HomeLearningInterestPopup';
 
 // Ultra-Modern Hero Section with Contemporary Design
 const HeroSection: React.FC = () => {
@@ -2973,6 +2974,47 @@ const FAQSection: React.FC = () => {
 
 // Main HomePage Component
 const HomePage: React.FC = () => {
+  const [showInterestPopup, setShowInterestPopup] = useState(false);
+  const [hasSeenPopup, setHasSeenPopup] = useState(false);
+
+  // Show popup for new visitors
+  useEffect(() => {
+    const hasSeen = localStorage.getItem('homeInterestPopupSeen');
+    if (!hasSeen) {
+      const timer = setTimeout(() => {
+        setShowInterestPopup(true);
+      }, 3000); // Show after 3 seconds
+      return () => clearTimeout(timer);
+    } else {
+      setHasSeenPopup(true);
+    }
+  }, []);
+
+  const handleInterestComplete = (data: any) => {
+    // Save interests to localStorage
+    localStorage.setItem('homeLearningInterests', JSON.stringify(data));
+    localStorage.setItem('homeInterestPopupSeen', 'true');
+    setShowInterestPopup(false);
+    setHasSeenPopup(true);
+    
+    // Check if user is already logged in
+    const isLoggedIn = localStorage.getItem('token') || sessionStorage.getItem('token');
+    
+    if (isLoggedIn) {
+      // If logged in, navigate directly to student courses with Discover tab
+      window.location.href = `/dashboard/student/courses?tab=discover&interests=${encodeURIComponent(JSON.stringify(data))}`;
+    } else {
+      // If not logged in, navigate to registration with interests
+      const interestsParam = encodeURIComponent(JSON.stringify(data));
+      window.location.href = `/register?interests=${interestsParam}`;
+    }
+  };
+
+  const handleInterestClose = () => {
+    setShowInterestPopup(false);
+    localStorage.setItem('homeInterestPopupSeen', 'true');
+  };
+
   return (
     <Box>
       <HeroSection />
@@ -2985,6 +3027,13 @@ const HomePage: React.FC = () => {
       <FAQSection />
       <CTASection />
       <FloatingContact />
+      
+      {/* Learning Interest Popup */}
+      <HomeLearningInterestPopup
+        open={showInterestPopup}
+        onClose={handleInterestClose}
+        onComplete={handleInterestComplete}
+      />
     </Box>
   );
 };

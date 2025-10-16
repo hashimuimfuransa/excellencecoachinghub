@@ -718,15 +718,15 @@ const StudentDashboard: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Stats Cards */}
-      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }} sx={{ mb: { xs: 3, sm: 4, md: 5 } }}>
-        <Grid item xs={6} sm={3} md={3}>
+      {/* Enhanced Mobile-Responsive Stats Cards */}
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 3, sm: 4, md: 5 } }}>
+        <Grid item xs={6} sm={6} md={3}>
           <StatsCard elevation={3}>
             <School 
               color="primary" 
               sx={{ 
-                fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
-                mb: { xs: 1, sm: 1.5 }
+                fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                mb: { xs: 0.5, sm: 1 }
               }} 
             />
             <Typography 
@@ -735,19 +735,20 @@ const StudentDashboard: React.FC = () => {
                 fontWeight: 700,
                 color: 'primary.main',
                 mb: 0.5,
-                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
+                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2.2rem' }
               }}
             >
               {dashboardData.stats.totalCourses}
             </Typography>
             <Typography 
-              variant="body1" 
+              variant="body2" 
               color="text.secondary"
               sx={{ 
                 fontWeight: 500,
-                fontSize: { xs: '0.875rem', sm: '1rem' },
+                fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
                 textAlign: 'center',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                px: { xs: 0.5, sm: 0 }
               }}
             >
               Enrolled Courses
@@ -755,13 +756,13 @@ const StudentDashboard: React.FC = () => {
           </StatsCard>
         </Grid>
 
-        <Grid item xs={6} sm={3} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <StatsCard elevation={3}>
             <Assignment 
               color="warning" 
               sx={{ 
-                fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
-                mb: { xs: 1, sm: 1.5 }
+                fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                mb: { xs: 0.5, sm: 1 }
               }} 
             />
             <Typography 
@@ -770,19 +771,20 @@ const StudentDashboard: React.FC = () => {
                 fontWeight: 700,
                 color: 'warning.main',
                 mb: 0.5,
-                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
+                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2.2rem' }
               }}
             >
               {dashboardData.stats.upcomingAssessments}
             </Typography>
             <Typography 
-              variant="body1" 
+              variant="body2" 
               color="text.secondary"
               sx={{ 
                 fontWeight: 500,
-                fontSize: { xs: '0.875rem', sm: '1rem' },
+                fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
                 textAlign: 'center',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                px: { xs: 0.5, sm: 0 }
               }}
             >
               Pending Assessments
@@ -790,13 +792,13 @@ const StudentDashboard: React.FC = () => {
           </StatsCard>
         </Grid>
 
-        <Grid item xs={6} sm={3} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <StatsCard elevation={3}>
             <Quiz 
               color="secondary" 
               sx={{ 
-                fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
-                mb: { xs: 1, sm: 1.5 }
+                fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                mb: { xs: 0.5, sm: 1 }
               }} 
             />
             <Typography 
@@ -805,19 +807,20 @@ const StudentDashboard: React.FC = () => {
                 fontWeight: 700,
                 color: 'secondary.main',
                 mb: 0.5,
-                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
+                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2.2rem' }
               }}
             >
               {dashboardData.stats.enhancedAssessments}
             </Typography>
             <Typography 
-              variant="body1" 
+              variant="body2" 
               color="text.secondary"
               sx={{ 
                 fontWeight: 500,
-                fontSize: { xs: '0.875rem', sm: '1rem' },
+                fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
                 textAlign: 'center',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                px: { xs: 0.5, sm: 0 }
               }}
             >
               Enhanced Tests
@@ -825,13 +828,13 @@ const StudentDashboard: React.FC = () => {
           </StatsCard>
         </Grid>
 
-        <Grid item xs={6} sm={3} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <StatsCard elevation={3}>
             <TrendingUp 
               color="success" 
               sx={{ 
-                fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
-                mb: { xs: 1, sm: 1.5 }
+                fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                mb: { xs: 0.5, sm: 1 }
               }} 
             />
             <Typography 
@@ -840,19 +843,20 @@ const StudentDashboard: React.FC = () => {
                 fontWeight: 700,
                 color: 'success.main',
                 mb: 0.5,
-                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
+                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2.2rem' }
               }}
             >
               {dashboardData.stats.averageProgress}%
             </Typography>
             <Typography 
-              variant="body1" 
+              variant="body2" 
               color="text.secondary"
               sx={{ 
                 fontWeight: 500,
-                fontSize: { xs: '0.875rem', sm: '1rem' },
+                fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
                 textAlign: 'center',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                px: { xs: 0.5, sm: 0 }
               }}
             >
               Avg Progress
@@ -861,9 +865,9 @@ const StudentDashboard: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* Main Content */}
+      {/* Enhanced Mobile-Responsive Main Content */}
       <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
-        {/* My Courses */}
+        {/* My Courses - Full width on mobile, 8/12 on larger screens */}
         <Grid item xs={12} lg={8}>
           <ResponsiveCard elevation={3}>
             <ResponsiveCardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
@@ -941,82 +945,122 @@ const StudentDashboard: React.FC = () => {
                   </ResponsiveButton>
                 </Box>
               ) : (
-                <Stack spacing={2}>
+                <Stack spacing={{ xs: 2.5, sm: 2 }}>
                   {dashboardData.enrolledCourses.slice(0, 3).map((course, index) => {
                     const enrollment = dashboardData.enrollments.find(e => e.course._id === course._id);
                     return (
                       <Box key={course._id}>
                         <Stack 
                           direction={{ xs: 'column', sm: 'row' }} 
-                          spacing={{ xs: 1, sm: 2 }}
-                          alignItems={{ xs: 'flex-start', sm: 'center' }}
+                          spacing={{ xs: 2, sm: 2 }}
+                          alignItems={{ xs: 'stretch', sm: 'center' }}
+                          sx={{
+                            p: { xs: 2, sm: 0 },
+                            borderRadius: { xs: 2, sm: 0 },
+                            bgcolor: { xs: 'grey.50', sm: 'transparent' },
+                            border: { xs: '1px solid', sm: 'none' },
+                            borderColor: { xs: 'grey.200', sm: 'transparent' }
+                          }}
                         >
-                          <Avatar
-                            src={getCourseImageUrl(course)}
-                            sx={{ 
-                              width: { xs: 40, sm: 56 }, 
-                              height: { xs: 40, sm: 56 },
-                              alignSelf: { xs: 'center', sm: 'flex-start' }
-                            }}
-                          >
-                            <School />
-                          </Avatar>
-                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                            <Typography 
-                              variant={isMobile ? "subtitle2" : "subtitle1"} 
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: { xs: 2, sm: 2 },
+                            mb: { xs: 1, sm: 0 }
+                          }}>
+                            <Avatar
+                              src={getCourseImageUrl(course)}
                               sx={{ 
-                                fontWeight: 600,
-                                mb: 0.5,
-                                textAlign: { xs: 'center', sm: 'left' }
+                                width: { xs: 48, sm: 56 }, 
+                                height: { xs: 48, sm: 56 },
+                                flexShrink: 0
                               }}
                             >
-                              {course.title}
-                            </Typography>
-                            <Typography 
-                              variant="body2" 
-                              color="text.secondary"
-                              sx={{ 
-                                mb: 1,
-                                textAlign: { xs: 'center', sm: 'left' }
-                              }}
-                            >
-                              {course.instructor?.firstName} {course.instructor?.lastName} • {course.category}
-                            </Typography>
+                              <School />
+                            </Avatar>
+                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                              <Typography 
+                                variant={isMobile ? "subtitle1" : "subtitle1"} 
+                                sx={{ 
+                                  fontWeight: 600,
+                                  mb: 0.5,
+                                  fontSize: { xs: '0.95rem', sm: '1rem' },
+                                  lineHeight: 1.3
+                                }}
+                              >
+                                {course.title}
+                              </Typography>
+                              <Typography 
+                                variant="body2" 
+                                color="text.secondary"
+                                sx={{ 
+                                  mb: 1,
+                                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                                  lineHeight: 1.4
+                                }}
+                              >
+                                {course.instructor?.firstName} {course.instructor?.lastName} • {course.category}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ width: '100%' }}>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center',
+                              mb: 1
+                            }}>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ 
+                                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                                  fontWeight: 500
+                                }}
+                              >
+                                Progress
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color="primary.main"
+                                sx={{ 
+                                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                                  fontWeight: 600
+                                }}
+                              >
+                                {enrollment?.progress?.totalProgress || 0}%
+                              </Typography>
+                            </Box>
                             <LinearProgress
                               variant="determinate"
                               value={enrollment?.progress?.totalProgress || 0}
                               sx={{ 
-                                height: { xs: 6, sm: 8 },
+                                height: { xs: 8, sm: 8 },
                                 borderRadius: 1,
-                                backgroundColor: 'grey.200'
+                                backgroundColor: 'grey.200',
+                                mb: { xs: 2, sm: 1 }
                               }}
                             />
-                            <Typography 
-                              variant="caption" 
-                              color="text.secondary"
+                            <ResponsiveButton
+                              size={buttonSize}
+                              variant="contained"
+                              onClick={() => navigate(`/course/${course._id}/learn`)}
                               sx={{ 
-                                mt: 0.5,
-                                display: 'block',
-                                textAlign: { xs: 'center', sm: 'left' }
+                                width: '100%',
+                                fontSize: { xs: '0.85rem', sm: '0.9rem' },
+                                py: { xs: 1, sm: 0.75 },
+                                borderRadius: { xs: 2, sm: 1.5 },
+                                textTransform: 'none',
+                                fontWeight: 600
                               }}
                             >
-                              {enrollment?.progress?.totalProgress || 0}% Complete
-                            </Typography>
+                              Continue Learning
+                            </ResponsiveButton>
                           </Box>
-                          <ResponsiveButton
-                            size={buttonSize}
-                            variant="outlined"
-                            onClick={() => navigate(`/course/${course._id}/learn`)}
-                            sx={{ 
-                              minWidth: { xs: '100%', sm: 'auto' },
-                              mt: { xs: 1, sm: 0 }
-                            }}
-                          >
-                            Continue
-                          </ResponsiveButton>
                         </Stack>
                         {index < Math.min(dashboardData.enrolledCourses.length - 1, 2) && (
-                          <Divider sx={{ mt: 2 }} />
+                          <Divider sx={{ mt: { xs: 2, sm: 2 } }} />
                         )}
                       </Box>
                     );
@@ -1027,7 +1071,7 @@ const StudentDashboard: React.FC = () => {
           </ResponsiveCard>
         </Grid>
 
-        {/* Quick Actions & Upcoming Sessions */}
+        {/* Enhanced Mobile-Responsive Sidebar */}
         <Grid item xs={12} lg={4}>
           <Stack spacing={{ xs: 2, sm: 3, md: 3 }}>
             {/* Upcoming Sessions */}
@@ -1041,7 +1085,8 @@ const StudentDashboard: React.FC = () => {
                     mb: { xs: 2, sm: 3 },
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1
+                    gap: 1,
+                    fontSize: { xs: '1.1rem', sm: '1.25rem' }
                   }}
                 >
                   <VideoCall sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
@@ -1053,54 +1098,100 @@ const StudentDashboard: React.FC = () => {
                     flexDirection="column"
                     alignItems="center"
                     justifyContent="center"
-                    py={{ xs: 1.5, sm: 2 }}
+                    py={{ xs: 2, sm: 2.5 }}
                     sx={{ color: 'text.secondary' }}
                   >
-                    <VideoCall sx={{ fontSize: { xs: 28, sm: 32 }, mb: 1, opacity: 0.5 }} />
-                    <Typography variant="body2" textAlign="center">
+                    <VideoCall sx={{ fontSize: { xs: 32, sm: 36 }, mb: 1.5, opacity: 0.5 }} />
+                    <Typography 
+                      variant="body2" 
+                      textAlign="center"
+                      sx={{ fontSize: { xs: '0.85rem', sm: '0.9rem' } }}
+                    >
                       No upcoming sessions
                     </Typography>
                   </Box>
                 ) : (
-                  <List sx={{ p: 0 }}>
+                  <Stack spacing={1.5}>
                     {dashboardData.upcomingSessions.slice(0, 3).map((session, index) => (
-                      <React.Fragment key={session._id}>
-                        <ListItem 
-                          disablePadding
-                          sx={{ 
-                            flexDirection: { xs: 'column', sm: 'row' },
-                            alignItems: { xs: 'flex-start', sm: 'center' },
-                            py: 1
-                          }}
+                      <Box
+                        key={session._id}
+                        sx={{
+                          p: { xs: 2, sm: 1.5 },
+                          borderRadius: 2,
+                          bgcolor: { xs: 'grey.50', sm: 'transparent' },
+                          border: { xs: '1px solid', sm: 'none' },
+                          borderColor: { xs: 'grey.200', sm: 'transparent' },
+                          '&:hover': {
+                            bgcolor: { xs: 'grey.100', sm: 'action.hover' }
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <Stack 
+                          direction={{ xs: 'column', sm: 'row' }} 
+                          spacing={{ xs: 1.5, sm: 1 }}
+                          alignItems={{ xs: 'stretch', sm: 'center' }}
                         >
-                          <ListItemAvatar sx={{ alignSelf: { xs: 'center', sm: 'flex-start' } }}>
-                            <Avatar sx={{ bgcolor: 'info.main' }}>
-                              <VideoCall />
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: { xs: 1.5, sm: 1 },
+                            mb: { xs: 1, sm: 0 }
+                          }}>
+                            <Avatar sx={{ 
+                              bgcolor: 'info.main',
+                              width: { xs: 36, sm: 32 },
+                              height: { xs: 36, sm: 32 }
+                            }}>
+                              <VideoCall sx={{ fontSize: { xs: '1.1rem', sm: '1rem' } }} />
                             </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={session.title}
-                            secondary={new Date(session.scheduledTime).toLocaleString()}
-                            sx={{ 
-                              textAlign: { xs: 'center', sm: 'left' },
-                              mb: { xs: 1, sm: 0 }
-                            }}
-                          />
-                          <IconButton
+                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                              <Typography 
+                                variant="subtitle2" 
+                                sx={{ 
+                                  fontWeight: 600,
+                                  fontSize: { xs: '0.9rem', sm: '0.875rem' },
+                                  lineHeight: 1.3,
+                                  mb: 0.5
+                                }}
+                              >
+                                {session.title}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ 
+                                  fontSize: { xs: '0.75rem', sm: '0.7rem' },
+                                  display: 'block'
+                                }}
+                              >
+                                {new Date(session.scheduledTime).toLocaleString()}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          
+                          <ResponsiveButton
                             size="small"
+                            variant="contained"
+                            startIcon={<PlayArrow sx={{ fontSize: { xs: '1rem', sm: '0.9rem' } }} />}
                             onClick={() => navigate(`/dashboard/student/live-sessions/${session._id}/room`)}
-                            title="Join Live Class"
                             sx={{ 
-                              alignSelf: { xs: 'center', sm: 'flex-start' }
+                              width: { xs: '100%', sm: 'auto' },
+                              fontSize: { xs: '0.8rem', sm: '0.75rem' },
+                              py: { xs: 0.75, sm: 0.5 },
+                              px: { xs: 2, sm: 1.5 },
+                              borderRadius: { xs: 2, sm: 1.5 },
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              minHeight: { xs: '36px', sm: '32px' }
                             }}
                           >
-                            <PlayArrow />
-                          </IconButton>
-                        </ListItem>
-                        {index < dashboardData.upcomingSessions.length - 1 && <Divider />}
-                      </React.Fragment>
+                            Join
+                          </ResponsiveButton>
+                        </Stack>
+                      </Box>
                     ))}
-                  </List>
+                  </Stack>
                 )}
               </ResponsiveCardContent>
             </ResponsiveCard>
@@ -1130,13 +1221,13 @@ const StudentDashboard: React.FC = () => {
           </ResponsiveCard>
         </Grid>
 
-        {/* Job Portal Integration Section */}
-        <Grid item xs={12} sx={{ mt: 4 }}>
+        {/* Enhanced Mobile-Responsive Job Portal Section */}
+        <Grid item xs={12} sx={{ mt: { xs: 3, sm: 4 } }}>
           <Paper 
             elevation={4}
             sx={{ 
-              p: { xs: 3, sm: 4 },
-              borderRadius: 3,
+              p: { xs: 2.5, sm: 3, md: 4 },
+              borderRadius: { xs: 2, sm: 3 },
               background: 'linear-gradient(135deg, #6a1b9a08, #4a148c15)',
               position: 'relative',
               overflow: 'hidden',
@@ -1151,41 +1242,79 @@ const StudentDashboard: React.FC = () => {
               }
             }}
           >
-            <Grid container spacing={3} alignItems="center">
+            <Grid container spacing={{ xs: 2, sm: 3 }} alignItems="center">
               <Grid item xs={12} md={7}>
                 <Typography 
-                  variant={isMobile ? "h5" : "h4"} 
+                  variant={isMobile ? "h6" : "h4"} 
                   component="h2" 
                   sx={{ 
                     fontWeight: 700,
                     color: '#6a1b9a',
-                    mb: 2
+                    mb: { xs: 1.5, sm: 2 },
+                    fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' },
+                    lineHeight: 1.3
                   }}
                 >
                   Ready to Start Your Career Journey?
                 </Typography>
-                <Typography variant="body1" paragraph sx={{ mb: 3 }}>
+                <Typography 
+                  variant="body2" 
+                  paragraph 
+                  sx={{ 
+                    mb: { xs: 2, sm: 3 },
+                    fontSize: { xs: '0.9rem', sm: '1rem' },
+                    lineHeight: 1.6
+                  }}
+                >
                   As a student of Excellence Coaching Hub, you have exclusive access to our Job Portal. 
                   Find internships, part-time positions, and full-time career opportunities that match your skills and interests.
                 </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: { xs: 1, sm: 1.5 }, 
+                  mb: { xs: 2, sm: 3 },
+                  justifyContent: { xs: 'center', md: 'flex-start' }
+                }}>
                   <Chip 
-                    icon={<School />} 
+                    icon={<School sx={{ fontSize: { xs: '1rem', sm: '1.1rem' } }} />} 
                     label="Student-Friendly Jobs" 
-                    sx={{ bgcolor: '#f3e5f5', color: '#6a1b9a' }}
+                    sx={{ 
+                      bgcolor: '#f3e5f5', 
+                      color: '#6a1b9a',
+                      fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                      height: { xs: 28, sm: 32 }
+                    }}
                   />
                   <Chip 
-                    icon={<Assignment />} 
+                    icon={<Assignment sx={{ fontSize: { xs: '1rem', sm: '1.1rem' } }} />} 
                     label="Internship Opportunities" 
-                    sx={{ bgcolor: '#f3e5f5', color: '#6a1b9a' }}
+                    sx={{ 
+                      bgcolor: '#f3e5f5', 
+                      color: '#6a1b9a',
+                      fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                      height: { xs: 28, sm: 32 }
+                    }}
                   />
                   <Chip 
-                    icon={<EmojiEvents />} 
+                    icon={<EmojiEvents sx={{ fontSize: { xs: '1rem', sm: '1.1rem' } }} />} 
                     label="Career Development" 
-                    sx={{ bgcolor: '#f3e5f5', color: '#6a1b9a' }}
+                    sx={{ 
+                      bgcolor: '#f3e5f5', 
+                      color: '#6a1b9a',
+                      fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                      height: { xs: 28, sm: 32 }
+                    }}
                   />
                 </Box>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <Stack 
+                  direction={{ xs: 'column', sm: 'row' }} 
+                  spacing={{ xs: 1.5, sm: 2 }}
+                  sx={{ 
+                    alignItems: { xs: 'stretch', sm: 'center' },
+                    justifyContent: { xs: 'center', md: 'flex-start' }
+                  }}
+                >
                   <Button 
                     variant="contained" 
                     size={buttonSize}
@@ -1193,7 +1322,12 @@ const StudentDashboard: React.FC = () => {
                       bgcolor: '#6a1b9a', 
                       '&:hover': { bgcolor: '#4a148c' },
                       px: { xs: 3, sm: 4 },
-                      py: { xs: 1, sm: 1.5 }
+                      py: { xs: 1.25, sm: 1.5 },
+                      fontSize: { xs: '0.9rem', sm: '1rem' },
+                      fontWeight: 600,
+                      borderRadius: { xs: 2, sm: 2.5 },
+                      textTransform: 'none',
+                      minHeight: { xs: '44px', sm: '40px' }
                     }}
                     onClick={() => window.open('/job-portal/app/dashboard', '_blank')}
                   >
@@ -1205,9 +1339,18 @@ const StudentDashboard: React.FC = () => {
                     sx={{ 
                       borderColor: '#6a1b9a', 
                       color: '#6a1b9a',
-                      '&:hover': { borderColor: '#4a148c', color: '#4a148c' },
+                      '&:hover': { 
+                        borderColor: '#4a148c', 
+                        color: '#4a148c',
+                        bgcolor: '#f3e5f5'
+                      },
                       px: { xs: 3, sm: 4 },
-                      py: { xs: 1, sm: 1.5 }
+                      py: { xs: 1.25, sm: 1.5 },
+                      fontSize: { xs: '0.9rem', sm: '1rem' },
+                      fontWeight: 600,
+                      borderRadius: { xs: 2, sm: 2.5 },
+                      textTransform: 'none',
+                      minHeight: { xs: '44px', sm: '40px' }
                     }}
                     onClick={() => window.open('/job-portal/app/profile', '_blank')}
                   >
@@ -1215,7 +1358,12 @@ const StudentDashboard: React.FC = () => {
                   </Button>
                 </Stack>
               </Grid>
-              <Grid item xs={12} md={5} sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Grid item xs={12} md={5} sx={{ 
+                display: 'flex', 
+                justifyContent: 'center',
+                alignItems: 'center',
+                mt: { xs: 2, md: 0 }
+              }}>
                 <Box 
                   component="img"
                   src="/assets/images/job-portal-promo.png"
@@ -1223,10 +1371,10 @@ const StudentDashboard: React.FC = () => {
                   sx={{ 
                     maxWidth: '100%',
                     height: 'auto',
-                    maxHeight: { xs: '200px', sm: '250px', md: '300px' },
-                    borderRadius: 2,
-                    boxShadow: 3,
-                    display: { xs: 'none', sm: 'block' }
+                    maxHeight: { xs: '180px', sm: '220px', md: '280px' },
+                    borderRadius: { xs: 1.5, sm: 2 },
+                    boxShadow: { xs: 2, sm: 3 },
+                    display: { xs: 'block', sm: 'block' }
                   }}
                   onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                     // Fallback if image doesn't exist

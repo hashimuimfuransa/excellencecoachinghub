@@ -51,6 +51,7 @@ import { courseService, ICourse } from '../../services/courseService';
 import { useAuth } from '../../hooks/useAuth';
 import { UserRole } from '../../shared/types';
 import { studentProfileService } from '../../services/studentProfileService';
+import LearningInterestPopup from '../../components/Student/LearningInterestPopup';
 
 const CoursesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -77,6 +78,11 @@ const CoursesPage: React.FC = () => {
   });
   const [showProfileAlert, setShowProfileAlert] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  // Learning interest popup state
+  const [showInterestPopup, setShowInterestPopup] = useState(false);
+  const [learningInterests, setLearningInterests] = useState<any>(null);
+  const [hasCompletedInterestSetup, setHasCompletedInterestSetup] = useState(false);
 
   // Load courses
   const loadCourses = async (isLoadMore = false) => {
@@ -156,6 +162,24 @@ const CoursesPage: React.FC = () => {
     loadProfileCompletion();
   }, [user]);
 
+  // Handle learning interest popup for students
+  useEffect(() => {
+    if (user?.role === UserRole.STUDENT) {
+      // Check if student has completed interest setup
+      const hasSetup = localStorage.getItem('learningInterestsCompleted');
+      if (!hasSetup) {
+        setShowInterestPopup(true);
+      } else {
+        setHasCompletedInterestSetup(true);
+        // Load saved interests
+        const savedInterests = localStorage.getItem('learningInterests');
+        if (savedInterests) {
+          setLearningInterests(JSON.parse(savedInterests));
+        }
+      }
+    }
+  }, [user]);
+
   // Listen for profile update events to refresh completion status
   useEffect(() => {
     const handleProfileUpdate = () => {
@@ -223,6 +247,63 @@ const CoursesPage: React.FC = () => {
     if (categoryLower.includes('design')) return '#43e97b, #38f9d7';
     if (categoryLower.includes('language')) return '#fa709a, #fee140';
     return '#a8edea, #fed6e3';
+  };
+
+  // Handle learning interest popup completion
+  const handleInterestComplete = (data: any) => {
+    setLearningInterests(data);
+    setHasCompletedInterestSetup(true);
+    setShowInterestPopup(false);
+    
+    // Save to localStorage
+    localStorage.setItem('learningInterests', JSON.stringify(data));
+    localStorage.setItem('learningInterestsCompleted', 'true');
+    
+    // Apply filters based on interests
+    applyInterestFilters(data);
+  };
+
+  // Apply filters based on learning interests
+  const applyInterestFilters = (interests: any) => {
+    if (!interests) return;
+    
+    // Map learning categories to course categories
+    const categoryMapping: { [key: string]: string } = {
+      'professional': 'Professional Development',
+      'business': 'Business',
+      'academic': 'Education',
+      'technical': 'Technology',
+      'creative': 'Design',
+      'healthcare': 'Healthcare'
+    };
+    
+    // Set category filter based on selected categories
+    if (interests.categories && interests.categories.length > 0) {
+      const mappedCategories = interests.categories
+        .map((cat: string) => categoryMapping[cat])
+        .filter(Boolean);
+      
+      if (mappedCategories.length > 0) {
+        setCategoryFilter(mappedCategories[0]); // Set first category as default
+      }
+    }
+    
+    // Set level filter based on experience level
+    if (interests.experienceLevel) {
+      const levelMapping: { [key: string]: string } = {
+        'beginner': 'Beginner',
+        'intermediate': 'Intermediate',
+        'advanced': 'Advanced'
+      };
+      setLevelFilter(levelMapping[interests.experienceLevel] || '');
+    }
+  };
+
+  // Handle popup close
+  const handleInterestClose = () => {
+    setShowInterestPopup(false);
+    // Mark as completed even if closed without completion
+    localStorage.setItem('learningInterestsCompleted', 'true');
   };
 
   return (
@@ -424,6 +505,34 @@ const CoursesPage: React.FC = () => {
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
+      )}
+
+      {/* Learning Interest Setup Button for Students */}
+      {user?.role === UserRole.STUDENT && hasCompletedInterestSetup && (
+        <Box sx={{ mb: 3, textAlign: 'center' }}>
+          <Button
+            variant="outlined"
+            startIcon={<AutoAwesome />}
+            onClick={() => setShowInterestPopup(true)}
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.dark',
+                backgroundColor: 'primary.main',
+                color: 'white',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Update Learning Interests
+          </Button>
+        </Box>
       )}
 
       {/* Modern Search and Filters */}
@@ -874,6 +983,13 @@ const CoursesPage: React.FC = () => {
           </Box>
         </Fade>
       )}
+
+      {/* Learning Interest Popup */}
+      <LearningInterestPopup
+        open={showInterestPopup}
+        onClose={handleInterestClose}
+        onComplete={handleInterestComplete}
+      />
     </Container>
   );
 };

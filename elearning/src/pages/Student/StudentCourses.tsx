@@ -204,7 +204,7 @@ const StudentCourses: React.FC = () => {
   const buttonSize = isSmallMobile ? 'small' : isMobile ? 'medium' : 'large';
 
   // State management
-  const [tabValue, setTabValue] = useState(1); // Default to Discover Courses tab
+  const [tabValue, setTabValue] = useState(0); // Default to My Learning tab
   const [enrolledCourses, setEnrolledCourses] = useState<ICourse[]>([]);
   const [availableCourses, setAvailableCourses] = useState<ICourse[]>([]);
   const [enrollments, setEnrollments] = useState<IEnrollment[]>([]);
@@ -306,7 +306,7 @@ const StudentCourses: React.FC = () => {
     
     // Set tab if specified in URL
     if (tabParam === 'discover') {
-      setTabValue(0);
+      setTabValue(1);
     }
     
     // Apply interests if provided in URL
@@ -332,18 +332,13 @@ const StudentCourses: React.FC = () => {
 
   // Handle learning interest popup - runs on component mount
   useEffect(() => {
-    console.log('🎯 Component mounted, checking popup');
-    
     // Check if student has completed interest setup
     const hasSetup = localStorage.getItem('learningInterestsCompleted');
-    console.log('🎯 Has setup:', hasSetup);
     
     if (!hasSetup) {
-      console.log('🎯 No setup found, showing popup');
       // Show popup for new students or visitors
       setShowInterestPopup(true);
     } else {
-      console.log('🎯 Setup found, loading interests');
       setHasCompletedInterestSetup(true);
       // Load saved interests
       const savedInterests = localStorage.getItem('learningInterests');
@@ -355,9 +350,6 @@ const StudentCourses: React.FC = () => {
 
   // Handle learning interest popup for students
   useEffect(() => {
-    console.log('🎯 User useEffect triggered');
-    console.log('🎯 User:', user);
-    
     // This effect runs when user changes, but we already handled the initial popup above
     if (user) {
       const hasSetup = localStorage.getItem('learningInterestsCompleted');
@@ -484,8 +476,8 @@ const StudentCourses: React.FC = () => {
     // Apply filters based on interests
     applyInterestFilters(data);
     
-    // Navigate to Discover Courses tab (tab index 0)
-    setTabValue(0);
+    // Navigate to Discover Courses tab (tab index 1)
+    setTabValue(1);
     
     // Show success message
     setShowInterestSuccess(true);
@@ -1088,7 +1080,7 @@ const StudentCourses: React.FC = () => {
         </Zoom>
       )}
 
-      {/* Discover Courses Tab */}
+      {/* My Learning Tab */}
       <TabPanel value={tabValue} index={0}>
         {loading ? (
           <Box display="flex" flexDirection="column" alignItems="center" py={8}>
@@ -1298,7 +1290,7 @@ const StudentCourses: React.FC = () => {
         )}
       </TabPanel>
 
-      {/* My Learning Tab */}
+      {/* Discover Courses Tab */}
       <TabPanel value={tabValue} index={1}>
         {/* Header */}
         <Box sx={{ mb: 4, textAlign: 'center' }}>
@@ -1780,25 +1772,6 @@ const StudentCourses: React.FC = () => {
         onClose={handleInterestClose}
         onComplete={handleInterestComplete}
       />
-      
-      {/* Debug Info - Remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <Box sx={{ 
-          position: 'fixed', 
-          top: 10, 
-          right: 10, 
-          bgcolor: 'rgba(0,0,0,0.8)', 
-          color: 'white', 
-          p: 1, 
-          borderRadius: 1,
-          fontSize: '0.7rem',
-          zIndex: 9999
-        }}>
-          <div>Popup: {showInterestPopup ? 'OPEN' : 'CLOSED'}</div>
-          <div>Setup: {hasCompletedInterestSetup ? 'YES' : 'NO'}</div>
-          <div>User: {user ? 'LOGGED IN' : 'NOT LOGGED IN'}</div>
-        </Box>
-      )}
       
       
       </Container>

@@ -15,10 +15,11 @@ import {
   ListItemText,
   Divider,
   Tooltip,
-  Zoom,
-  Slide,
   useTheme,
 } from '@mui/material';
+import { SafeSlideTransition, SimpleFadeTransition } from '../utils/transitionFix';
+
+const Zoom = SimpleFadeTransition;
 import {
   ContactSupport,
   Close,
@@ -209,7 +210,7 @@ const FloatingContact: React.FC = () => {
               : '0 20px 60px rgba(0, 0, 0, 0.15)',
           },
         }}
-        TransitionComponent={Slide}
+        TransitionComponent={SafeSlideTransition}
         slotProps={{
           backdrop: {
             timeout: 500,

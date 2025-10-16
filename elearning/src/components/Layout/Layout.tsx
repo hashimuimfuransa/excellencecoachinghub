@@ -76,6 +76,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useNotifications } from '../../hooks/useNotifications';
 import { UserRole } from '../../shared/types';
+import { SafeDialogTransition } from '../../utils/transitionFix';
 import EmailVerificationBanner from '../Auth/EmailVerificationBanner';
 import FloatingAIAssistant from '../FloatingAIAssistant';
 import { useResponsive, getDrawerWidth } from '../../utils/responsive';
@@ -83,12 +84,10 @@ import ProfilePage from '../../pages/Profile/ProfilePage';
 import BottomNavigationBar from '../BottomNavigationBar';
 
 // Ultra-Modern Responsive styled components
-const ResponsiveAppBar = styled(AppBar, {
-  shouldForwardProp: (prop) => prop !== 'drawerWidth',
-})<{ drawerWidth: number }>(({ theme, drawerWidth }) => ({
+const ResponsiveAppBar = styled(AppBar)(({ theme }) => ({
   [theme.breakpoints.up('md')]: {
-    width: `calc(100% - ${drawerWidth}px)`,
-    marginLeft: drawerWidth,
+    width: `calc(100% - 280px)`, // Fixed width for desktop
+    marginLeft: 280,
   },
   [theme.breakpoints.down('md')]: {
     width: '100%',
@@ -101,7 +100,7 @@ const ResponsiveAppBar = styled(AppBar, {
   `,
   backdropFilter: 'blur(20px)',
   color: '#ffffff',
-  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
+  boxShadow: '0 4px 16px rgba(102, 126, 234, 0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
   borderBottom: '1px solid rgba(255,255,255,0.15)',
   position: 'relative',
   '&::before': {
@@ -122,14 +121,12 @@ const ResponsiveAppBar = styled(AppBar, {
   }
 }));
 
-const ResponsiveDrawer = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'drawerWidth',
-})<{ drawerWidth: number }>(({ theme, drawerWidth }) => ({
+const ResponsiveDrawer = styled(Box)(({ theme }) => ({
   [theme.breakpoints.up('md')]: {
-    width: drawerWidth,
+    width: 280, // Fixed width for desktop
     flexShrink: 0,
     '& .MuiDrawer-paper': {
-      width: drawerWidth,
+      width: 280, // Fixed width for desktop
       boxSizing: 'border-box',
       background: `
         linear-gradient(180deg, #ffffff 0%, #f8fafc 100%),
@@ -142,41 +139,35 @@ const ResponsiveDrawer = styled(Box, {
   },
 }));
 
-const ResponsiveMain = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'drawerWidth',
-})<{ drawerWidth: number }>(({ theme, drawerWidth }) => ({
+const ResponsiveMain = styled(Box)(({ theme }) => ({
   flexGrow: 1,
-  [theme.breakpoints.up('md')]: {
-    width: `calc(100% - ${drawerWidth}px)`,
-    marginLeft: drawerWidth,
-  },
-  [theme.breakpoints.down('md')]: {
-    width: '100%',
-    marginLeft: 0,
-  },
   minHeight: '100vh',
-  backgroundColor: theme.palette.grey[50],
-  // Add proper padding to push content below the fixed AppBar header and provide breathing room
-  padding: theme.spacing(0, 1, 2, 1), // Default padding for mobile
-  paddingTop: `calc(56px + ${theme.spacing(1)})`, // AppBar height + spacing for mobile
+  backgroundColor: '#f8fafc',
+  // Improved padding for better content display
+  padding: theme.spacing(0, 1, 2, 1), // Better padding for mobile
+  paddingTop: theme.spacing(1), // Reduced padding since AppBar is now properly positioned
   [theme.breakpoints.up('sm')]: {
-    padding: theme.spacing(0, 1, 2, 1), // Reduced padding for better space utilization
-    paddingTop: `calc(64px + ${theme.spacing(1)})`, // AppBar height + reduced spacing for desktop
+    padding: theme.spacing(0, 2, 3, 2), // Better padding for tablet
+    paddingTop: theme.spacing(1), // Reduced padding for tablet
+  },
+  [theme.breakpoints.up('md')]: {
+    padding: theme.spacing(0, 3, 4, 3), // Better padding for desktop
+    paddingTop: theme.spacing(2), // Reduced padding for desktop
   },
   [theme.breakpoints.up('lg')]: {
-    padding: theme.spacing(0, 0.5, 1.5, 0.5), // Further reduced padding for large screens
-    paddingTop: `calc(64px + ${theme.spacing(0.5)})`, // Minimal spacing for large screens
+    padding: theme.spacing(0, 4, 6, 4), // Generous padding for large screens
+    paddingTop: theme.spacing(3), // Reduced padding for large screens
   },
 }));
 
 const ResponsiveToolbar = styled(Toolbar)(({ theme }) => ({
   [theme.breakpoints.down('sm')]: {
-    minHeight: 56,
+    minHeight: 48, // Reduced from 56
     paddingLeft: theme.spacing(1),
     paddingRight: theme.spacing(1),
   },
   [theme.breakpoints.up('sm')]: {
-    minHeight: 64,
+    minHeight: 56, // Reduced from 64
     paddingLeft: theme.spacing(2),
     paddingRight: theme.spacing(2),
   },
@@ -395,16 +386,17 @@ const Layout: React.FC = () => {
 
   // Enhanced drawer content
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Enhanced Logo/Brand Section */}
       <Box 
         sx={{ 
-          p: { xs: 2, sm: 3 }, 
+          p: { xs: 1.5, sm: 2 }, 
           textAlign: 'center',
           borderBottom: '1px solid rgba(102, 126, 234, 0.1)',
           background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(240, 147, 251, 0.05) 100%)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          flexShrink: 0
         }}
       >
         {/* Background Glow */}
@@ -423,11 +415,11 @@ const Layout: React.FC = () => {
         <Box sx={{ position: 'relative', zIndex: 1 }}>
           <Box
             sx={{
-              mb: 2,
+              mb: 1.5,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              p: 1,
+              p: 0.8,
               borderRadius: 2,
               background: 'rgba(255, 255, 255, 0.8)',
               border: '1px solid rgba(102, 126, 234, 0.2)',
@@ -439,7 +431,7 @@ const Layout: React.FC = () => {
               src="/logo.webp"
               alt="Excellence Coaching Hub"
               style={{ 
-                height: isMobile ? '28px' : '40px', 
+                height: isMobile ? '24px' : '32px', 
                 width: 'auto' 
               }}
             />
@@ -455,8 +447,8 @@ const Layout: React.FC = () => {
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              mb: 1,
-              fontSize: { xs: '0.9rem', sm: '1.1rem' }
+              mb: 0.5,
+              fontSize: { xs: '0.8rem', sm: '1rem' }
             }}
           >
             Excellence Hub
@@ -466,7 +458,7 @@ const Layout: React.FC = () => {
             variant="caption"
             color="text.secondary"
             sx={{ 
-              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+              fontSize: { xs: '0.65rem', sm: '0.7rem' },
               fontWeight: 500,
               opacity: 0.8
             }}
@@ -476,16 +468,33 @@ const Layout: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Navigation Items */}
-      <List 
-        sx={{ 
-          flexGrow: 1,
-          py: { xs: 0.5, sm: 1 },
-          '& .MuiListItem-root': {
-            px: { xs: 1, sm: 1.5 }
-          }
-        }}
-      >
+      {/* Navigation Items - Scrollable */}
+      <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <List 
+          sx={{ 
+            flexGrow: 1,
+            py: { xs: 0.5, sm: 0.5 },
+            overflow: 'auto',
+            '& .MuiListItem-root': {
+              px: { xs: 0.5, sm: 1 }
+            },
+            // Custom scrollbar styling
+            '&::-webkit-scrollbar': {
+              width: '4px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: 'rgba(0,0,0,0.05)',
+              borderRadius: '2px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: 'rgba(102, 126, 234, 0.3)',
+              borderRadius: '2px',
+              '&:hover': {
+                background: 'rgba(102, 126, 234, 0.5)',
+              },
+            },
+          }}
+        >
         {getNavigationItems().map((item) => {
           const isLiveSession = item.text.includes('Live Sessions');
           
@@ -512,11 +521,11 @@ const Layout: React.FC = () => {
                     }}
                     disabled={isDisabled}
                 sx={{
-                  minHeight: { xs: 44, sm: 52 },
-                  px: { xs: 1.5, sm: 2.5 },
-                  borderRadius: 2.5,
-                  mx: { xs: 1, sm: 1.5 },
-                  mb: 1,
+                  minHeight: { xs: 40, sm: 44 },
+                  px: { xs: 1, sm: 1.5 },
+                  borderRadius: 2,
+                  mx: { xs: 0.5, sm: 1 },
+                  mb: 0.5,
                   position: 'relative',
                   overflow: 'hidden',
                   // Base styling with glassmorphism
@@ -593,9 +602,9 @@ const Layout: React.FC = () => {
               >
               <ListItemIcon 
                 sx={{ 
-                  minWidth: { xs: 42, sm: 48 },
+                  minWidth: { xs: 36, sm: 40 },
                   '& .MuiSvgIcon-root': {
-                    fontSize: { xs: '1.3rem', sm: '1.6rem' },
+                    fontSize: { xs: '1.1rem', sm: '1.3rem' },
                     transition: 'all 0.3s ease',
                     filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
                   }
@@ -606,10 +615,14 @@ const Layout: React.FC = () => {
               <ListItemText 
                 primary={item.text}
                 primaryTypographyProps={{
-                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                  fontSize: { xs: '0.8rem', sm: '0.85rem' },
                   fontWeight: isActivePath(item.path) ? 700 : 500,
-                  color: isActivePath(item.path) ? 'inherit' : 'text.primary',
-                  transition: 'all 0.3s ease'
+                  color: isActivePath(item.path) ? 'inherit' : 'text.primary'
+                }}
+                sx={{
+                  '& .MuiTypography-root': {
+                    transition: 'all 0.3s ease'
+                  }
                 }}
               />
               {isDisabled && (
@@ -630,46 +643,97 @@ const Layout: React.FC = () => {
           </ResponsiveListItem>
           );
         })}
-      </List>
+        </List>
+      </Box>
 
-      <Divider />
-
-      {/* Settings and Notifications */}
-      <List>
-        <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation('/dashboard/notifications')}>
-            <ListItemIcon>
-              <Badge badgeContent={unreadCount} color="error">
-                <Notifications />
-              </Badge>
-            </ListItemIcon>
-            <ListItemText primary="Notifications" />
-          </ListItemButton>
-        </ListItem>
-
-        {/* Only show Settings for Admin users */}
-        {(user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN) && (
+      {/* Bottom Section - Fixed */}
+      <Box sx={{ flexShrink: 0, borderTop: '1px solid rgba(102, 126, 234, 0.1)' }}>
+        <List sx={{ py: 0.5 }}>
           <ListItem disablePadding>
-            <ListItemButton onClick={() => handleNavigation('/dashboard/admin/settings')}>
-              <ListItemIcon>
-                <Settings />
+            <ListItemButton 
+              onClick={() => handleNavigation('/dashboard/notifications')}
+              sx={{
+                minHeight: { xs: 40, sm: 44 },
+                px: { xs: 1, sm: 1.5 },
+                borderRadius: 2,
+                mx: { xs: 0.5, sm: 1 },
+                mb: 0.5,
+                background: 'rgba(255, 255, 255, 0.6)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(102, 126, 234, 0.1)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(240, 147, 251, 0.05) 100%)',
+                  borderColor: 'rgba(102, 126, 234, 0.3)',
+                  transform: 'translateX(4px)',
+                  boxShadow: '0 4px 20px rgba(102, 126, 234, 0.15)',
+                },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                <Badge badgeContent={unreadCount} color="error">
+                  <Notifications sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' } }} />
+                </Badge>
               </ListItemIcon>
-              <ListItemText primary="Settings" />
+              <ListItemText 
+                primary="Notifications" 
+                primaryTypographyProps={{
+                  fontSize: { xs: '0.8rem', sm: '0.85rem' },
+                  fontWeight: 500
+                }}
+              />
             </ListItemButton>
           </ListItem>
-        )}
-      </List>
+
+          {/* Only show Settings for Admin users */}
+          {(user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN) && (
+            <ListItem disablePadding>
+              <ListItemButton 
+                onClick={() => handleNavigation('/dashboard/admin/settings')}
+                sx={{
+                  minHeight: { xs: 40, sm: 44 },
+                  px: { xs: 1, sm: 1.5 },
+                  borderRadius: 2,
+                  mx: { xs: 0.5, sm: 1 },
+                  mb: 0.5,
+                  background: 'rgba(255, 255, 255, 0.6)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(102, 126, 234, 0.1)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(240, 147, 251, 0.05) 100%)',
+                    borderColor: 'rgba(102, 126, 234, 0.3)',
+                    transform: 'translateX(4px)',
+                    boxShadow: '0 4px 20px rgba(102, 126, 234, 0.15)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <Settings sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' } }} />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Settings" 
+                  primaryTypographyProps={{
+                    fontSize: { xs: '0.8rem', sm: '0.85rem' },
+                    fontWeight: 500
+                  }}
+                />
+              </ListItemButton>
+            </ListItem>
+          )}
+        </List>
+      </Box>
     </Box>
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* App Bar */}
       <ResponsiveAppBar
         position="fixed"
-        drawerWidth={drawerWidths.desktop}
+        sx={{ zIndex: theme.zIndex.drawer + 1 }}
       >
-        <Toolbar>
+        <Toolbar sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -680,7 +744,16 @@ const Layout: React.FC = () => {
             <MenuIcon />
           </IconButton>
 
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography 
+            variant="h6" 
+            noWrap 
+            component="div" 
+            sx={{ 
+              flexGrow: 1,
+              display: { xs: 'none', sm: 'block' },
+              mr: 2
+            }}
+          >
             {user?.firstName} {user?.lastName}
           </Typography>
 
@@ -689,11 +762,12 @@ const Layout: React.FC = () => {
             component="form"
             onSubmit={handleSearchSubmit}
             sx={{
-              display: { xs: 'none', md: 'flex' },
+              display: 'flex',
               alignItems: 'center',
               mr: 2,
-              minWidth: 300,
-              maxWidth: 500
+              minWidth: { xs: 200, sm: 250, md: 350 },
+              maxWidth: { xs: 250, sm: 300, md: 450 },
+              flexGrow: { xs: 1, sm: 0 }
             }}
           >
             <TextField
@@ -736,18 +810,54 @@ const Layout: React.FC = () => {
 
           {/* Explore Categories Button */}
           <Button
-            variant="text"
-            color="inherit"
+            variant="contained"
             startIcon={<Explore />}
             endIcon={<ExpandMore />}
             onClick={handleExploreClick}
             sx={{
               mr: 2,
               textTransform: 'none',
-              fontSize: '1rem',
+              fontSize: { xs: '0.9rem', sm: '1rem' },
+              display: { xs: 'none', sm: 'flex' },
+              minWidth: { sm: 120, md: 140 },
+              height: { xs: 36, sm: 40 },
+              borderRadius: 2,
+              background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
+              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+              fontWeight: 600,
+              letterSpacing: '0.5px',
+              position: 'relative',
+              overflow: 'hidden',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)'
-              }
+                background: 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)',
+                boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
+                transform: 'translateY(-1px)',
+                '&::before': {
+                  opacity: 1,
+                }
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+                boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)',
+              },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                transition: 'left 0.5s ease',
+                opacity: 0,
+              },
+              '&:hover::before': {
+                left: '100%',
+                opacity: 1,
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
             Explore
@@ -774,6 +884,96 @@ const Layout: React.FC = () => {
           </Tooltip>
         </Toolbar>
       </ResponsiveAppBar>
+
+      {/* Main Layout Container */}
+      <Box sx={{ display: 'flex', flexGrow: 1, mt: { xs: '48px', sm: '56px' } }}>
+        {/* Navigation Drawer */}
+        <Box
+          component="nav"
+          sx={{ width: { md: 280 }, flexShrink: { md: 0 } }}
+          aria-label="navigation"
+        >
+          {/* Mobile drawer */}
+          <Drawer
+            variant="temporary"
+            open={mobileOpen}
+            onClose={handleDrawerToggle}
+            ModalProps={{
+              keepMounted: true, // Better open performance on mobile.
+            }}
+            sx={{
+              display: { xs: 'block', md: 'none' },
+              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 260 },
+            }}
+          >
+            {drawer}
+          </Drawer>
+
+          {/* Desktop drawer */}
+          <Drawer
+            variant="permanent"
+            sx={{
+              display: { xs: 'none', md: 'block' },
+              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 },
+            }}
+            open
+          >
+            {drawer}
+          </Drawer>
+        </Box>
+
+        {/* Main content */}
+        <ResponsiveMain>
+          {/* Email Verification Banner */}
+          {user && (
+            <EmailVerificationBanner
+              user={{
+                email: user.email,
+                firstName: user.firstName,
+                isEmailVerified: user.isEmailVerified
+              }}
+            />
+          )}
+          
+          {/* Main Content with Mobile Bottom Navigation Spacing */}
+          <Box sx={{ 
+            pb: { xs: '80px', md: 0 }, // Add bottom padding on mobile for bottom nav
+            minHeight: { xs: 'calc(100vh - 80px)', md: 'calc(100vh - 56px)' },
+            marginBottom: { xs: 0, md: 0 },
+            position: 'relative',
+            // Add a subtle background pattern
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: `
+                radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(240, 147, 251, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(79, 172, 254, 0.03) 0%, transparent 50%)
+              `,
+              pointerEvents: 'none',
+              zIndex: 0
+            }
+          }}>
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              <Outlet />
+            </Box>
+          </Box>
+
+          {/* Floating AI Assistant - Available for students */}
+          {user?.role === UserRole.STUDENT && (
+            <FloatingAIAssistant
+              context={{
+                page: location.pathname,
+                // Additional context can be passed here
+              }}
+            />
+          )}
+        </ResponsiveMain>
+      </Box>
 
       {/* Profile Menu */}
       <Menu
@@ -839,11 +1039,25 @@ const Layout: React.FC = () => {
         }}
         PaperProps={{
           sx: {
-            mt: 1,
-            minWidth: 400,
-            maxWidth: 600,
-            borderRadius: 2,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
+            mt: 2,
+            minWidth: { xs: 320, sm: 450, md: 600 },
+            maxWidth: { xs: '90vw', sm: 500, md: 700 },
+            borderRadius: 3,
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 25px rgba(0, 0, 0, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(20px)',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
+            overflow: 'hidden',
+            position: 'relative',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: 'linear-gradient(90deg, #4caf50 0%, #2196f3 50%, #9c27b0 100%)',
+            }
           }
         }}
       >
@@ -912,73 +1126,6 @@ const Layout: React.FC = () => {
         </Box>
       </Popover>
 
-      {/* Navigation Drawer */}
-      <Box
-        component="nav"
-        sx={{ width: { md: drawerWidths.desktop }, flexShrink: { md: 0 } }}
-        aria-label="navigation"
-      >
-        {/* Mobile drawer */}
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
-          }}
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidths.mobile },
-          }}
-        >
-          {drawer}
-        </Drawer>
-
-        {/* Desktop drawer */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidths.desktop },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      {/* Main content */}
-      <ResponsiveMain drawerWidth={drawerWidths.desktop}>
-        {/* Email Verification Banner */}
-        {user && (
-          <EmailVerificationBanner
-            user={{
-              email: user.email,
-              firstName: user.firstName,
-              isEmailVerified: user.isEmailVerified
-            }}
-          />
-        )}
-        
-        {/* Main Content with Mobile Bottom Navigation Spacing */}
-        <Box sx={{ 
-          pb: { xs: '80px', md: 0 }, // Add bottom padding on mobile for bottom nav
-          minHeight: { xs: 'calc(100vh - 80px)', md: '100vh' },
-          marginBottom: { xs: 0, md: 0 }
-        }}>
-          <Outlet />
-        </Box>
-
-        {/* Floating AI Assistant - Available for students */}
-        {user?.role === UserRole.STUDENT && (
-          <FloatingAIAssistant
-            context={{
-              page: location.pathname,
-              // Additional context can be passed here
-            }}
-          />
-        )}
-      </ResponsiveMain>
 
       {/* Profile Modal */}
       <Dialog
@@ -988,6 +1135,7 @@ const Layout: React.FC = () => {
         fullWidth
         fullScreen={isMobile}
         keepMounted={false} // Don't keep component mounted when closed
+        TransitionComponent={SafeDialogTransition}
         sx={{
           '& .MuiDialog-paper': {
             borderRadius: isMobile ? 0 : 2,

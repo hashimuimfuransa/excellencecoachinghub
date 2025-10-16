@@ -83,10 +83,10 @@ export const getCardDimensions = () => ({
 
 // Drawer width for different devices
 export const getDrawerWidth = () => ({
-  mobile: 280,
-  tablet: 300,
-  laptop: 280,  // Reduced from 320 to 280 for better space utilization
-  desktop: 300  // Reduced from 340 to 300 for better space utilization
+  mobile: 260,  // Reduced for better mobile experience
+  tablet: 280,  // Reduced for better tablet experience
+  laptop: 260,  // Reduced for better space utilization
+  desktop: 280  // Reduced for better space utilization
 });
 
 // Container max widths for different devices

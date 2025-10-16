@@ -13,7 +13,6 @@ import {
   Avatar,
   IconButton,
   Chip,
-  Slide,
   useTheme,
   useMediaQuery,
   CircularProgress
@@ -29,18 +28,11 @@ import {
   Help,
   Psychology
 } from '@mui/icons-material';
-import { TransitionProps } from '@mui/material/transitions';
 import { useAuth } from '../hooks/useAuth';
 import { aiAssistantService } from '../services/aiAssistantService';
+import { SafeDialogTransition } from '../utils/transitionFix';
 
-const Transition = React.forwardRef(function Transition(
-  props: TransitionProps & {
-    children: React.ReactElement<any, any>;
-  },
-  ref: React.Ref<unknown>,
-) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
+const Transition = SafeDialogTransition;
 
 interface Message {
   id: string;

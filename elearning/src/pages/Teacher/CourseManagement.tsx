@@ -69,6 +69,7 @@ import { assignmentService } from '../../services/assignmentService';
 import { assessmentService } from '../../services/assessmentService';
 import api from '../../services/api';
 import { Week, WeekMaterial } from '../../services/weekService';
+import { SafeDialogTransition } from '../../utils/transitionFix';
 import DocumentProcessor from '../../components/CourseMaterials/DocumentProcessor';
 import MediaUploader from '../../components/CourseMaterials/MediaUploader';
 import CourseMaterials from '../../components/CourseMaterials/CourseMaterials';
@@ -2738,7 +2739,7 @@ const CourseManagement: React.FC = () => {
       </Paper>
 
       {/* Add/Edit Material Dialog */}
-      <Dialog open={materialDialogOpen} onClose={() => setMaterialDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={materialDialogOpen} onClose={() => setMaterialDialogOpen(false)} maxWidth="md" fullWidth TransitionComponent={SafeDialogTransition}>
         <DialogTitle>
           {editingMaterial ? 'Edit Material' : 'Add New Material'}
         </DialogTitle>
@@ -2810,7 +2811,7 @@ const CourseManagement: React.FC = () => {
       </Dialog>
 
       {/* Material Deletion Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={cancelDeleteMaterial}>
+      <Dialog open={deleteDialogOpen} onClose={cancelDeleteMaterial} TransitionComponent={SafeDialogTransition}>
         <DialogTitle>Delete Material</DialogTitle>
         <DialogContent>
           <Typography>
@@ -2846,7 +2847,7 @@ const CourseManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
       {/* Add/Edit Week Dialog */}
-      <Dialog open={weekDialogOpen} onClose={() => setWeekDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={weekDialogOpen} onClose={() => setWeekDialogOpen(false)} maxWidth="md" fullWidth TransitionComponent={SafeDialogTransition}>
         <DialogTitle>
           {editingWeek ? 'Edit Week' : 'Add New Week'}
         </DialogTitle>
@@ -2928,7 +2929,7 @@ const CourseManagement: React.FC = () => {
       </Dialog>
 
       {/* Add/Edit Week Material Dialog */}
-      <Dialog open={weekMaterialDialogOpen} onClose={() => setWeekMaterialDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={weekMaterialDialogOpen} onClose={() => setWeekMaterialDialogOpen(false)} maxWidth="md" fullWidth TransitionComponent={SafeDialogTransition}>
         <DialogTitle>
           {editingWeekMaterial ? 'Edit Material' : 'Add Material to Week'}
         </DialogTitle>
@@ -3023,7 +3024,7 @@ const CourseManagement: React.FC = () => {
       </Dialog>
 
       {/* Add/Edit Assignment Dialog */}
-      <Dialog open={assignmentDialogOpen} onClose={() => setAssignmentDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={assignmentDialogOpen} onClose={() => setAssignmentDialogOpen(false)} maxWidth="md" fullWidth TransitionComponent={SafeDialogTransition}>
         <DialogTitle>
           {editingAssignment ? 'Edit Assignment' : 'Create New Assignment'}
         </DialogTitle>

@@ -78,6 +78,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { assessmentService, IAssessment, IQuestion } from '../../services/assessmentService';
 import { proctoringService } from '../../services/proctoringService';
 import { OrganizedAssessment } from '../../services/aiAssessmentOrganizerService';
+import { SafeDialogTransition } from '../../utils/transitionFix';
 
 interface ProctoringData {
   isActive: boolean;
@@ -1191,7 +1192,7 @@ const EnhancedProctoredAssessment: React.FC = () => {
       </Container>
 
       {/* Warning Dialog */}
-      <Dialog open={showWarning} onClose={() => setShowWarning(false)}>
+      <Dialog open={showWarning} onClose={() => setShowWarning(false)} TransitionComponent={SafeDialogTransition}>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Warning color="warning" />
           Assessment Warning
@@ -1207,7 +1208,7 @@ const EnhancedProctoredAssessment: React.FC = () => {
       </Dialog>
 
       {/* Submit Confirmation Dialog */}
-      <Dialog open={showSubmitDialog} onClose={() => setShowSubmitDialog(false)}>
+      <Dialog open={showSubmitDialog} onClose={() => setShowSubmitDialog(false)} TransitionComponent={SafeDialogTransition}>
         <DialogTitle>Submit Assessment</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }}>
@@ -1239,6 +1240,7 @@ const EnhancedProctoredAssessment: React.FC = () => {
         onClose={() => setShowAiInsights(false)}
         maxWidth="md"
         fullWidth
+        TransitionComponent={SafeDialogTransition}
       >
         <DialogTitle sx={{ pb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

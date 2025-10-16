@@ -91,6 +91,7 @@ import { liveSessionService, ILiveSession } from '../../services/liveSessionServ
 import { recordedSessionService, IRecordedSession } from '../../services/recordedSessionService';
 import { courseService } from '../../services/courseService';
 import { Widget } from '@uploadcare/react-widget';
+import { SafeDialogTransition } from '../../utils/transitionFix';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1515,6 +1516,7 @@ const LiveSessions: React.FC = () => {
         maxWidth="md"
         fullWidth
         fullScreen={isMobile}
+        TransitionComponent={SafeDialogTransition}
         PaperProps={{
           sx: {
             m: isMobile ? 0 : 2,
@@ -1660,6 +1662,7 @@ const LiveSessions: React.FC = () => {
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
+        TransitionComponent={SafeDialogTransition}
       >
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
@@ -1814,6 +1817,7 @@ const LiveSessions: React.FC = () => {
         maxWidth="lg"
         fullWidth
         fullScreen={isMobile}
+        TransitionComponent={SafeDialogTransition}
         PaperProps={{
           sx: {
             m: isMobile ? 0 : 2,

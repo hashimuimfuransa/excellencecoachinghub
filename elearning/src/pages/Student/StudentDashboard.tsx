@@ -34,7 +34,9 @@ import {
   PlayArrow,
   TrendingUp,
   Notifications,
-  Person
+  Person,
+  Description,
+  Assessment
 } from '@mui/icons-material';
 
 import { useAuth } from '../../store/AuthContext';
@@ -544,6 +546,33 @@ const StudentDashboard: React.FC = () => {
                   }}
                 >
                   📚 Study Materials
+                </ResponsiveButton>
+                
+                <ResponsiveButton 
+                  size={buttonSize}
+                  variant="outlined" 
+                  onClick={() => navigate('/past-papers')}
+                  sx={{ 
+                    bgcolor: 'white',
+                    borderColor: 'secondary.main',
+                    color: 'secondary.main',
+                    minHeight: { xs: '44px', sm: '40px' },
+                    fontSize: { xs: '0.85rem', sm: '0.9rem' },
+                    fontWeight: 600,
+                    borderRadius: { xs: 2, sm: 2.5 },
+                    '&:hover': {
+                      bgcolor: 'secondary.main',
+                      color: 'white',
+                      transform: { xs: 'none', sm: 'translateY(-2px)' },
+                      boxShadow: { xs: '0 2px 8px rgba(156, 39, 176, 0.3)', sm: '0 4px 12px rgba(156, 39, 176, 0.3)' }
+                    },
+                    transition: 'all 0.3s ease',
+                    '&:active': {
+                      transform: 'scale(0.98)'
+                    }
+                  }}
+                >
+                  📝 Past Papers
                 </ResponsiveButton>
                 
                 <ResponsiveButton 

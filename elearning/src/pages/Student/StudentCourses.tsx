@@ -250,17 +250,73 @@ const StudentCourses: React.FC = () => {
         setEnrollments(enrollmentsResponse.enrollments);
       } else {
         // Load available courses and enrollments
+        const courseFilters: any = {
+          search: searchTerm,
+          category: categoryFilter,
+          limit: 50 // Increased limit to allow for better client-side filtering
+        };
+        
+        // Only add interest-based filters if interests are set
+        if (learningInterests) {
+          if (learningInterests.categories && learningInterests.categories.length > 0) {
+            courseFilters.learningCategories = learningInterests.categories;
+          }
+          if (learningInterests.experienceLevel) {
+            courseFilters.level = learningInterests.experienceLevel.charAt(0).toUpperCase() + learningInterests.experienceLevel.slice(1);
+          }
+        }
+        
+        console.log('🔍 Loading courses with filters:', courseFilters);
+        
         const [coursesResponse, enrollmentsResponse] = await Promise.allSettled([
-          courseService.getPublicCourses({
-            search: searchTerm,
-            category: categoryFilter,
-            limit: 20
-          }),
+          courseService.getPublicCourses(courseFilters),
           enrollmentService.getMyEnrollments()
         ]);
         
         if (coursesResponse.status === 'fulfilled') {
-          setAvailableCourses(coursesResponse.value.courses);
+          let courses = coursesResponse.value.courses;
+          console.log('📚 Courses loaded from API:', {
+            count: courses.length,
+            courses: courses.map(c => ({ title: c.title, category: c.category, level: c.level })),
+            learningInterests: learningInterests
+          });
+          
+          // Apply interest-based filtering if interests are available
+          if (learningInterests) {
+            console.log('🎯 Applying interest filtering:', {
+              interests: learningInterests,
+              originalCount: courses.length,
+              courses: courses.map(c => ({
+                title: c.title,
+                learningCategories: c.learningCategories,
+                level: c.level,
+                careerGoal: c.careerGoal,
+                category: c.category
+              }))
+            });
+            
+            const originalCount = courses.length;
+            courses = filterCoursesByInterests(courses, learningInterests);
+            console.log('🎯 Filtered courses by interests:', { 
+              original: originalCount, 
+              filtered: courses.length,
+              filteredCourses: courses.map(c => c.title),
+              interests: learningInterests
+            });
+            
+            // If no courses match, show a helpful message
+            if (courses.length === 0) {
+              console.log('⚠️ No courses match the selected interests. Consider showing all courses or adjusting filters.');
+            }
+          } else {
+            console.log('📚 No learning interests set - showing all courses:', courses.length);
+          }
+          
+          setAvailableCourses(courses);
+        } else {
+          console.error('❌ Failed to load courses:', coursesResponse.reason);
+          setError('Failed to load courses. Please try again.');
+          setAvailableCourses([]);
         }
         if (enrollmentsResponse.status === 'fulfilled') {
           setEnrollments(enrollmentsResponse.value.enrollments);
@@ -296,7 +352,7 @@ const StudentCourses: React.FC = () => {
   // Load courses when tab changes or filters change
   useEffect(() => {
     loadCourses();
-  }, [tabValue, searchTerm, categoryFilter]);
+  }, [tabValue, searchTerm, categoryFilter, learningInterests]);
 
   // Handle URL parameters for tab and interests
   useEffect(() => {
@@ -316,6 +372,12 @@ const StudentCourses: React.FC = () => {
         setLearningInterests(interests);
         applyInterestFilters(interests);
         
+        // Save interests to localStorage so they persist
+        localStorage.setItem('learningInterests', JSON.stringify(interests));
+        localStorage.setItem('learningInterestsCompleted', 'true');
+        
+        console.log('📚 Interests loaded from URL and saved to localStorage:', interests);
+        
         // Clean up URL parameters
         const newUrl = window.location.pathname;
         window.history.replaceState({}, document.title, newUrl);
@@ -332,11 +394,23 @@ const StudentCourses: React.FC = () => {
 
   // Handle learning interest popup - runs on component mount
   useEffect(() => {
+    // Check if interests were provided via URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const interestsParam = urlParams.get('interests');
+    
+    // If interests are provided via URL, don't show popup
+    if (interestsParam) {
+      setHasCompletedInterestSetup(true);
+      console.log('📚 Interests provided via URL - skipping popup');
+      return;
+    }
+    
     // Check if student has completed interest setup
     const hasSetup = localStorage.getItem('learningInterestsCompleted');
     
     if (!hasSetup) {
       // Show popup for new students or visitors
+      console.log('📚 No interests found - showing popup');
       setShowInterestPopup(true);
     } else {
       setHasCompletedInterestSetup(true);
@@ -344,6 +418,7 @@ const StudentCourses: React.FC = () => {
       const savedInterests = localStorage.getItem('learningInterests');
       if (savedInterests) {
         setLearningInterests(JSON.parse(savedInterests));
+        console.log('📚 Loaded saved interests from localStorage');
       }
     }
   }, []); // Run only on mount
@@ -352,6 +427,16 @@ const StudentCourses: React.FC = () => {
   useEffect(() => {
     // This effect runs when user changes, but we already handled the initial popup above
     if (user) {
+      // Check if interests were provided via URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const interestsParam = urlParams.get('interests');
+      
+      // If interests are provided via URL, don't show popup
+      if (interestsParam) {
+        setHasCompletedInterestSetup(true);
+        return;
+      }
+      
       const hasSetup = localStorage.getItem('learningInterestsCompleted');
       if (hasSetup) {
         setHasCompletedInterestSetup(true);
@@ -479,6 +564,9 @@ const StudentCourses: React.FC = () => {
     // Navigate to Discover Courses tab (tab index 1)
     setTabValue(1);
     
+    // Reload courses to apply new interest filters
+    loadCourses();
+    
     // Show success message
     setShowInterestSuccess(true);
     setTimeout(() => setShowInterestSuccess(false), 5000);
@@ -487,6 +575,8 @@ const StudentCourses: React.FC = () => {
   // Apply filters based on learning interests
   const applyInterestFilters = (interests: any) => {
     if (!interests) return;
+    
+    console.log('🎯 Applying interest filters:', interests);
     
     // Map learning categories to course categories
     const categoryMapping: { [key: string]: string } = {
@@ -524,6 +614,199 @@ const StudentCourses: React.FC = () => {
       };
       // Note: We'll need to add level filtering to the course search if not already present
     }
+  };
+
+  // Filter courses based on learning interests
+  const filterCoursesByInterests = (courses: ICourse[], interests: any) => {
+    if (!interests || !courses.length) return courses;
+    
+    console.log('🔍 Filtering courses by interests:', { interests, courseCount: courses.length });
+    
+    // If no specific criteria are provided, return all courses
+    const hasCriteria = interests.categories?.length > 0 || 
+                       interests.experienceLevel || 
+                       interests.careerGoal || 
+                       interests.learningStyle || 
+                       interests.timeCommitment || 
+                       interests.specificInterests?.length > 0;
+    
+    if (!hasCriteria) {
+      console.log('🔍 No specific criteria provided, returning all courses');
+      return courses;
+    }
+    
+    const filteredCourses = courses.filter(course => {
+      let matches = 0;
+      let totalCriteria = 0;
+      
+      // Check learning categories match
+      if (interests.categories && interests.categories.length > 0) {
+        if (course.learningCategories && course.learningCategories.length > 0) {
+          const hasMatchingCategory = interests.categories.some((interestCat: string) => 
+            course.learningCategories!.includes(interestCat)
+          );
+          if (hasMatchingCategory) matches++;
+        } else {
+          // If course doesn't have learningCategories, try to match by category field
+          const categoryMapping: { [key: string]: string[] } = {
+            'professional': ['Professional Development', 'Business', 'Leadership'],
+            'business': ['Business', 'Entrepreneurship', 'Marketing', 'Finance'],
+            'academic': ['Education', 'Academic', 'Study', 'Learning'],
+            'technical': ['Technology', 'Programming', 'Web Development', 'Data Science', 'AI'],
+            'creative': ['Design', 'Creative', 'Art', 'Photography', 'Music'],
+            'healthcare': ['Healthcare', 'Medical', 'Nursing', 'Health']
+          };
+          
+          const mappedCategories: string[] = interests.categories.flatMap((cat: string) => categoryMapping[cat] || []);
+          const hasMatchingCategory = mappedCategories.some((mappedCat: string) => 
+            course.category && course.category.toLowerCase().includes(mappedCat.toLowerCase())
+          );
+          if (hasMatchingCategory) matches++;
+        }
+        totalCriteria++;
+      }
+      
+      // Check experience level match
+      if (interests.experienceLevel) {
+        const levelMapping: { [key: string]: string } = {
+          'beginner': 'Beginner',
+          'intermediate': 'Intermediate', 
+          'advanced': 'Advanced'
+        };
+        const mappedLevel = levelMapping[interests.experienceLevel];
+        if (course.level === mappedLevel) {
+          matches++;
+        }
+        totalCriteria++;
+      }
+      
+      // Check career goal match
+      if (interests.careerGoal && course.careerGoal) {
+        if (course.careerGoal === interests.careerGoal) {
+          matches++;
+        }
+        totalCriteria++;
+      }
+      
+      // Check learning style match
+      if (interests.learningStyle && course.learningStyle) {
+        if (course.learningStyle === interests.learningStyle) {
+          matches++;
+        }
+        totalCriteria++;
+      }
+      
+      // Check time commitment match
+      if (interests.timeCommitment && course.timeCommitment) {
+        if (course.timeCommitment === interests.timeCommitment) {
+          matches++;
+        }
+        totalCriteria++;
+      }
+      
+      // Check specific interests match (search in title, description, tags, specificInterests)
+      if (interests.specificInterests && interests.specificInterests.length > 0) {
+        const courseText = [
+          course.title,
+          course.description,
+          ...(course.tags || []),
+          ...(course.specificInterests || [])
+        ].join(' ').toLowerCase();
+        
+        const hasMatchingInterest = interests.specificInterests.some((interest: string) =>
+          courseText.includes(interest.toLowerCase())
+        );
+        
+        if (hasMatchingInterest) {
+          matches++;
+        }
+        totalCriteria++;
+      }
+      
+      // Course matches if it meets at least 1 criteria or 20% of available criteria (more lenient)
+      const minMatches = Math.max(1, Math.ceil(totalCriteria * 0.2));
+      const courseMatches = matches >= minMatches;
+      
+      if (courseMatches) {
+        console.log('✅ Course matches:', {
+          title: course.title,
+          matches,
+          totalCriteria,
+          learningCategories: course.learningCategories,
+          level: course.level
+        });
+      }
+      
+      return courseMatches;
+    });
+    
+    // If filtering is too restrictive and returns very few courses, show more courses
+    if (filteredCourses.length < 3 && courses.length > 3) {
+      console.log('🔍 Filtering too restrictive, showing more courses. Filtered:', filteredCourses.length, 'Total:', courses.length);
+      
+      // Return courses that match at least one criteria or have no specific filtering
+      return courses.filter(course => {
+        let matches = 0;
+        
+        // Check learning categories match (more lenient)
+        if (interests.categories && interests.categories.length > 0) {
+          if (course.learningCategories && course.learningCategories.length > 0) {
+            const hasMatchingCategory = interests.categories.some((interestCat: string) => 
+              course.learningCategories!.includes(interestCat)
+            );
+            if (hasMatchingCategory) matches++;
+          } else {
+            // Fallback to category matching
+            const categoryMapping: { [key: string]: string[] } = {
+              'professional': ['Professional Development', 'Business', 'Leadership'],
+              'business': ['Business', 'Entrepreneurship', 'Marketing', 'Finance'],
+              'academic': ['Education', 'Academic', 'Study', 'Learning'],
+              'technical': ['Technology', 'Programming', 'Web Development', 'Data Science', 'AI'],
+              'creative': ['Design', 'Creative', 'Art', 'Photography', 'Music'],
+              'healthcare': ['Healthcare', 'Medical', 'Nursing', 'Health']
+            };
+            
+            const mappedCategories: string[] = interests.categories.flatMap((cat: string) => categoryMapping[cat] || []);
+            const hasMatchingCategory = mappedCategories.some((mappedCat: string) => 
+              course.category && course.category.toLowerCase().includes(mappedCat.toLowerCase())
+            );
+            if (hasMatchingCategory) matches++;
+          }
+        }
+        
+        // Check experience level match (more lenient)
+        if (interests.experienceLevel) {
+          const levelMapping: { [key: string]: string } = {
+            'beginner': 'Beginner',
+            'intermediate': 'Intermediate', 
+            'advanced': 'Advanced'
+          };
+          const mappedLevel = levelMapping[interests.experienceLevel];
+          if (course.level === mappedLevel) matches++;
+        }
+        
+        // Check specific interests match (more lenient)
+        if (interests.specificInterests && interests.specificInterests.length > 0) {
+          const courseText = [
+            course.title,
+            course.description,
+            ...(course.tags || []),
+            ...(course.specificInterests || [])
+          ].join(' ').toLowerCase();
+          
+          const hasMatchingInterest = interests.specificInterests.some((interest: string) =>
+            courseText.includes(interest.toLowerCase())
+          );
+          
+          if (hasMatchingInterest) matches++;
+        }
+        
+        // Return course if it matches at least one criteria or if no specific criteria
+        return matches > 0 || (!interests.categories?.length && !interests.experienceLevel && !interests.specificInterests?.length);
+      });
+    }
+    
+    return filteredCourses;
   };
 
   // Handle popup close
@@ -633,11 +916,11 @@ const StudentCourses: React.FC = () => {
                 }}
               >
                 <ListItemIcon>
-                  <Explore />
+                  <MenuBook />
                 </ListItemIcon>
                 <ListItemText 
-                  primary="Discover Courses" 
-                  secondary="Browse available courses"
+                  primary="My Learning" 
+                  secondary="View enrolled courses"
                 />
               </ListItem>
               <ListItem
@@ -650,11 +933,11 @@ const StudentCourses: React.FC = () => {
                 }}
               >
                 <ListItemIcon>
-                  <MenuBook />
+                  <Explore />
                 </ListItemIcon>
                 <ListItemText 
-                  primary="My Learning" 
-                  secondary="View enrolled courses"
+                  primary="Discover Courses" 
+                  secondary="Browse available courses"
                 />
               </ListItem>
             </List>
@@ -671,104 +954,77 @@ const StudentCourses: React.FC = () => {
           </Box>
         </Drawer>
 
-        {/* Profile Completion Alert for Students */}
+        {/* Profile Completion Alert for Students - Ultra Compact */}
       {user?.role === UserRole.STUDENT && !profileCompletion.isComplete && showProfileAlert && (
         <Fade in={showProfileAlert}>
           <Paper
             elevation={0}
             sx={{
-              mb: 4,
-              p: 4,
+              mb: 2,
+              p: { xs: 1.5, sm: 2 },
               background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(124, 58, 237, 0.95) 50%, rgba(236, 72, 153, 0.95) 100%)',
               color: 'white',
-              borderRadius: 4,
+              borderRadius: 2,
               position: 'relative',
               overflow: 'hidden',
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
-              boxShadow: '0 20px 40px rgba(37, 99, 235, 0.3)',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: -50,
-                right: -50,
-                width: 200,
-                height: 200,
-                background: 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)',
-                borderRadius: '50%',
-              }
+              boxShadow: '0 8px 16px rgba(37, 99, 235, 0.2)',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Person sx={{ mr: 1 }} />
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Complete Your Profile
-                </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, mr: 2 }}>
+                <Person sx={{ mr: 1, fontSize: 18 }} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.85rem', sm: '0.9rem' }, mb: 0.5 }}>
+                    Complete Your Profile ({profileCompletion.percentage}%)
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={profileCompletion.percentage}
+                    sx={{
+                      height: 4,
+                      borderRadius: 2,
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      '& .MuiLinearProgress-bar': {
+                        backgroundColor: 'white'
+                      }
+                    }}
+                  />
+                </Box>
               </Box>
-              <IconButton
-                size="small"
-                onClick={() => setShowProfileAlert(false)}
-                sx={{ color: 'white' }}
-              >
-                ✕
-              </IconButton>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <ActionButton
+                  variant="contained"
+                  onClick={() => {
+                    console.log('🎯 Complete Profile button clicked!');
+                    window.dispatchEvent(new CustomEvent('openProfileModal'));
+                  }}
+                  sx={{
+                    backgroundColor: 'white',
+                    color: '#667eea',
+                    fontWeight: 600,
+                    py: 0.5,
+                    px: 1.5,
+                    fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                    minWidth: 'auto',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.9)'
+                    }
+                  }}
+                >
+                  Complete
+                </ActionButton>
+                <IconButton
+                  size="small"
+                  onClick={() => setShowProfileAlert(false)}
+                  sx={{ color: 'white', p: 0.5 }}
+                >
+                  <Close sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Box>
             </Box>
-            
-            <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
-              Complete your profile to get personalized course recommendations and better learning experience.
-            </Typography>
-            
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  Profile Completion
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  {profileCompletion.percentage}%
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={profileCompletion.percentage}
-                sx={{
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  '& .MuiLinearProgress-bar': {
-                    backgroundColor: 'white'
-                  }
-                }}
-              />
-            </Box>
-            
-            {profileCompletion.missingFields.length > 0 && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                  Missing fields: {profileCompletion.missingFields.slice(0, 3).join(', ')}
-                  {profileCompletion.missingFields.length > 3 && ` and ${profileCompletion.missingFields.length - 3} more`}
-                </Typography>
-              </Box>
-            )}
-            
-            <ActionButton
-              variant="contained"
-              onClick={() => {
-                console.log('🎯 Complete Profile button clicked!');
-                // Use the same event system as the Layout component
-                window.dispatchEvent(new CustomEvent('openProfileModal'));
-              }}
-              sx={{
-                backgroundColor: 'white',
-                color: '#667eea',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.9)'
-                }
-              }}
-            >
-              Complete Profile
-            </ActionButton>
           </Paper>
         </Fade>
       )}
@@ -883,19 +1139,6 @@ const StudentCourses: React.FC = () => {
             Update Learning Interests
           </ActionButton>
           
-          {/* Test Button - Remove in production */}
-          <ActionButton
-            variant="text"
-            onClick={() => {
-              localStorage.removeItem('learningInterestsCompleted');
-              localStorage.removeItem('learningInterests');
-              setHasCompletedInterestSetup(false);
-              setShowInterestPopup(true);
-            }}
-            sx={{ ml: 2, fontSize: '0.8rem', color: 'red' }}
-          >
-            Test Popup
-          </ActionButton>
           
         </Box>
       )}
@@ -1020,9 +1263,9 @@ const StudentCourses: React.FC = () => {
             }}
           >
             <Tab 
-              icon={<Explore />} 
+              icon={<MenuBook />} 
               iconPosition="start"
-              label="🔍 Discover Courses" 
+              label="📚 My Learning" 
               sx={{ 
                 '&.Mui-selected': { 
                   color: 'primary.main',
@@ -1031,9 +1274,9 @@ const StudentCourses: React.FC = () => {
               }}
             />
             <Tab 
-              icon={<MenuBook />} 
+              icon={<Explore />} 
               iconPosition="start"
-              label="📚 My Learning" 
+              label="🔍 Discover Courses" 
               sx={{ 
                 '&.Mui-selected': { 
                   color: 'primary.main',
@@ -1054,9 +1297,9 @@ const StudentCourses: React.FC = () => {
           bgcolor: tabValue === 0 ? alpha(theme.palette.primary.main, 0.1) : alpha(theme.palette.secondary.main, 0.1)
         }}>
           <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
-            {tabValue === 0 ? <Explore /> : <MenuBook />}
+            {tabValue === 0 ? <MenuBook /> : <Explore />}
             <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-              {tabValue === 0 ? '🔍 Discover Courses' : '📚 My Learning'}
+              {tabValue === 0 ? '📚 My Learning' : '🔍 Discover Courses'}
             </Typography>
           </Stack>
         </Paper>
@@ -1493,17 +1736,39 @@ const StudentCourses: React.FC = () => {
               🤔 No courses found
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              Try adjusting your search terms or browse all categories
+              {learningInterests ? 
+                "No courses match your selected interests. Try adjusting your preferences or browse all courses." :
+                "Try adjusting your search terms or browse all categories"
+              }
             </Typography>
-            <ActionButton
-              variant="outlined"
-              onClick={() => {
-                setSearchTerm('');
-                setCategoryFilter('');
-              }}
-            >
-              🔄 Clear Filters
-            </ActionButton>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+              <ActionButton
+                variant="outlined"
+                onClick={() => {
+                  setSearchTerm('');
+                  setCategoryFilter('');
+                  setLearningInterests(null);
+                  localStorage.removeItem('learningInterests');
+                }}
+              >
+                🔄 Clear All Filters
+              </ActionButton>
+              {learningInterests && (
+                <ActionButton
+                  variant="contained"
+                  onClick={() => {
+                    console.log('🔄 Show All Courses clicked - clearing interests');
+                    setLearningInterests(null);
+                    localStorage.removeItem('learningInterests');
+                    setSearchTerm('');
+                    setCategoryFilter('');
+                    loadCourses();
+                  }}
+                >
+                  👀 Show All Courses
+                </ActionButton>
+              )}
+            </Stack>
           </Paper>
         ) : (
           <>

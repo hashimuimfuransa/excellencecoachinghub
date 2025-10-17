@@ -61,7 +61,9 @@ import {
   MenuBook,
   AutoGraph,
   Support,
-  Explore
+  Explore,
+  Description,
+  Assessment
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -293,7 +295,7 @@ const HeroSection: React.FC = () => {
             </Paper>
             
             {/* Modern CTA Buttons */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} sx={{ mb: 6 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5} sx={{ mb: 6 }}>
               <Button
                 variant="contained"
                 size="large"
@@ -302,22 +304,52 @@ const HeroSection: React.FC = () => {
                 sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
-                  px: 4,
-                  py: 2,
-                  fontSize: '1.2rem',
+                  px: 3.5,
+                  py: 1.5,
+                  fontSize: '1rem',
                   fontWeight: 700,
-                  borderRadius: 3,
+                  borderRadius: 2.5,
                   textTransform: 'none',
-                  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
+                  boxShadow: '0 6px 24px rgba(102, 126, 234, 0.35)',
+                  minWidth: { xs: '100%', sm: '200px' },
+                  height: '52px',
                   '&:hover': {
                     background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                    transform: 'translateY(-3px)',
-                    boxShadow: '0 12px 40px rgba(102, 126, 234, 0.6)'
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 10px 32px rgba(102, 126, 234, 0.5)'
                   },
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
               >
                 {isAuthenticated ? 'Continue Learning' : 'Start Learning Today'}
+              </Button>
+              
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<Description />}
+                onClick={() => navigate('/past-papers')}
+                sx={{
+                  background: 'linear-gradient(135deg, #e91e63 0%, #ad1457 100%)',
+                  color: 'white',
+                  px: 3.5,
+                  py: 1.5,
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  borderRadius: 2.5,
+                  textTransform: 'none',
+                  boxShadow: '0 6px 24px rgba(233, 30, 99, 0.35)',
+                  minWidth: { xs: '100%', sm: '200px' },
+                  height: '52px',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #d81b60 0%, #9c27b0 100%)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 10px 32px rgba(233, 30, 99, 0.5)'
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              >
+                📝 Practice Past Papers
               </Button>
               
               <Button
@@ -327,23 +359,25 @@ const HeroSection: React.FC = () => {
                 sx={{
                   borderColor: 'rgba(255, 255, 255, 0.6)',
                   color: 'white',
-                  px: 4,
-                  py: 2,
-                  fontSize: '1.2rem',
+                  px: 3.5,
+                  py: 1.5,
+                  fontSize: '1rem',
                   fontWeight: 600,
-                  borderRadius: 3,
+                  borderRadius: 2.5,
                   borderWidth: 2,
                   textTransform: 'none',
                   backdropFilter: 'blur(10px)',
                   bgcolor: 'rgba(255, 255, 255, 0.1)',
+                  minWidth: { xs: '100%', sm: '180px' },
+                  height: '52px',
                   '&:hover': {
                     borderColor: '#FFD700',
                     color: '#FFD700',
                     bgcolor: 'rgba(255, 215, 0, 0.1)',
-                    transform: 'translateY(-3px)',
+                    transform: 'translateY(-2px)',
                     borderWidth: 2
                   },
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
               >
                 Watch Demo
@@ -1429,7 +1463,7 @@ const FeaturedCoursesSection: React.FC = () => {
             }
           </Typography>
           
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} justifyContent="center" sx={{ mb: 4 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5} justifyContent="center" sx={{ mb: 4 }}>
             <Button
               variant="contained"
               size="large"
@@ -1437,22 +1471,51 @@ const FeaturedCoursesSection: React.FC = () => {
               onClick={() => navigate('/courses')}
               sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                px: 4,
+                px: 3.5,
                 py: 1.5,
-                fontSize: '1.1rem',
+                fontSize: '1rem',
                 fontWeight: 600,
-                borderRadius: 3,
+                borderRadius: 2.5,
                 textTransform: 'none',
-                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                boxShadow: '0 6px 24px rgba(102, 126, 234, 0.3)',
+                minWidth: { xs: '100%', sm: '200px' },
+                height: '48px',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)'
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 10px 32px rgba(102, 126, 234, 0.4)'
                 },
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
               Explore All Courses
+            </Button>
+            
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<Description />}
+              onClick={() => navigate('/past-papers')}
+              sx={{
+                background: 'linear-gradient(135deg, #e91e63 0%, #ad1457 100%)',
+                px: 3.5,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                borderRadius: 2.5,
+                textTransform: 'none',
+                boxShadow: '0 6px 24px rgba(233, 30, 99, 0.3)',
+                minWidth: { xs: '100%', sm: '200px' },
+                height: '48px',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #d81b60 0%, #9c27b0 100%)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 10px 32px rgba(233, 30, 99, 0.4)'
+                },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              📝 Practice Past Papers
             </Button>
             
             {!isAuthenticated && (
@@ -2972,6 +3035,251 @@ const FAQSection: React.FC = () => {
   );
 };
 
+// Ultra-Modern Past Papers Section
+const PastPapersSection: React.FC = () => {
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  return (
+    <Box
+      sx={{
+        py: { xs: 8, md: 12 },
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Background Pattern */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `
+            radial-gradient(circle at 20% 80%, rgba(233, 30, 99, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(156, 39, 176, 0.1) 0%, transparent 50%)
+          `,
+          zIndex: 0
+        }}
+      />
+      
+      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ textAlign: 'center', mb: 8 }}>
+          <Box sx={{ mb: 4 }}>
+            <Chip
+              icon={<Description sx={{ color: '#e91e63 !important' }} />}
+              label="📝 Past Papers"
+              sx={{
+                bgcolor: 'rgba(233, 30, 99, 0.1)',
+                color: '#e91e63',
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                fontSize: '1rem',
+                mb: 3,
+                '& .MuiChip-icon': {
+                  fontSize: '1.2rem'
+                }
+              }}
+            />
+          </Box>
+          
+          <Typography
+            variant="h2"
+            component="h2"
+            sx={{
+              fontWeight: 800,
+              mb: 3,
+              background: 'linear-gradient(135deg, #e91e63 0%, #ad1457 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontSize: { xs: '2.5rem', md: '3.5rem' }
+            }}
+          >
+            Practice with Past Papers
+          </Typography>
+          
+          <Typography
+            variant="h5"
+            sx={{
+              color: 'text.secondary',
+              maxWidth: '600px',
+              mx: 'auto',
+              mb: 6,
+              lineHeight: 1.6,
+              fontSize: { xs: '1.1rem', md: '1.3rem' }
+            }}
+          >
+            Test your knowledge with real exam questions from previous years. 
+            Get instant feedback and track your progress.
+          </Typography>
+        </Box>
+
+        <Grid container spacing={4} sx={{ mb: 8 }}>
+          <Grid item xs={12} md={4}>
+            <Card
+              sx={{
+                p: 4,
+                height: '100%',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                border: '1px solid rgba(233, 30, 99, 0.1)',
+                borderRadius: 3,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: '0 20px 40px rgba(233, 30, 99, 0.15)',
+                  borderColor: 'rgba(233, 30, 99, 0.3)'
+                }
+              }}
+            >
+              <Box sx={{ textAlign: 'center' }}>
+                <Box
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #e91e63 0%, #ad1457 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 3
+                  }}
+                >
+                  <Assessment sx={{ fontSize: 40, color: 'white' }} />
+                </Box>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  Real Exam Questions
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  Practice with authentic questions from previous exam sessions
+                </Typography>
+              </Box>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Card
+              sx={{
+                p: 4,
+                height: '100%',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                border: '1px solid rgba(102, 126, 234, 0.1)',
+                borderRadius: 3,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: '0 20px 40px rgba(102, 126, 234, 0.15)',
+                  borderColor: 'rgba(102, 126, 234, 0.3)'
+                }
+              }}
+            >
+              <Box sx={{ textAlign: 'center' }}>
+                <Box
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 3
+                  }}
+                >
+                  <Speed sx={{ fontSize: 40, color: 'white' }} />
+                </Box>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  Instant Feedback
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  Get immediate results and detailed explanations for each question
+                </Typography>
+              </Box>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Card
+              sx={{
+                p: 4,
+                height: '100%',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                border: '1px solid rgba(156, 39, 176, 0.1)',
+                borderRadius: 3,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: '0 20px 40px rgba(156, 39, 176, 0.15)',
+                  borderColor: 'rgba(156, 39, 176, 0.3)'
+                }
+              }}
+            >
+              <Box sx={{ textAlign: 'center' }}>
+                <Box
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 3
+                  }}
+                >
+                  <TrendingUp sx={{ fontSize: 40, color: 'white' }} />
+                </Box>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  Track Progress
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  Monitor your performance and identify areas for improvement
+                </Typography>
+              </Box>
+            </Card>
+          </Grid>
+        </Grid>
+
+        <Box sx={{ textAlign: 'center' }}>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<Description />}
+            onClick={() => navigate('/past-papers')}
+            sx={{
+              background: 'linear-gradient(135deg, #e91e63 0%, #ad1457 100%)',
+              px: 4,
+              py: 1.5,
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              borderRadius: 2.5,
+              textTransform: 'none',
+              boxShadow: '0 6px 24px rgba(233, 30, 99, 0.3)',
+              minWidth: '200px',
+              height: '50px',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #d81b60 0%, #9c27b0 100%)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 10px 32px rgba(233, 30, 99, 0.4)'
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          >
+            Browse Past Papers
+          </Button>
+        </Box>
+      </Container>
+    </Box>
+  );
+};
+
 // Main HomePage Component
 const HomePage: React.FC = () => {
   const [showInterestPopup, setShowInterestPopup] = useState(false);
@@ -2990,7 +3298,7 @@ const HomePage: React.FC = () => {
     }
   }, []);
 
-  const handleInterestComplete = (data: any) => {
+  const handleInterestComplete = (data: any, type: 'courses' | 'past-papers' = 'courses') => {
     // Save interests to localStorage
     localStorage.setItem('homeLearningInterests', JSON.stringify(data));
     localStorage.setItem('homeInterestPopupSeen', 'true');
@@ -3001,12 +3309,20 @@ const HomePage: React.FC = () => {
     const isLoggedIn = localStorage.getItem('token') || sessionStorage.getItem('token');
     
     if (isLoggedIn) {
-      // If logged in, navigate directly to student courses with Discover tab
-      window.location.href = `/dashboard/student/courses?tab=discover&interests=${encodeURIComponent(JSON.stringify(data))}`;
+      // If logged in, navigate based on selection
+      if (type === 'past-papers') {
+        window.location.href = `/past-papers?interests=${encodeURIComponent(JSON.stringify(data))}`;
+      } else {
+        window.location.href = `/dashboard/student/courses?tab=discover&interests=${encodeURIComponent(JSON.stringify(data))}`;
+      }
     } else {
-      // If not logged in, navigate to registration with interests
+      // If not logged in, navigate based on selection
       const interestsParam = encodeURIComponent(JSON.stringify(data));
-      window.location.href = `/register?interests=${interestsParam}`;
+      if (type === 'past-papers') {
+        window.location.href = `/past-papers?interests=${interestsParam}`;
+      } else {
+        window.location.href = `/register?interests=${interestsParam}`;
+      }
     }
   };
 
@@ -3022,6 +3338,7 @@ const HomePage: React.FC = () => {
       <JobMarketSkillsSection />
       <FeaturesSection />
       <FeaturedCoursesSection />
+      <PastPapersSection />
       <StatisticsSection />
       <TestimonialsSection />
       <FAQSection />

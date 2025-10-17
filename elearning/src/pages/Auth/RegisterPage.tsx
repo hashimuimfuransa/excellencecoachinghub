@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link as RouterLink, useSearchParams } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -48,9 +48,11 @@ const RegisterPage: React.FC = () => {
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [googleUserData, setGoogleUserData] = useState<any>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [interests, setInterests] = useState<any>(null);
 
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [formData, setFormData] = useState<RegisterForm>({
     firstName: '',
@@ -62,6 +64,20 @@ const RegisterPage: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<RegisterFormErrors>({});
+
+  // Load interests from URL parameters on component mount
+  useEffect(() => {
+    const interestsParam = searchParams.get('interests');
+    if (interestsParam) {
+      try {
+        const interestsData = JSON.parse(decodeURIComponent(interestsParam));
+        setInterests(interestsData);
+        console.log('📚 Interests loaded from URL:', interestsData);
+      } catch (error) {
+        console.error('Error parsing interests from URL:', error);
+      }
+    }
+  }, [searchParams]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -149,7 +165,14 @@ const RegisterPage: React.FC = () => {
     try {
       await register(formData);
       toast.success('Registration successful! Please check your email to verify your account.');
-      navigate('/');
+      
+      // If interests were provided, redirect to courses with interests
+      if (interests) {
+        const interestsParam = encodeURIComponent(JSON.stringify(interests));
+        navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`);
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       const errorMessage = error.message || 'Registration failed. Please try again.';
       setError(errorMessage);
@@ -175,7 +198,14 @@ const RegisterPage: React.FC = () => {
     } else if (result.user && result.token) {
       // Existing user - direct login success
       toast.success(`Welcome back, ${result.user.firstName}!`);
-      navigate('/');
+      
+      // If interests were provided, redirect to courses with interests
+      if (interests) {
+        const interestsParam = encodeURIComponent(JSON.stringify(interests));
+        navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`);
+      } else {
+        navigate('/');
+      }
       
       // Trigger auth context update
       window.location.reload();
@@ -210,7 +240,14 @@ const RegisterPage: React.FC = () => {
       if (result.user && result.token) {
         toast.success(`Welcome to Excellence Coaching Hub, ${result.user.firstName}!`);
         setShowRoleSelection(false);
-        navigate('/');
+        
+        // If interests were provided, redirect to courses with interests
+        if (interests) {
+          const interestsParam = encodeURIComponent(JSON.stringify(interests));
+          navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`);
+        } else {
+          navigate('/');
+        }
         
         // Trigger auth context update
         window.location.reload();
@@ -757,7 +794,7 @@ const RegisterPage: React.FC = () => {
             {/* Login Link */}
             <Button
               component={RouterLink}
-              to="/login"
+              to={interests ? `/login?interests=${encodeURIComponent(JSON.stringify(interests))}` : "/login"}
               fullWidth
               variant="outlined"
               size="large"

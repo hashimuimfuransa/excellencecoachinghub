@@ -98,6 +98,8 @@ import sendGridWebhookRoutes from '@/routes/sendGridWebhookRoutes';
 import unsubscribeRoutes from '@/routes/unsubscribeRoutes';
 import communityRoutes from '@/routes/communityRoutes';
 import annotationRoutes from '@/routes/annotationRoutes';
+import pastPaperRoutes from '@/routes/pastPaperRoutes';
+import superAdminPastPaperRoutes from '@/routes/superAdminPastPaperRoutes';
 
 // Social Network routes
 import postRoutes from '@/routes/postRoutes';
@@ -997,6 +999,10 @@ app.use('/api/admin', superAdminRoutes);
 
 // Annotation routes
 app.use('/api/annotations', annotationRoutes);
+
+// Past Papers routes
+app.use('/api/past-papers', pastPaperRoutes);
+app.use('/api/admin/past-papers', superAdminPastPaperRoutes);
 
 // Placeholder image endpoint for avatar videos
 app.get('/api/placeholder/:width/:height', (req, res) => {

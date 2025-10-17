@@ -29,6 +29,10 @@ export { EmailEvent, IEmailEvent } from './EmailEvent';
 export { default as EmailTracker, IEmailTracker, EmailType } from './EmailTracker';
 export { Annotation, IAnnotation } from './Annotation';
 
+// Past Papers Models
+export { PastPaper, IPastPaperDocument, IPastPaperModel } from './PastPaper';
+export { PastPaperAttempt, IPastPaperAttemptDocument, IPastPaperAttemptModel } from './PastPaperAttempt';
+
 // Job Portal Models
 export { Job, IJobDocument, IJobModel } from './Job';
 export { Internship, IInternshipDocument, IInternshipModel } from './Internship';

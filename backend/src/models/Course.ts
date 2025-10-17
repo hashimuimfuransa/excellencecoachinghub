@@ -63,6 +63,13 @@ export interface ICourseDocument extends Document {
   difficultyLevel: 'beginner' | 'intermediate' | 'advanced' | 'expert';
   certificationOffered: boolean;
   certificateRequirements: string[];
+  // New fields for better discoverability
+  careerGoal: string; // Target career goal for the course
+  experienceLevel: string; // Target experience level
+  timeCommitment: string; // Expected time commitment
+  learningStyle: string; // Primary learning style
+  specificInterests: string[]; // Specific topics and skills covered
+  learningCategories: string[]; // Learning categories for better discoverability
   isPublished: boolean;
   publishedAt?: Date;
   enrollmentDeadline?: Date; // When enrollment closes
@@ -327,6 +334,37 @@ const courseSchema = new Schema<ICourseDocument>({
     trim: true,
     maxlength: [200, 'Certificate requirement cannot exceed 200 characters']
   }],
+  // New fields for better discoverability
+  careerGoal: {
+    type: String,
+    enum: ['employment', 'business_owner', 'student', 'career_change', 'skill_upgrade', 'exploring'],
+    default: 'exploring'
+  },
+  experienceLevel: {
+    type: String,
+    enum: ['beginner', 'intermediate', 'advanced'],
+    default: 'beginner'
+  },
+  timeCommitment: {
+    type: String,
+    enum: ['light', 'moderate', 'intensive', 'full_time'],
+    default: 'moderate'
+  },
+  learningStyle: {
+    type: String,
+    enum: ['visual', 'hands_on', 'theoretical', 'interactive'],
+    default: 'hands_on'
+  },
+  specificInterests: [{
+    type: String,
+    trim: true,
+    maxlength: [100, 'Specific interest cannot exceed 100 characters']
+  }],
+  learningCategories: [{
+    type: String,
+    enum: ['professional', 'business', 'academic', 'technical', 'creative', 'healthcare'],
+    trim: true
+  }],
   courseEndDate: {
     type: Date,
     default: null
@@ -397,6 +435,7 @@ courseSchema.index({ enrollmentCount: -1 });
 courseSchema.index({ createdAt: -1 });
 courseSchema.index({ publishedAt: -1 });
 courseSchema.index({ tags: 1 });
+courseSchema.index({ learningCategories: 1 });
 courseSchema.index({ title: 'text', description: 'text' }); // Text search index
 
 // Virtual for average rating calculation

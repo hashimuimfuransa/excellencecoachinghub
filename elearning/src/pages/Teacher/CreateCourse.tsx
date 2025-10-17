@@ -20,7 +20,10 @@ import {
   StepLabel,
   Paper,
   Divider,
-  Autocomplete
+  Autocomplete,
+  useTheme,
+  useMediaQuery,
+  Stack
 } from '@mui/material';
 import {
   Save,
@@ -36,7 +39,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService } from '../../services/courseService';
 
-const steps = ['Basic Information', 'Course Details', 'Review & Submit'];
+const steps = ['Basic Information', 'Course Details', 'Discoverability & Target Audience', 'Review & Submit'];
 
 const categories = [
   // Programming Languages
@@ -110,9 +113,55 @@ const categories = [
   'Career Development', 'Resume Writing', 'Interview Skills', 'Networking'
 ];
 
+// Learning Categories for better course discoverability
+const learningCategories = [
+  {
+    id: 'professional',
+    title: 'Professional Development',
+    description: 'Advance your career with industry-specific skills',
+    subcategories: ['Leadership', 'Project Management', 'Communication', 'Team Building', 'Strategic Planning']
+  },
+  {
+    id: 'business',
+    title: 'Business & Entrepreneurship',
+    description: 'Start and grow your own business venture',
+    subcategories: ['Startup Fundamentals', 'Marketing', 'Finance', 'Operations', 'Sales']
+  },
+  {
+    id: 'academic',
+    title: 'Academic Coaching',
+    description: 'Excel in your studies and academic pursuits',
+    subcategories: ['Study Techniques', 'Research Methods', 'Academic Writing', 'Time Management', 'Exam Preparation']
+  },
+  {
+    id: 'technical',
+    title: 'Technical Skills',
+    description: 'Master cutting-edge technology and programming',
+    subcategories: ['Programming', 'Data Science', 'Web Development', 'Mobile Apps', 'AI & Machine Learning']
+  },
+  {
+    id: 'creative',
+    title: 'Creative Arts',
+    description: 'Unleash your creative potential and artistic skills',
+    subcategories: ['Graphic Design', 'Digital Art', 'Photography', 'Video Editing', 'Music Production']
+  },
+  {
+    id: 'healthcare',
+    title: 'Healthcare & Medical',
+    description: 'Pursue a career in healthcare and medical fields',
+    subcategories: ['Nursing', 'Medical Research', 'Public Health', 'Mental Health', 'Healthcare Administration']
+  }
+];
+
 const CreateCourse: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  
+  // Mobile responsive breakpoints
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
   
   // State management
   const [activeStep, setActiveStep] = useState(0);
@@ -129,13 +178,21 @@ const CreateCourse: React.FC = () => {
     duration: 0,
     prerequisites: [] as string[],
     learningObjectives: [] as string[],
-    tags: [] as string[]
+    tags: [] as string[],
+    // New fields for better discoverability
+    careerGoal: '',
+    experienceLevel: '',
+    timeCommitment: '',
+    learningStyle: '',
+    specificInterests: [] as string[],
+    learningCategories: [] as string[]
   });
 
   // Temporary input states
   const [newPrerequisite, setNewPrerequisite] = useState('');
   const [newObjective, setNewObjective] = useState('');
   const [newTag, setNewTag] = useState('');
+  const [newSpecificInterest, setNewSpecificInterest] = useState('');
 
   // Handle form input changes
   const handleInputChange = (field: string, value: any) => {
@@ -174,6 +231,8 @@ const CreateCourse: React.FC = () => {
         return !!(formData.title && formData.description && formData.category);
       case 1: // Course Details
         return !!(formData.level && formData.duration > 0);
+      case 2: // Discoverability & Target Audience
+        return !!(formData.careerGoal && formData.experienceLevel && formData.timeCommitment && formData.learningStyle && formData.learningCategories.length > 0);
       default:
         return true;
     }
@@ -202,7 +261,7 @@ const CreateCourse: React.FC = () => {
 
       const courseData = {
         ...formData,
-        instructor: user?._id
+        price: 0 // Price will be set by admin during approval
       };
 
       const response = await courseService.createCourse(courseData);
@@ -255,14 +314,28 @@ const CreateCourse: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        {/* Header */}
-        <Box mb={4}>
-          <Typography variant="h4" gutterBottom>
+    <Container maxWidth="lg" sx={{ mt: { xs: 2, sm: 4 }, mb: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+        {/* Header - Mobile Responsive */}
+        <Box mb={{ xs: 3, sm: 4 }}>
+          <Typography 
+            variant={isMobile ? "h5" : "h4"} 
+            gutterBottom
+            sx={{ 
+              fontWeight: 700,
+              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
+            }}
+          >
             Create New Course
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography 
+            variant={isMobile ? "body2" : "body1"} 
+            color="text.secondary"
+            sx={{ 
+              fontSize: { xs: '0.875rem', sm: '1rem' },
+              lineHeight: 1.6
+            }}
+          >
             Create a comprehensive course to share your knowledge with students
           </Typography>
         </Box>
@@ -280,29 +353,53 @@ const CreateCourse: React.FC = () => {
           </Alert>
         )}
 
-        {/* Progress Stepper */}
-        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+        {/* Progress Stepper - Mobile Responsive */}
+        <Stepper 
+          activeStep={activeStep} 
+          sx={{ 
+            mb: { xs: 3, sm: 4 },
+            '& .MuiStepLabel-label': {
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }
+          }}
+          orientation={isMobile ? "vertical" : "horizontal"}
+        >
           {steps.map((label) => (
             <Step key={label}>
-              <StepLabel>{label}</StepLabel>
+              <StepLabel 
+                sx={{ 
+                  '& .MuiStepLabel-label': {
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    lineHeight: 1.2
+                  }
+                }}
+              >
+                {label}
+              </StepLabel>
             </Step>
           ))}
         </Stepper>
 
         {/* Form Content */}
         <Box>
-          {/* Step 0: Basic Information */}
+          {/* Step 0: Basic Information - Mobile Responsive */}
           {activeStep === 0 && (
             <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
-                  <School sx={{ mr: 1 }} />
-                  <Typography variant="h6">
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Box display="flex" alignItems="center" mb={{ xs: 2, sm: 3 }}>
+                  <School sx={{ mr: 1, fontSize: { xs: 20, sm: 24 } }} />
+                  <Typography 
+                    variant={isMobile ? "subtitle1" : "h6"}
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: { xs: '1.1rem', sm: '1.25rem' }
+                    }}
+                  >
                     Basic Information
                   </Typography>
                 </Box>
                 
-                <Grid container spacing={3}>
+                <Grid container spacing={{ xs: 2, sm: 3 }}>
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
@@ -311,6 +408,7 @@ const CreateCourse: React.FC = () => {
                       onChange={(e) => handleInputChange('title', e.target.value)}
                       placeholder="e.g., Complete Web Development Bootcamp"
                       helperText="Choose a clear, descriptive title for your course"
+                      size={isMobile ? "small" : "medium"}
                     />
                   </Grid>
                   
@@ -319,11 +417,12 @@ const CreateCourse: React.FC = () => {
                       fullWidth
                       label="Course Description *"
                       multiline
-                      rows={4}
+                      rows={isMobile ? 3 : 4}
                       value={formData.description}
                       onChange={(e) => handleInputChange('description', e.target.value)}
                       placeholder="Describe what students will learn in this course..."
                       helperText={`${formData.description.length}/2000 characters`}
+                      size={isMobile ? "small" : "medium"}
                     />
                   </Grid>
                   
@@ -345,6 +444,7 @@ const CreateCourse: React.FC = () => {
                           placeholder="Type or select a category..."
                           helperText="Type to search or enter a custom category"
                           required
+                          size={isMobile ? "small" : "medium"}
                         />
                       )}
                       renderOption={(props, option) => (
@@ -363,7 +463,15 @@ const CreateCourse: React.FC = () => {
                         return filtered;
                       }}
                     />
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary" 
+                      sx={{ 
+                        mt: 1, 
+                        display: 'block',
+                        fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                      }}
+                    >
                       💡 You can type any category you want! Start typing to see suggestions or create your own.
                     </Typography>
                   </Grid>
@@ -375,6 +483,7 @@ const CreateCourse: React.FC = () => {
                         value={formData.level}
                         label="Difficulty Level *"
                         onChange={(e) => handleInputChange('level', e.target.value)}
+                        size={isMobile ? "small" : "medium"}
                       >
                         <MenuItem value="Beginner">Beginner</MenuItem>
                         <MenuItem value="Intermediate">Intermediate</MenuItem>
@@ -387,18 +496,24 @@ const CreateCourse: React.FC = () => {
             </Card>
           )}
 
-          {/* Step 1: Course Details */}
+          {/* Step 1: Course Details - Mobile Responsive */}
           {activeStep === 1 && (
             <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
-                  <Description sx={{ mr: 1 }} />
-                  <Typography variant="h6">
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Box display="flex" alignItems="center" mb={{ xs: 2, sm: 3 }}>
+                  <Description sx={{ mr: 1, fontSize: { xs: 20, sm: 24 } }} />
+                  <Typography 
+                    variant={isMobile ? "subtitle1" : "h6"}
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: { xs: '1.1rem', sm: '1.25rem' }
+                    }}
+                  >
                     Course Details
                   </Typography>
                 </Box>
                 
-                <Grid container spacing={3}>
+                <Grid container spacing={{ xs: 2, sm: 3 }}>
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
@@ -408,23 +523,47 @@ const CreateCourse: React.FC = () => {
                       onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 0)}
                       inputProps={{ min: 1, max: 1000 }}
                       helperText="Estimated course duration"
+                      size={isMobile ? "small" : "medium"}
                     />
                   </Grid>
                   
                   <Grid item xs={12} md={6}>
-                    <Alert severity="info" sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-                      <Typography variant="body2">
+                    <Alert 
+                      severity="info" 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        height: '100%',
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                      }}
+                    >
+                      <Typography 
+                        variant="body2"
+                        sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                      >
                         💰 Course pricing will be set by admin during approval process
                       </Typography>
                     </Alert>
                   </Grid>
                   
-                  {/* Prerequisites */}
+                  {/* Prerequisites - Mobile Responsive */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" gutterBottom>
+                    <Typography 
+                      variant="subtitle1" 
+                      gutterBottom
+                      sx={{ 
+                        fontSize: { xs: '0.9rem', sm: '1rem' },
+                        fontWeight: 600
+                      }}
+                    >
                       Prerequisites
                     </Typography>
-                    <Box display="flex" gap={1} mb={2}>
+                    <Box 
+                      display="flex" 
+                      gap={{ xs: 0.5, sm: 1 }} 
+                      mb={2}
+                      flexDirection={{ xs: 'column', sm: 'row' }}
+                    >
                       <TextField
                         fullWidth
                         label="Add Prerequisite"
@@ -436,16 +575,19 @@ const CreateCourse: React.FC = () => {
                             addToArray('prerequisites', newPrerequisite, setNewPrerequisite);
                           }
                         }}
+                        size={isMobile ? "small" : "medium"}
                       />
                       <Button
                         variant="outlined"
                         onClick={() => addToArray('prerequisites', newPrerequisite, setNewPrerequisite)}
                         disabled={!newPrerequisite.trim()}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{ minWidth: { xs: 'auto', sm: '80px' } }}
                       >
                         Add
                       </Button>
                     </Box>
-                    <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
+                    <Box display="flex" flexWrap="wrap" gap={{ xs: 0.5, sm: 1 }} mb={2}>
                       {formData.prerequisites.map((prereq, index) => (
                         <Chip
                           key={index}
@@ -453,17 +595,31 @@ const CreateCourse: React.FC = () => {
                           onDelete={() => removeFromArray('prerequisites', index)}
                           color="primary"
                           variant="outlined"
+                          size={isMobile ? "small" : "medium"}
+                          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                         />
                       ))}
                     </Box>
                   </Grid>
 
-                  {/* Learning Objectives */}
+                  {/* Learning Objectives - Mobile Responsive */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" gutterBottom>
+                    <Typography 
+                      variant="subtitle1" 
+                      gutterBottom
+                      sx={{ 
+                        fontSize: { xs: '0.9rem', sm: '1rem' },
+                        fontWeight: 600
+                      }}
+                    >
                       Learning Objectives
                     </Typography>
-                    <Box display="flex" gap={1} mb={2}>
+                    <Box 
+                      display="flex" 
+                      gap={{ xs: 0.5, sm: 1 }} 
+                      mb={2}
+                      flexDirection={{ xs: 'column', sm: 'row' }}
+                    >
                       <TextField
                         fullWidth
                         label="Add Learning Objective"
@@ -475,16 +631,19 @@ const CreateCourse: React.FC = () => {
                             addToArray('learningObjectives', newObjective, setNewObjective);
                           }
                         }}
+                        size={isMobile ? "small" : "medium"}
                       />
                       <Button
                         variant="outlined"
                         onClick={() => addToArray('learningObjectives', newObjective, setNewObjective)}
                         disabled={!newObjective.trim()}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{ minWidth: { xs: 'auto', sm: '80px' } }}
                       >
                         Add
                       </Button>
                     </Box>
-                    <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
+                    <Box display="flex" flexWrap="wrap" gap={{ xs: 0.5, sm: 1 }} mb={2}>
                       {formData.learningObjectives.map((objective, index) => (
                         <Chip
                           key={index}
@@ -492,17 +651,31 @@ const CreateCourse: React.FC = () => {
                           onDelete={() => removeFromArray('learningObjectives', index)}
                           color="secondary"
                           variant="outlined"
+                          size={isMobile ? "small" : "medium"}
+                          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                         />
                       ))}
                     </Box>
                   </Grid>
 
-                  {/* Tags */}
+                  {/* Tags - Mobile Responsive */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" gutterBottom>
+                    <Typography 
+                      variant="subtitle1" 
+                      gutterBottom
+                      sx={{ 
+                        fontSize: { xs: '0.9rem', sm: '1rem' },
+                        fontWeight: 600
+                      }}
+                    >
                       Tags
                     </Typography>
-                    <Box display="flex" gap={1} mb={2}>
+                    <Box 
+                      display="flex" 
+                      gap={{ xs: 0.5, sm: 1 }} 
+                      mb={2}
+                      flexDirection={{ xs: 'column', sm: 'row' }}
+                    >
                       <TextField
                         fullWidth
                         label="Add Tag"
@@ -514,22 +687,26 @@ const CreateCourse: React.FC = () => {
                             addToArray('tags', newTag, setNewTag);
                           }
                         }}
+                        size={isMobile ? "small" : "medium"}
                       />
                       <Button
                         variant="outlined"
                         onClick={() => addToArray('tags', newTag, setNewTag)}
                         disabled={!newTag.trim()}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{ minWidth: { xs: 'auto', sm: '80px' } }}
                       >
                         Add
                       </Button>
                     </Box>
-                    <Box display="flex" flexWrap="wrap" gap={1}>
+                    <Box display="flex" flexWrap="wrap" gap={{ xs: 0.5, sm: 1 }}>
                       {formData.tags.map((tag, index) => (
                         <Chip
                           key={index}
                           label={tag}
                           onDelete={() => removeFromArray('tags', index)}
-                          size="small"
+                          size={isMobile ? "small" : "medium"}
+                          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                         />
                       ))}
                     </Box>
@@ -539,54 +716,421 @@ const CreateCourse: React.FC = () => {
             </Card>
           )}
 
-          {/* Step 2: Review & Submit */}
+          {/* Step 2: Discoverability & Target Audience - Mobile Responsive */}
           {activeStep === 2 && (
             <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Box display="flex" alignItems="center" mb={{ xs: 2, sm: 3 }}>
+                  <Category sx={{ mr: 1, fontSize: { xs: 20, sm: 24 } }} />
+                  <Typography 
+                    variant={isMobile ? "subtitle1" : "h6"}
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: { xs: '1.1rem', sm: '1.25rem' }
+                    }}
+                  >
+                    Discoverability & Target Audience
+                  </Typography>
+                </Box>
+                
+                <Grid container spacing={{ xs: 2, sm: 3 }}>
+                  {/* Career Goal */}
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth required>
+                      <InputLabel>Target Career Goal</InputLabel>
+                      <Select
+                        value={formData.careerGoal}
+                        label="Target Career Goal"
+                        onChange={(e) => handleInputChange('careerGoal', e.target.value)}
+                        size={isMobile ? "small" : "medium"}
+                      >
+                        <MenuItem value="employment">Looking for Employment</MenuItem>
+                        <MenuItem value="business_owner">Running a Business</MenuItem>
+                        <MenuItem value="student">Student</MenuItem>
+                        <MenuItem value="career_change">Career Change</MenuItem>
+                        <MenuItem value="skill_upgrade">Skill Upgrade</MenuItem>
+                        <MenuItem value="exploring">Just Exploring</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Experience Level */}
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth required>
+                      <InputLabel>Target Experience Level</InputLabel>
+                      <Select
+                        value={formData.experienceLevel}
+                        label="Target Experience Level"
+                        onChange={(e) => handleInputChange('experienceLevel', e.target.value)}
+                        size={isMobile ? "small" : "medium"}
+                      >
+                        <MenuItem value="beginner">Beginner (New to the field)</MenuItem>
+                        <MenuItem value="intermediate">Intermediate (Some experience)</MenuItem>
+                        <MenuItem value="advanced">Advanced (Experienced professional)</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Time Commitment */}
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth required>
+                      <InputLabel>Expected Time Commitment</InputLabel>
+                      <Select
+                        value={formData.timeCommitment}
+                        label="Expected Time Commitment"
+                        onChange={(e) => handleInputChange('timeCommitment', e.target.value)}
+                        size={isMobile ? "small" : "medium"}
+                      >
+                        <MenuItem value="light">1-2 hours/week (Light learning)</MenuItem>
+                        <MenuItem value="moderate">3-5 hours/week (Moderate learning)</MenuItem>
+                        <MenuItem value="intensive">6-10 hours/week (Intensive learning)</MenuItem>
+                        <MenuItem value="full_time">10+ hours/week (Full-time learning)</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Learning Style */}
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth required>
+                      <InputLabel>Primary Learning Style</InputLabel>
+                      <Select
+                        value={formData.learningStyle}
+                        label="Primary Learning Style"
+                        onChange={(e) => handleInputChange('learningStyle', e.target.value)}
+                        size={isMobile ? "small" : "medium"}
+                      >
+                        <MenuItem value="visual">Visual Learning (Videos, diagrams, infographics)</MenuItem>
+                        <MenuItem value="hands_on">Hands-on Practice (Projects, exercises, labs)</MenuItem>
+                        <MenuItem value="theoretical">Theoretical Study (Reading, lectures, concepts)</MenuItem>
+                        <MenuItem value="interactive">Interactive Learning (Discussions, collaboration, Q&A)</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Learning Categories - Mobile Responsive */}
+                  <Grid item xs={12}>
+                    <Typography 
+                      variant="subtitle1" 
+                      gutterBottom
+                      sx={{ 
+                        fontSize: { xs: '0.9rem', sm: '1rem' },
+                        fontWeight: 600
+                      }}
+                    >
+                      Learning Categories *
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                      sx={{ 
+                        mb: 2,
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                      }}
+                    >
+                      Select the learning categories that best match your course content. This helps students find your course based on their interests.
+                    </Typography>
+                    <Box display="flex" flexWrap="wrap" gap={{ xs: 1, sm: 1.5 }} mb={2}>
+                      {learningCategories.map((category) => (
+                        <Chip
+                          key={category.id}
+                          label={category.title}
+                          onClick={() => {
+                            const currentCategories = formData.learningCategories;
+                            if (currentCategories.includes(category.id)) {
+                              handleInputChange('learningCategories', currentCategories.filter(id => id !== category.id));
+                            } else {
+                              handleInputChange('learningCategories', [...currentCategories, category.id]);
+                            }
+                          }}
+                          color={formData.learningCategories.includes(category.id) ? 'primary' : 'default'}
+                          variant={formData.learningCategories.includes(category.id) ? 'filled' : 'outlined'}
+                          size={isMobile ? "small" : "medium"}
+                          sx={{ 
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: formData.learningCategories.includes(category.id) 
+                                ? 'primary.dark' 
+                                : 'primary.light',
+                              color: formData.learningCategories.includes(category.id) 
+                                ? 'white' 
+                                : 'primary.main'
+                            }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                    {formData.learningCategories.length > 0 && (
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        sx={{ 
+                          fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                          display: 'block',
+                          mb: 1
+                        }}
+                      >
+                        Selected: {formData.learningCategories.map(id => 
+                          learningCategories.find(cat => cat.id === id)?.title
+                        ).join(', ')}
+                      </Typography>
+                    )}
+                  </Grid>
+
+                  {/* Specific Interests/Skills - Mobile Responsive */}
+                  <Grid item xs={12}>
+                    <Typography 
+                      variant="subtitle1" 
+                      gutterBottom
+                      sx={{ 
+                        fontSize: { xs: '0.9rem', sm: '1rem' },
+                        fontWeight: 600
+                      }}
+                    >
+                      Specific Topics & Skills Covered
+                    </Typography>
+                    <Box 
+                      display="flex" 
+                      gap={{ xs: 0.5, sm: 1 }} 
+                      mb={2}
+                      flexDirection={{ xs: 'column', sm: 'row' }}
+                    >
+                      <TextField
+                        fullWidth
+                        label="Add Specific Topic/Skill"
+                        value={newSpecificInterest}
+                        onChange={(e) => setNewSpecificInterest(e.target.value)}
+                        placeholder="e.g., React Hooks, Digital Marketing Analytics, Financial Modeling"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            addToArray('specificInterests', newSpecificInterest, setNewSpecificInterest);
+                          }
+                        }}
+                        size={isMobile ? "small" : "medium"}
+                      />
+                      <Button
+                        variant="outlined"
+                        onClick={() => addToArray('specificInterests', newSpecificInterest, setNewSpecificInterest)}
+                        disabled={!newSpecificInterest.trim()}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{ minWidth: { xs: 'auto', sm: '80px' } }}
+                      >
+                        Add
+                      </Button>
+                    </Box>
+                    <Box display="flex" flexWrap="wrap" gap={{ xs: 0.5, sm: 1 }} mb={2}>
+                      {formData.specificInterests.map((interest, index) => (
+                        <Chip
+                          key={index}
+                          label={interest}
+                          onDelete={() => removeFromArray('specificInterests', index)}
+                          color="info"
+                          variant="outlined"
+                          size={isMobile ? "small" : "medium"}
+                          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                        />
+                      ))}
+                    </Box>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary"
+                      sx={{ 
+                        fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                      }}
+                    >
+                      💡 These specific topics will help students find your course when searching for particular skills or technologies.
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 3: Review & Submit - Mobile Responsive */}
+          {activeStep === 3 && (
+            <Card>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Typography 
+                  variant={isMobile ? "subtitle1" : "h6"} 
+                  gutterBottom
+                  sx={{ 
+                    fontWeight: 600,
+                    fontSize: { xs: '1.1rem', sm: '1.25rem' }
+                  }}
+                >
                   Review & Submit
                 </Typography>
                 
-                <Alert severity="info" sx={{ mb: 3 }}>
+                <Alert 
+                  severity="info" 
+                  sx={{ 
+                    mb: { xs: 2, sm: 3 },
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                  }}
+                >
                   Please review your course information. Once submitted, your course will be reviewed by our admin team before being published.
                 </Alert>
 
-                {/* Course Summary */}
-                <Grid container spacing={3}>
+                {/* Course Summary - Mobile Responsive */}
+                <Grid container spacing={{ xs: 2, sm: 3 }}>
                   <Grid item xs={12} md={6}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle1" gutterBottom>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Typography 
+                          variant="subtitle1" 
+                          gutterBottom
+                          sx={{ 
+                            fontSize: { xs: '0.9rem', sm: '1rem' },
+                            fontWeight: 600
+                          }}
+                        >
                           Basic Information
                         </Typography>
-                        <Typography variant="body2"><strong>Title:</strong> {formData.title}</Typography>
-                        <Typography variant="body2"><strong>Category:</strong> {formData.category}</Typography>
-                        <Typography variant="body2"><strong>Level:</strong> {formData.level}</Typography>
-                        <Typography variant="body2"><strong>Duration:</strong> {formData.duration} hours</Typography>
+                        <Stack spacing={0.5}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Title:</strong> {formData.title}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Category:</strong> {formData.category}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Level:</strong> {formData.level}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Duration:</strong> {formData.duration} hours
+                          </Typography>
+                        </Stack>
                       </CardContent>
                     </Card>
                   </Grid>
 
                   <Grid item xs={12} md={6}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle1" gutterBottom>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Typography 
+                          variant="subtitle1" 
+                          gutterBottom
+                          sx={{ 
+                            fontSize: { xs: '0.9rem', sm: '1rem' },
+                            fontWeight: 600
+                          }}
+                        >
+                          Target Audience
+                        </Typography>
+                        <Stack spacing={0.5}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Career Goal:</strong> {formData.careerGoal}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Experience Level:</strong> {formData.experienceLevel}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Time Commitment:</strong> {formData.timeCommitment}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Learning Style:</strong> {formData.learningStyle}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Learning Categories:</strong> {formData.learningCategories.map(id => 
+                              learningCategories.find(cat => cat.id === id)?.title
+                            ).join(', ')}
+                          </Typography>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Typography 
+                          variant="subtitle1" 
+                          gutterBottom
+                          sx={{ 
+                            fontSize: { xs: '0.9rem', sm: '1rem' },
+                            fontWeight: 600
+                          }}
+                        >
                           Course Content
                         </Typography>
-                        <Typography variant="body2"><strong>Prerequisites:</strong> {formData.prerequisites.length}</Typography>
-                        <Typography variant="body2"><strong>Learning Objectives:</strong> {formData.learningObjectives.length}</Typography>
-                        <Typography variant="body2"><strong>Tags:</strong> {formData.tags.length}</Typography>
+                        <Stack spacing={0.5}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Prerequisites:</strong> {formData.prerequisites.length}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Learning Objectives:</strong> {formData.learningObjectives.length}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Tags:</strong> {formData.tags.length}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                          >
+                            <strong>Specific Topics:</strong> {formData.specificInterests.length}
+                          </Typography>
+                        </Stack>
                       </CardContent>
                     </Card>
                   </Grid>
 
                   <Grid item xs={12}>
                     <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle1" gutterBottom>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Typography 
+                          variant="subtitle1" 
+                          gutterBottom
+                          sx={{ 
+                            fontSize: { xs: '0.9rem', sm: '1rem' },
+                            fontWeight: 600
+                          }}
+                        >
                           Description
                         </Typography>
-                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            whiteSpace: 'pre-wrap',
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                            lineHeight: 1.5
+                          }}
+                        >
                           {formData.description}
                         </Typography>
                       </CardContent>
@@ -598,22 +1142,39 @@ const CreateCourse: React.FC = () => {
           )}
         </Box>
 
-        {/* Navigation Buttons */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mt={4}>
+        {/* Navigation Buttons - Mobile Responsive */}
+        <Box 
+          display="flex" 
+          justifyContent="space-between" 
+          alignItems="center" 
+          mt={{ xs: 3, sm: 4 }}
+          flexDirection={{ xs: 'column', sm: 'row' }}
+          gap={{ xs: 2, sm: 0 }}
+        >
           <Button
             onClick={handleBack}
             disabled={activeStep === 0}
             variant="outlined"
+            fullWidth={isMobile}
+            size={isMobile ? "small" : "medium"}
+            sx={{ order: { xs: 2, sm: 1 } }}
           >
             Back
           </Button>
 
-          <Box display="flex" gap={2}>
+          <Box 
+            display="flex" 
+            gap={{ xs: 1, sm: 2 }}
+            width={{ xs: '100%', sm: 'auto' }}
+            order={{ xs: 1, sm: 2 }}
+          >
             {activeStep < steps.length - 1 ? (
               <Button
                 onClick={handleNext}
                 variant="contained"
                 disabled={!validateStep(activeStep)}
+                fullWidth={isMobile}
+                size={isMobile ? "small" : "medium"}
               >
                 Next
               </Button>
@@ -624,6 +1185,8 @@ const CreateCourse: React.FC = () => {
                 variant="contained"
                 color="success"
                 startIcon={loading ? <CircularProgress size={20} /> : <Send />}
+                fullWidth={isMobile}
+                size={isMobile ? "small" : "medium"}
               >
                 {loading ? 'Creating...' : 'Create Course'}
               </Button>

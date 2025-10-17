@@ -17,6 +17,8 @@ export const getAllCourses = async (req: Request, res: Response, next: NextFunct
     const status = req.query.status as string;
     const category = req.query.category as string;
     const instructor = req.query.instructor as string;
+    const level = req.query.level as string;
+    const learningCategories = req.query.learningCategories as string;
     const sortBy = req.query.sortBy as string || 'createdAt';
     const sortOrder = req.query.sortOrder as string || 'desc';
 
@@ -56,6 +58,23 @@ export const getAllCourses = async (req: Request, res: Response, next: NextFunct
       filter.category = category;
     }
 
+    if (level) {
+      filter.level = level;
+    }
+
+    if (learningCategories) {
+      // Handle both single category and comma-separated categories
+      const categories = learningCategories.split(',').map(cat => cat.trim());
+      filter.learningCategories = { $in: categories };
+    }
+
+    // Debug logging
+    console.log('🔍 Course filters applied:', {
+      filter,
+      query: req.query,
+      isPublicRequest
+    });
+
     // Build sort object
     const sort: any = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
@@ -74,6 +93,14 @@ export const getAllCourses = async (req: Request, res: Response, next: NextFunct
     // Get total count for pagination
     const totalCourses = await Course.countDocuments(filter);
     const totalPages = Math.ceil(totalCourses / limit);
+
+    console.log('📊 Course query results:', {
+      coursesFound: courses.length,
+      totalCourses,
+      filter,
+      page,
+      limit
+    });
 
     res.status(200).json({
       success: true,
@@ -175,7 +202,14 @@ export const createCourse = async (req: Request, res: Response, next: NextFuncti
       duration,
       prerequisites,
       learningObjectives,
-      tags
+      tags,
+      // New fields for better discoverability
+      careerGoal,
+      experienceLevel,
+      timeCommitment,
+      learningStyle,
+      specificInterests,
+      learningCategories
     } = req.body;
 
     // Normalize level to lowercase (frontend might send capitalized)
@@ -192,6 +226,13 @@ export const createCourse = async (req: Request, res: Response, next: NextFuncti
       prerequisites: prerequisites || [],
       learningOutcomes: learningObjectives || [], // Note: using learningOutcomes as per schema
       tags: tags || [],
+      // New fields for better discoverability
+      careerGoal: careerGoal || 'exploring',
+      experienceLevel: experienceLevel || 'beginner',
+      timeCommitment: timeCommitment || 'moderate',
+      learningStyle: learningStyle || 'hands_on',
+      specificInterests: specificInterests || [],
+      learningCategories: learningCategories || [],
       instructor: req.user._id,
       status: CourseStatus.PENDING_APPROVAL, // Use proper enum value
       isPublished: false,
@@ -417,7 +458,46 @@ export const updateCourse = async (req: Request, res: Response, next: NextFuncti
     }
 
     const { id } = req.params;
-    const updateData = req.body;
+    const {
+      title,
+      description,
+      category,
+      level,
+      duration,
+      prerequisites,
+      learningObjectives,
+      tags,
+      // New fields for better discoverability
+      careerGoal,
+      experienceLevel,
+      timeCommitment,
+      learningStyle,
+      specificInterests,
+      learningCategories
+    } = req.body;
+
+    // Build update object with only provided fields
+    const updateData: any = {};
+    
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (category !== undefined) updateData.category = category;
+    if (level !== undefined) {
+      // Normalize level to lowercase
+      updateData.level = level.toLowerCase();
+    }
+    if (duration !== undefined) updateData.duration = duration;
+    if (prerequisites !== undefined) updateData.prerequisites = prerequisites;
+    if (learningObjectives !== undefined) updateData.learningOutcomes = learningObjectives; // Note: using learningOutcomes as per schema
+    if (tags !== undefined) updateData.tags = tags;
+    
+    // New discoverability fields
+    if (careerGoal !== undefined) updateData.careerGoal = careerGoal;
+    if (experienceLevel !== undefined) updateData.experienceLevel = experienceLevel;
+    if (timeCommitment !== undefined) updateData.timeCommitment = timeCommitment;
+    if (learningStyle !== undefined) updateData.learningStyle = learningStyle;
+    if (specificInterests !== undefined) updateData.specificInterests = specificInterests;
+    if (learningCategories !== undefined) updateData.learningCategories = learningCategories;
 
     const course = await Course.findByIdAndUpdate(
       id,

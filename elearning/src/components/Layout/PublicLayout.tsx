@@ -51,7 +51,9 @@ import {
   RocketLaunch,
   Notifications,
   LightMode,
-  DarkMode
+  DarkMode,
+  Description,
+  Assessment
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import Footer from './Footer';
@@ -83,6 +85,7 @@ const PublicLayout: React.FC = () => {
   const navigationItems = [
     { label: 'Home', path: '/' },
     { label: 'Courses', path: '/courses' },
+    { label: 'Past Papers', path: '/past-papers' },
     { label: 'About', path: '/about' },
     { label: 'Contact', path: '/contact' }
   ];
@@ -105,9 +108,13 @@ const PublicLayout: React.FC = () => {
     setExploreAnchorEl(null);
   };
 
-  const handleCategoryClick = (category: string) => {
+  const handleCategoryClick = (category: string, path?: string) => {
     handleExploreClose();
-    navigate(`/courses?category=${encodeURIComponent(category)}`);
+    if (path) {
+      navigate(path);
+    } else {
+      navigate(`/courses?category=${encodeURIComponent(category)}`);
+    }
   };
 
   // Profile menu handlers
@@ -150,27 +157,30 @@ const PublicLayout: React.FC = () => {
     { name: 'Languages', icon: <Language />, color: '#d32f2f' },
     { name: 'Health & Medicine', icon: <LocalHospital />, color: '#00796b' },
     { name: 'Engineering', icon: <Engineering />, color: '#5d4037' },
-    { name: 'Mathematics', icon: <Calculate />, color: '#303f9f' }
+    { name: 'Mathematics', icon: <Calculate />, color: '#303f9f' },
+    { name: 'Past Papers', icon: <Description />, color: '#e91e63', path: '/past-papers' }
   ];
 
-  // Modern Clean Mobile drawer content
+  // Ultra-Modern Attractive Mobile drawer content
   const drawer = (
     <Box 
       sx={{ 
-        width: 280, 
+        width: 320, 
         height: '100%', 
-        bgcolor: '#ffffff',
-        position: 'relative'
+        position: 'relative',
+        color: '#ffffff'
       }}
     >
-      {/* Clean Header */}
+      {/* Ultra-Modern Attractive Header */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           p: 3,
-          borderBottom: '1px solid #f1f5f9'
+          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+          backdropFilter: 'blur(10px)'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -179,18 +189,24 @@ const PublicLayout: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 36,
-              height: 36,
-              overflow: 'hidden'
+              width: 40,
+              height: 40,
+              overflow: 'hidden',
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 4px 15px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)'
             }}
           >
             <img
               src="/logo.webp"
               alt="Excellence Hub"
               style={{ 
-                height: '100%', 
-                width: '100%',
-                objectFit: 'contain'
+                height: '80%', 
+                width: '80%',
+                objectFit: 'contain',
+                filter: 'brightness(1.2) contrast(1.1)'
               }}
             />
           </Box>
@@ -198,10 +214,15 @@ const PublicLayout: React.FC = () => {
             <Typography 
               variant="h6" 
               sx={{ 
-                fontWeight: 700,
-                fontSize: '1.1rem',
-                color: '#0f172a',
-                lineHeight: 1.2
+                fontWeight: 800,
+                fontSize: '1.2rem',
+                color: '#ffffff',
+                lineHeight: 1.2,
+                textShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
               }}
             >
               Excellence Hub
@@ -210,9 +231,11 @@ const PublicLayout: React.FC = () => {
               variant="caption"
               sx={{ 
                 fontSize: '0.7rem',
-                fontWeight: 500,
-                color: '#64748b',
-                letterSpacing: '0.05em'
+                fontWeight: 600,
+                color: 'rgba(255, 255, 255, 0.9)',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
               }}
             >
               AI-POWERED LEARNING
@@ -224,23 +247,28 @@ const PublicLayout: React.FC = () => {
           onClick={handleDrawerToggle}
           size="small"
           sx={{
-            bgcolor: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            color: '#64748b',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            color: 'rgba(255, 255, 255, 0.9)',
+            borderRadius: 2,
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 15px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
             '&:hover': {
-              bgcolor: 'rgba(59, 130, 246, 0.06)',
-              borderColor: 'rgba(59, 130, 246, 0.3)',
-              color: '#3b82f6'
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
+              borderColor: 'rgba(255, 255, 255, 0.5)',
+              color: '#ffffff',
+              transform: 'scale(1.1)',
+              boxShadow: '0 6px 20px rgba(255, 255, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
             },
-            transition: 'all 0.2s ease'
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
-          <CloseIcon sx={{ fontSize: '1rem' }} />
+          <CloseIcon sx={{ fontSize: '1.1rem' }} />
         </IconButton>
       </Box>
       
-      {/* Navigation Links */}
-      <Box sx={{ p: 2 }}>
+      {/* Ultra-Modern Attractive Navigation Links */}
+      <Box sx={{ p: 3 }}>
         {navigationItems.map((item, index) => {
           const isActive = location.pathname === item.path;
           return (
@@ -251,18 +279,35 @@ const PublicLayout: React.FC = () => {
               sx={{
                 justifyContent: 'flex-start',
                 textTransform: 'none',
-                fontWeight: isActive ? 600 : 500,
-                color: isActive ? '#3b82f6' : '#64748b',
-                bgcolor: isActive ? 'rgba(59, 130, 246, 0.06)' : 'transparent',
-                borderRadius: 2,
-                py: 1.5,
+                fontWeight: isActive ? 700 : 500,
+                color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.8)',
+                background: isActive 
+                  ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)' 
+                  : 'transparent',
+                border: isActive 
+                  ? '1px solid rgba(255, 255, 255, 0.3)' 
+                  : '1px solid transparent',
+                borderRadius: 3,
+                py: 1.8,
                 px: 3,
-                mb: 1,
+                mb: 1.5,
                 fontSize: '0.95rem',
-                transition: 'all 0.2s ease',
+                backdropFilter: isActive ? 'blur(10px)' : 'none',
+                boxShadow: isActive 
+                  ? '0 4px 15px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)' 
+                  : 'none',
+                textShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.3)' : 'none',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  bgcolor: isActive ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.06)',
-                  color: '#3b82f6'
+                  background: isActive 
+                    ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%)' 
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                  borderColor: 'rgba(255, 255, 255, 0.4)',
+                  color: '#ffffff',
+                  transform: 'translateX(8px) scale(1.02)',
+                  boxShadow: '0 6px 20px rgba(255, 255, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
+                  backdropFilter: 'blur(15px)'
                 }
               }}
             >
@@ -272,8 +317,14 @@ const PublicLayout: React.FC = () => {
         })}
       </Box>
       
-      {/* Auth Section */}
-      <Box sx={{ p: 3, mt: 'auto', borderTop: '1px solid #f1f5f9' }}>
+      {/* Ultra-Modern Attractive Auth Section */}
+      <Box sx={{ 
+        p: 3, 
+        mt: 'auto', 
+        borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+        backdropFilter: 'blur(10px)'
+      }}>
         {isAuthenticated ? (
           <Button
             fullWidth
@@ -281,12 +332,23 @@ const PublicLayout: React.FC = () => {
             onClick={() => handleNavigation('/dashboard')}
             startIcon={<Dashboard />}
             sx={{ 
-              bgcolor: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-              borderRadius: 2,
+              background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+              color: '#6366f1',
+              borderRadius: 3,
               textTransform: 'none',
-              fontWeight: 600,
-              py: 1.5,
-              boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)'
+              fontWeight: 700,
+              py: 1.8,
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 6px 20px rgba(255, 255, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+              textShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)',
+                color: '#4f46e5',
+                transform: 'translateY(-2px) scale(1.02)',
+                boxShadow: '0 8px 25px rgba(255, 255, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+                textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+              }
             }}
           >
             Go to Dashboard
@@ -299,14 +361,24 @@ const PublicLayout: React.FC = () => {
               onClick={() => handleNavigation('/login')}
               sx={{ 
                 mb: 2,
-                borderRadius: 2,
+                borderRadius: 3,
                 textTransform: 'none',
-                fontWeight: 500,
-                color: '#64748b',
-                py: 1.5,
+                fontWeight: 600,
+                color: 'rgba(255, 255, 255, 0.9)',
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 4px 15px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+                py: 1.8,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  bgcolor: 'rgba(59, 130, 246, 0.06)',
-                  color: '#3b82f6'
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
+                  borderColor: 'rgba(255, 255, 255, 0.4)',
+                  color: '#ffffff',
+                  transform: 'translateY(-2px) scale(1.02)',
+                  boxShadow: '0 6px 20px rgba(255, 255, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.4)'
                 }
               }}
             >
@@ -318,12 +390,23 @@ const PublicLayout: React.FC = () => {
               onClick={() => handleNavigation('/register')}
               startIcon={<RocketLaunch />}
               sx={{
-                bgcolor: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                borderRadius: 2,
+                background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+                color: '#6366f1',
+                borderRadius: 3,
                 textTransform: 'none',
-                fontWeight: 600,
-                py: 1.5,
-                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)'
+                fontWeight: 700,
+                py: 1.8,
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 6px 20px rgba(255, 255, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                textShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)',
+                  color: '#4f46e5',
+                  transform: 'translateY(-3px) scale(1.02)',
+                  boxShadow: '0 8px 25px rgba(255, 255, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                }
               }}
             >
               Get Started
@@ -336,38 +419,55 @@ const PublicLayout: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* Ultra-Modern Minimalistic Navigation Bar */}
+      {/* Ultra-Modern Attractive Navigation Bar */}
       <Fade in={true}>
         <AppBar
           position="fixed"
-          elevation={scrolled ? 4 : 0}
+          elevation={0}
           sx={{
             background: scrolled 
-              ? 'rgba(255, 255, 255, 0.95)' 
-              : 'rgba(255, 255, 255, 0.85)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.95) 0%, rgba(168, 85, 247, 0.95) 50%, rgba(236, 72, 153, 0.95) 100%)' 
+              : 'linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(168, 85, 247, 0.9) 50%, rgba(236, 72, 153, 0.9) 100%)',
+            backdropFilter: 'blur(25px)',
+            WebkitBackdropFilter: 'blur(25px)',
             borderBottom: scrolled 
-              ? '1px solid rgba(59, 130, 246, 0.12)' 
-              : '1px solid transparent',
-            color: '#0f172a',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              ? '1px solid rgba(255, 255, 255, 0.2)' 
+              : '1px solid rgba(255, 255, 255, 0.1)',
+            color: '#ffffff !important',
+            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             boxShadow: scrolled 
-              ? '0 4px 20px rgba(59, 130, 246, 0.08)' 
-              : 'none',
-            zIndex: 1300
+              ? '0 8px 32px rgba(99, 102, 241, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)' 
+              : '0 4px 20px rgba(99, 102, 241, 0.2)',
+            zIndex: 1300,
+            '& *': {
+              color: 'inherit !important'
+            },
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.05) 100%)',
+              pointerEvents: 'none'
+            },
+            '@keyframes shimmer': {
+              '0%': { transform: 'translateX(-100%)' },
+              '100%': { transform: 'translateX(100%)' }
+            }
           }}
         >
         <Container maxWidth="xl">
           <Toolbar sx={{ 
-            px: { xs: 2, sm: 3, md: 4 },
-            py: { xs: 1.5, sm: 2 },
-            minHeight: { xs: 70, sm: 80 },
+            px: { xs: 2, sm: 3, md: 3 },
+            py: { xs: 1, sm: 1.2 },
+            minHeight: { xs: 60, sm: 65 },
             justifyContent: 'space-between',
             alignItems: 'center',
             width: '100%'
           }}>
-            {/* Modern Minimalistic Logo */}
+            {/* Ultra-Modern Attractive Logo */}
             <Box
               sx={{
                 display: 'flex',
@@ -375,43 +475,62 @@ const PublicLayout: React.FC = () => {
                 cursor: 'pointer',
                 flexShrink: 0,
                 gap: 2,
-                transition: 'all 0.3s ease',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
                 '&:hover': {
-                  transform: 'translateY(-1px)'
+                  transform: 'translateY(-2px) scale(1.02)',
+                  '& .logo-glow': {
+                    boxShadow: '0 0 30px rgba(255, 255, 255, 0.4), 0 0 60px rgba(99, 102, 241, 0.3)'
+                  },
+                  '& .logo-text': {
+                    textShadow: '0 0 20px rgba(255, 255, 255, 0.8)'
+                  }
                 }
               }}
               onClick={() => navigate('/')}
             >
               <Box
+                className="logo-glow"
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 48,
-                  height: 48,
-                  overflow: 'hidden'
+                  width: 40,
+                  height: 40,
+                  overflow: 'hidden',
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 2px 10px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  backdropFilter: 'blur(10px)',
+                  position: 'relative'
                 }}
               >
                 <img
                   src="/logo.webp"
                   alt="Excellence Hub"
                   style={{ 
-                    height: '100%', 
-                    width: '100%',
-                    objectFit: 'contain'
+                    height: '80%', 
+                    width: '80%',
+                    objectFit: 'contain',
+                    filter: 'brightness(1.2) contrast(1.1)'
                   }}
                 />
               </Box>
               
               <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
                 <Typography
+                  className="logo-text"
                   variant="h6"
                   sx={{
                     fontWeight: 700,
-                    fontSize: '1.25rem',
-                    color: '#0f172a',
-                    letterSpacing: '-0.025em',
-                    lineHeight: 1.2
+                    fontSize: '1.1rem',
+                    color: '#ffffff !important',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.2,
+                    textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}
                 >
                   Excellence Hub
@@ -419,10 +538,14 @@ const PublicLayout: React.FC = () => {
                 <Typography
                   variant="caption"
                   sx={{
-                    color: '#64748b',
-                    fontSize: '0.75rem',
+                    color: 'rgba(255, 255, 255, 0.8) !important',
+                    fontSize: '0.65rem',
                     fontWeight: 500,
-                    letterSpacing: '0.05em'
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+                    display: 'block',
+                    mt: 0.2
                   }}
                 >
                   AI-POWERED LEARNING
@@ -430,15 +553,15 @@ const PublicLayout: React.FC = () => {
               </Box>
             </Box>
 
-            {/* Clean Minimalistic Navigation */}
+            {/* Compact Modern Navigation */}
             <Box
               sx={{
                 display: { xs: 'none', md: 'flex' },
                 alignItems: 'center',
                 flexGrow: 1,
                 justifyContent: 'center',
-                gap: 1,
-                mx: 4
+                gap: 0.5,
+                mx: 3
               }}
             >
               {navigationItems.map((item) => {
@@ -448,32 +571,49 @@ const PublicLayout: React.FC = () => {
                     key={item.label}
                     onClick={() => navigate(item.path)}
                     sx={{
-                      color: isActive ? '#3b82f6' : '#64748b',
+                      color: isActive ? '#ffffff !important' : 'rgba(255, 255, 255, 0.85) !important',
                       fontWeight: isActive ? 600 : 500,
                       borderRadius: 2,
-                      px: 3,
-                      py: 1.5,
-                      fontSize: '0.95rem',
+                      px: 2,
+                      py: 1,
+                      fontSize: '0.85rem',
                       textTransform: 'none',
                       position: 'relative',
                       minWidth: 'auto',
-                      background: isActive ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
-                      transition: 'all 0.2s ease',
+                      background: isActive 
+                        ? 'rgba(255, 255, 255, 0.2)' 
+                        : 'transparent',
+                      border: isActive 
+                        ? '1px solid rgba(255, 255, 255, 0.3)' 
+                        : '1px solid transparent',
+                      backdropFilter: isActive ? 'blur(8px)' : 'none',
+                      boxShadow: isActive 
+                        ? '0 2px 8px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)' 
+                        : 'none',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      textShadow: isActive ? '0 1px 2px rgba(0, 0, 0, 0.2)' : 'none',
                       '&:hover': {
-                        bgcolor: isActive ? 'rgba(59, 130, 246, 0.12)' : 'rgba(59, 130, 246, 0.06)',
-                        color: '#3b82f6',
+                        background: isActive 
+                          ? 'rgba(255, 255, 255, 0.25)' 
+                          : 'rgba(255, 255, 255, 0.1)',
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                        color: '#ffffff',
                         transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                        textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+                        backdropFilter: 'blur(10px)'
                       },
                       '&::after': isActive ? {
                         content: '""',
                         position: 'absolute',
-                        bottom: 0,
+                        bottom: -1,
                         left: '50%',
                         width: '60%',
                         height: 2,
-                        bgcolor: '#3b82f6',
+                        background: '#ffffff',
                         borderRadius: 1,
-                        transform: 'translateX(-50%)'
+                        transform: 'translateX(-50%)',
+                        boxShadow: '0 1px 4px rgba(255, 255, 255, 0.3)'
                       } : {}
                     }}
                   >
@@ -483,7 +623,7 @@ const PublicLayout: React.FC = () => {
               })}
             </Box>
 
-            {/* Modern Clean Search Bar */}
+            {/* Compact Modern Search Bar */}
             <Box
               component="form"
               onSubmit={handleSearchSubmit}
@@ -491,8 +631,9 @@ const PublicLayout: React.FC = () => {
                 display: { xs: 'none', sm: 'flex' },
                 alignItems: 'center',
                 flexShrink: 0,
-                width: { sm: 200, md: 240 },
-                mr: 2
+                width: { sm: 180, md: 200 },
+                mr: 1.5,
+                position: 'relative'
               }}
             >
               <TextField
@@ -505,41 +646,52 @@ const PublicLayout: React.FC = () => {
                   startAdornment: (
                     <InputAdornment position="start">
                       <Search sx={{ 
-                        color: '#9ca3af',
-                        fontSize: '1.1rem'
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '1.1rem',
+                        transition: 'all 0.3s ease'
                       }} />
                     </InputAdornment>
                   ),
                   sx: {
-                    bgcolor: '#f8fafc',
+                    background: 'rgba(255, 255, 255, 0.1)',
                     borderRadius: 2,
-                    fontSize: '0.9rem',
+                    fontSize: '0.8rem',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 2px 8px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': {
-                        borderColor: 'rgba(156, 163, 175, 0.3)',
-                        borderWidth: 1
+                        border: 'none'
                       },
                       '&:hover': {
-                        bgcolor: '#ffffff',
-                        '& fieldset': {
-                          borderColor: 'rgba(59, 130, 246, 0.4)'
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                        '& .MuiInputAdornment-root .MuiSvgIcon-root': {
+                          color: 'rgba(255, 255, 255, 0.9) !important',
+                          transform: 'scale(1.05)'
                         }
                       },
                       '&.Mui-focused': {
-                        bgcolor: '#ffffff',
-                        boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
-                        '& fieldset': {
-                          borderColor: '#3b82f6',
-                          borderWidth: 1
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                        boxShadow: '0 4px 15px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1)',
+                        '& .MuiInputAdornment-root .MuiSvgIcon-root': {
+                          color: '#ffffff',
+                          transform: 'scale(1.1)'
                         }
                       }
                     },
                     '& input': {
-                      color: '#374151',
-                      fontSize: '0.9rem',
+                      color: '#ffffff !important',
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
                       '&::placeholder': {
-                        color: '#9ca3af',
-                        opacity: 1
+                        color: 'rgba(255, 255, 255, 0.7) !important',
+                        opacity: 1,
+                        fontWeight: 400
                       }
                     }
                   }
@@ -547,40 +699,45 @@ const PublicLayout: React.FC = () => {
               />
             </Box>
 
-            {/* Clean Explore Button */}
+            {/* Compact Modern Explore Button */}
             <Button
               variant="outlined"
-              startIcon={<Explore sx={{ fontSize: '1rem' }} />}
-              endIcon={<ExpandMore sx={{ fontSize: '0.9rem' }} />}
+              startIcon={<Explore sx={{ fontSize: '0.9rem' }} />}
+              endIcon={<ExpandMore sx={{ fontSize: '0.8rem' }} />}
               onClick={handleExploreClick}
               sx={{
                 display: { xs: 'none', sm: 'flex' },
                 textTransform: 'none',
-                fontSize: '0.9rem',
+                fontSize: '0.8rem',
                 fontWeight: 500,
-                borderColor: 'rgba(156, 163, 175, 0.3)',
-                color: '#64748b',
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                color: 'rgba(255, 255, 255, 0.9) !important',
                 borderRadius: 2,
-                px: 2.5,
-                py: 1,
-                mr: 2,
-                bgcolor: 'transparent',
-                transition: 'all 0.2s ease',
+                px: 2,
+                py: 0.8,
+                mr: 1.5,
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(8px)',
+                boxShadow: '0 2px 8px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
                 '&:hover': {
-                  borderColor: '#3b82f6',
-                  bgcolor: 'rgba(59, 130, 246, 0.06)',
-                  color: '#3b82f6',
-                  transform: 'translateY(-1px)'
+                  borderColor: 'rgba(255, 255, 255, 0.4)',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  color: '#ffffff',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                  textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
                 }
               }}
             >
               Categories
             </Button>
 
-            {/* Clean Modern Auth Section */}
+            {/* Compact Modern Auth Section */}
             <Box sx={{ 
               display: { xs: 'none', sm: 'flex' }, 
-              gap: 1.5, 
+              gap: 1, 
               alignItems: 'center'
             }}>
               {isAuthenticated ? (
@@ -588,24 +745,33 @@ const PublicLayout: React.FC = () => {
                   <IconButton
                     size="small"
                     sx={{
-                      color: '#64748b',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: 2,
+                      backdropFilter: 'blur(8px)',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        bgcolor: 'rgba(59, 130, 246, 0.06)',
-                        color: '#3b82f6'
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                        color: '#ffffff',
+                        transform: 'scale(1.05)',
+                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.2)'
                       }
                     }}
                   >
                     <Badge badgeContent={3} color="error" variant="dot">
-                      <Notifications sx={{ fontSize: 20 }} />
+                      <Notifications sx={{ fontSize: 18 }} />
                     </Badge>
                   </IconButton>
                   
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: '#64748b',
+                      color: 'rgba(255, 255, 255, 0.9) !important',
                       fontWeight: 500,
-                      fontSize: '0.85rem'
+                      fontSize: '0.8rem',
+                      textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
                     }}
                   >
                     Hi, {user?.firstName}
@@ -615,22 +781,30 @@ const PublicLayout: React.FC = () => {
                     onClick={handleProfileClick}
                     sx={{
                       p: 0,
-                      border: '2px solid rgba(59, 130, 246, 0.2)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
                       borderRadius: 2,
-                      transition: 'all 0.2s ease',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      boxShadow: '0 2px 8px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        borderColor: '#3b82f6',
-                        transform: 'scale(1.05)'
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        transform: 'scale(1.05)',
+                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
                       }
                     }}
                   >
                     <Avatar
                       sx={{
-                        width: 32,
-                        height: 32,
-                        bgcolor: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                        width: 28,
+                        height: 28,
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        color: '#6366f1',
                         fontSize: '0.8rem',
-                        fontWeight: 600
+                        fontWeight: 600,
+                        textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)'
                       }}
                     >
                       {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
@@ -643,17 +817,26 @@ const PublicLayout: React.FC = () => {
                     variant="text"
                     onClick={() => navigate('/login')}
                     sx={{ 
-                      px: 3,
-                      py: 1,
+                      px: 2,
+                      py: 0.8,
                       borderRadius: 2,
                       fontWeight: 500,
-                      fontSize: '0.9rem',
+                      fontSize: '0.8rem',
                       textTransform: 'none',
-                      color: '#64748b',
-                      transition: 'all 0.2s ease',
+                      color: 'rgba(255, 255, 255, 0.9) !important',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(8px)',
+                      boxShadow: '0 2px 8px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                      textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        bgcolor: 'rgba(59, 130, 246, 0.06)',
-                        color: '#3b82f6'
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                        color: '#ffffff',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                        textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
                       }
                     }}
                   >
@@ -662,21 +845,26 @@ const PublicLayout: React.FC = () => {
                   <Button
                     variant="contained"
                     onClick={() => navigate('/register')}
-                    startIcon={<RocketLaunch sx={{ fontSize: '1rem' }} />}
+                    startIcon={<RocketLaunch sx={{ fontSize: '0.9rem' }} />}
                     sx={{ 
-                      px: 3,
-                      py: 1,
+                      px: 2,
+                      py: 0.8,
                       borderRadius: 2,
                       fontWeight: 600,
-                      fontSize: '0.9rem',
+                      fontSize: '0.8rem',
                       textTransform: 'none',
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                      boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
-                      transition: 'all 0.2s ease',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      color: '#6366f1',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      boxShadow: '0 4px 12px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                      textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                        background: '#ffffff',
+                        color: '#4f46e5',
                         transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                        boxShadow: '0 6px 16px rgba(255, 255, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                        textShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
                       }
                     }}
                   >
@@ -686,7 +874,7 @@ const PublicLayout: React.FC = () => {
               )}
             </Box>
 
-            {/* Modern Mobile Menu Button */}
+            {/* Compact Modern Mobile Menu Button */}
             <IconButton
               color="inherit"
               aria-label="open drawer"
@@ -695,25 +883,29 @@ const PublicLayout: React.FC = () => {
                 display: { sm: 'none' },
                 p: 1,
                 borderRadius: 2,
-                border: '1px solid rgba(156, 163, 175, 0.2)',
-                bgcolor: '#f8fafc',
-                color: '#374151',
-                transition: 'all 0.2s ease',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(8px)',
+                boxShadow: '0 2px 8px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  bgcolor: 'rgba(59, 130, 246, 0.06)',
-                  borderColor: 'rgba(59, 130, 246, 0.3)',
-                  color: '#3b82f6'
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  borderColor: 'rgba(255, 255, 255, 0.4)',
+                  color: '#ffffff',
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 4px 12px rgba(255, 255, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
                 }
               }}
             >
-              <MenuIcon sx={{ fontSize: '1.2rem' }} />
+              <MenuIcon sx={{ fontSize: '1.1rem' }} />
             </IconButton>
           </Toolbar>
         </Container>
         </AppBar>
       </Fade>
 
-      {/* Modern Mobile Drawer */}
+      {/* Ultra-Modern Attractive Mobile Drawer */}
       <Drawer
         variant="temporary"
         anchor="right"
@@ -726,10 +918,22 @@ const PublicLayout: React.FC = () => {
           display: { xs: 'block', sm: 'none' },
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
-            width: 280,
-            bgcolor: '#ffffff',
-            boxShadow: '0 25px 50px rgba(59, 130, 246, 0.1)',
-            borderLeft: '1px solid #f1f5f9'
+            width: 320,
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.95) 0%, rgba(168, 85, 247, 0.95) 50%, rgba(236, 72, 153, 0.95) 100%)',
+            backdropFilter: 'blur(25px)',
+            WebkitBackdropFilter: 'blur(25px)',
+            boxShadow: '0 25px 50px rgba(99, 102, 241, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.05) 100%)',
+              pointerEvents: 'none'
+            }
           }
         }}
       >
@@ -794,7 +998,7 @@ const PublicLayout: React.FC = () => {
                 <Button
                   fullWidth
                   variant="text"
-                  onClick={() => handleCategoryClick(category.name)}
+                  onClick={() => handleCategoryClick(category.name, category.path)}
                   sx={{
                     p: 2.5,
                     height: 'auto',
@@ -975,7 +1179,7 @@ const PublicLayout: React.FC = () => {
         component="main" 
         sx={{ 
           flexGrow: 1,
-          pt: { xs: 9, sm: 10 }, // Account for fixed navbar height
+          pt: { xs: 7.5, sm: 8 }, // Account for reduced navbar height
           minHeight: '100vh'
         }}
       >

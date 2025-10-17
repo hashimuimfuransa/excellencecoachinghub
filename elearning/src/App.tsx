@@ -77,6 +77,8 @@ import CourseAssignmentsPage from './pages/Student/CourseAssignmentsPage';
 import CourseAssessmentsPage from './pages/Student/CourseAssessmentsPage';
 import CourseAnnouncementsPage from './pages/Student/CourseAnnouncementsPage';
 import TakeAssessmentStandalone from './pages/Assessment/TakeAssessment';
+import PastPapersPage from './pages/PastPapers/PastPapersPage';
+import TakePastPaperPage from './pages/PastPapers/TakePastPaperPage';
 import EnhancedTakeAssessment from './pages/Assessment/EnhancedTakeAssessment';
 import AssessmentResults from './pages/Assessment/AssessmentResults';
 import EnhancedWorkOnAssignment from './pages/Assignment/EnhancedWorkOnAssignment';
@@ -173,6 +175,8 @@ const App: React.FC = () => {
         <Route path="courses/:id" element={<CourseDetailPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
+        <Route path="past-papers" element={<PastPapersPage />} />
+        <Route path="past-papers/:id/take" element={<TakePastPaperPage />} />
         <Route path="help" element={<div>Help Center - Coming Soon</div>} />
         <Route path="privacy" element={<div>Privacy Policy - Coming Soon</div>} />
         <Route path="terms" element={<div>Terms of Service - Coming Soon</div>} />

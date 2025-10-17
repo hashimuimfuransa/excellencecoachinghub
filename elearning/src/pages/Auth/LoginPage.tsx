@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link as RouterLink, useSearchParams } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -51,10 +51,12 @@ const LoginPage: React.FC = () => {
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [googleUserData, setGoogleUserData] = useState<any>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [interests, setInterests] = useState<any>(null);
 
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   // Get redirect path from location state
   const from = (location.state as any)?.from?.pathname || '/';
@@ -65,6 +67,20 @@ const LoginPage: React.FC = () => {
   });
   
   const [errors, setErrors] = useState<Partial<LoginForm>>({});
+
+  // Load interests from URL parameters on component mount
+  useEffect(() => {
+    const interestsParam = searchParams.get('interests');
+    if (interestsParam) {
+      try {
+        const interestsData = JSON.parse(decodeURIComponent(interestsParam));
+        setInterests(interestsData);
+        console.log('📚 Interests loaded from URL:', interestsData);
+      } catch (error) {
+        console.error('Error parsing interests from URL:', error);
+      }
+    }
+  }, [searchParams]);
 
   const handleInputChange = (field: keyof LoginForm) => (
     event: React.ChangeEvent<HTMLInputElement>
@@ -111,7 +127,14 @@ const LoginPage: React.FC = () => {
     try {
       await login(formData.email, formData.password);
       toast.success('Login successful!');
-      navigate(from, { replace: true });
+      
+      // If interests were provided, redirect to courses with interests
+      if (interests) {
+        const interestsParam = encodeURIComponent(JSON.stringify(interests));
+        navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`, { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (error: any) {
       const errorMessage = error.message || 'Login failed. Please try again.';
       setError(errorMessage);
@@ -133,7 +156,14 @@ const LoginPage: React.FC = () => {
     } else if (result.user && result.token) {
       // Existing user - direct login success
       toast.success(`Welcome back, ${result.user.firstName}!`);
-      navigate(from, { replace: true });
+      
+      // If interests were provided, redirect to courses with interests
+      if (interests) {
+        const interestsParam = encodeURIComponent(JSON.stringify(interests));
+        navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`, { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
       
       // Trigger auth context update
       window.location.reload();
@@ -178,7 +208,14 @@ const LoginPage: React.FC = () => {
       if (result.user && result.token) {
         toast.success(`Welcome to Excellence Coaching Hub, ${result.user.firstName}!`);
         setShowRoleSelection(false);
-        navigate(from, { replace: true });
+        
+        // If interests were provided, redirect to courses with interests
+        if (interests) {
+          const interestsParam = encodeURIComponent(JSON.stringify(interests));
+          navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`, { replace: true });
+        } else {
+          navigate(from, { replace: true });
+        }
         
         // Trigger auth context update
         window.location.reload();
@@ -555,7 +592,7 @@ const LoginPage: React.FC = () => {
             {/* Register Link */}
             <Button
               component={RouterLink}
-              to="/register"
+              to={interests ? `/register?interests=${encodeURIComponent(JSON.stringify(interests))}` : "/register"}
               fullWidth
               variant="outlined"
               size="large"

@@ -18,6 +18,7 @@ import { getCourseMaterials, proxyPDF, proxyDocument } from '../controllers/cour
 import { protect, authorize } from '../middleware/auth';
 import { requireAdmin } from '../middleware/roleAuth';
 import { requireApprovedTeacher } from '../middleware/teacherAuth';
+import { requireCourseModification } from '../middleware/courseAuth';
 import { validateRequest } from '../middleware/validateRequest';
 import { UserRole } from '../../../shared/types';
 
@@ -113,7 +114,43 @@ const createCourseValidation = [
     .isNumeric()
     .withMessage('Duration must be a number')
     .isInt({ min: 1 })
-    .withMessage('Duration must be at least 1 hour')
+    .withMessage('Duration must be at least 1 hour'),
+  // New fields for better discoverability
+  body('careerGoal')
+    .optional()
+    .isIn(['employment', 'business_owner', 'student', 'career_change', 'skill_upgrade', 'exploring'])
+    .withMessage('Career goal must be one of: employment, business_owner, student, career_change, skill_upgrade, exploring'),
+  body('experienceLevel')
+    .optional()
+    .isIn(['beginner', 'intermediate', 'advanced'])
+    .withMessage('Experience level must be one of: beginner, intermediate, advanced'),
+  body('timeCommitment')
+    .optional()
+    .isIn(['light', 'moderate', 'intensive', 'full_time'])
+    .withMessage('Time commitment must be one of: light, moderate, intensive, full_time'),
+  body('learningStyle')
+    .optional()
+    .isIn(['visual', 'hands_on', 'theoretical', 'interactive'])
+    .withMessage('Learning style must be one of: visual, hands_on, theoretical, interactive'),
+  body('specificInterests')
+    .optional()
+    .isArray()
+    .withMessage('Specific interests must be an array'),
+  body('specificInterests.*')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Each specific interest cannot exceed 100 characters'),
+  body('learningCategories')
+    .optional()
+    .isArray()
+    .withMessage('Learning categories must be an array'),
+  body('learningCategories.*')
+    .optional()
+    .isString()
+    .isIn(['professional', 'business', 'academic', 'technical', 'creative', 'healthcare'])
+    .withMessage('Each learning category must be one of: professional, business, academic, technical, creative, healthcare')
 ];
 
 const updateCourseValidation = [
@@ -149,7 +186,73 @@ const updateCourseValidation = [
     .isNumeric()
     .withMessage('Duration must be a number')
     .isInt({ min: 1 })
-    .withMessage('Duration must be at least 1 hour')
+    .withMessage('Duration must be at least 1 hour'),
+  // New fields for better discoverability
+  body('careerGoal')
+    .optional()
+    .isIn(['employment', 'business_owner', 'student', 'career_change', 'skill_upgrade', 'exploring'])
+    .withMessage('Career goal must be one of: employment, business_owner, student, career_change, skill_upgrade, exploring'),
+  body('experienceLevel')
+    .optional()
+    .isIn(['beginner', 'intermediate', 'advanced'])
+    .withMessage('Experience level must be one of: beginner, intermediate, advanced'),
+  body('timeCommitment')
+    .optional()
+    .isIn(['light', 'moderate', 'intensive', 'full_time'])
+    .withMessage('Time commitment must be one of: light, moderate, intensive, full_time'),
+  body('learningStyle')
+    .optional()
+    .isIn(['visual', 'hands_on', 'theoretical', 'interactive'])
+    .withMessage('Learning style must be one of: visual, hands_on, theoretical, interactive'),
+  body('specificInterests')
+    .optional()
+    .isArray()
+    .withMessage('Specific interests must be an array'),
+  body('specificInterests.*')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Each specific interest cannot exceed 100 characters'),
+  body('learningCategories')
+    .optional()
+    .isArray()
+    .withMessage('Learning categories must be an array'),
+  body('learningCategories.*')
+    .optional()
+    .isString()
+    .isIn(['professional', 'business', 'academic', 'technical', 'creative', 'healthcare'])
+    .withMessage('Each learning category must be one of: professional, business, academic, technical, creative, healthcare'),
+  body('prerequisites')
+    .optional()
+    .isArray()
+    .withMessage('Prerequisites must be an array'),
+  body('prerequisites.*')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('Each prerequisite cannot exceed 200 characters'),
+  body('learningObjectives')
+    .optional()
+    .isArray()
+    .withMessage('Learning objectives must be an array'),
+  body('learningObjectives.*')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 300 })
+    .withMessage('Each learning objective cannot exceed 300 characters'),
+  body('tags')
+    .optional()
+    .isArray()
+    .withMessage('Tags must be an array'),
+  body('tags.*')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Each tag cannot exceed 50 characters')
 ];
 
 const approveCourseValidation = [
@@ -216,7 +319,7 @@ router.get('/:id', getCourseById);
 
 // Teacher-specific routes (requires approved teacher profile)
 router.post('/', authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), requireApprovedTeacher, createCourseValidation, validateRequest, createCourse);
-router.put('/:id', requireAdmin, updateCourseValidation, validateRequest, updateCourse);
+router.put('/:id', requireCourseModification, updateCourseValidation, validateRequest, updateCourse);
 router.delete('/:id', requireAdmin, deleteCourse);
 router.put('/:id/approve', requireAdmin, approveCourseValidation, validateRequest, approveCourse);
 router.put('/:id/reject', requireAdmin, rejectCourseValidation, validateRequest, rejectCourse);

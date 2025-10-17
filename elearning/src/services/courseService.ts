@@ -39,6 +39,13 @@ export interface ICourse {
     duration?: number;
     order: number;
   }>;
+  // New fields for better discoverability
+  careerGoal?: string;
+  experienceLevel?: string;
+  timeCommitment?: string;
+  learningStyle?: string;
+  specificInterests?: string[];
+  learningCategories?: string[];
   createdAt: string;
   updatedAt: string;
   approvedAt?: string;
@@ -78,6 +85,8 @@ export interface CourseFilters {
   instructor?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  learningCategories?: string[];
+  level?: string;
 }
 
 export interface UpdateCourseData {
@@ -88,6 +97,16 @@ export interface UpdateCourseData {
   price?: number;
   duration?: number;
   isActive?: boolean;
+  prerequisites?: string[];
+  learningObjectives?: string[];
+  tags?: string[];
+  // New fields for better discoverability
+  careerGoal?: string;
+  experienceLevel?: string;
+  timeCommitment?: string;
+  learningStyle?: string;
+  specificInterests?: string[];
+  learningCategories?: string[];
 }
 
 export interface CourseActionData {
@@ -266,6 +285,13 @@ export const courseService = {
     prerequisites?: string[];
     learningObjectives?: string[];
     tags?: string[];
+    // New fields for better discoverability
+    careerGoal?: string;
+    experienceLevel?: string;
+    timeCommitment?: string;
+    learningStyle?: string;
+    specificInterests?: string[];
+    learningCategories?: string[];
   }): Promise<ICourse> => {
     const response = await apiService.post<{ course: ICourse }>('/courses', courseData);
 

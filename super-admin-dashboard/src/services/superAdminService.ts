@@ -1720,6 +1720,171 @@ class SuperAdminService {
       throw error;
     }
   }
+
+  // Past Papers Management
+  async getPastPapers(filters: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: boolean;
+    subject?: string;
+    level?: string;
+    year?: number;
+    examBoard?: string;
+  } = {}): Promise<{
+    success: boolean;
+    data: {
+      pastPapers: any[];
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalItems: number;
+        itemsPerPage: number;
+      };
+    };
+  }> {
+    try {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, value.toString());
+        }
+      });
+      const response = await apiGet<any>(`/admin/past-papers?${params}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch past papers:', error);
+      throw error;
+    }
+  }
+
+  async createPastPaper(data: any): Promise<{ success: boolean; data: any }> {
+    try {
+      const response = await apiPost<any>('/admin/past-papers', data);
+      return response;
+    } catch (error) {
+      console.error('Failed to create past paper:', error);
+      throw error;
+    }
+  }
+
+  async updatePastPaper(id: string, data: any): Promise<{ success: boolean; data: any }> {
+    try {
+      const response = await apiPut<any>(`/admin/past-papers/${id}`, data);
+      return response;
+    } catch (error) {
+      console.error('Failed to update past paper:', error);
+      throw error;
+    }
+  }
+
+  async deletePastPaper(id: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await apiDelete<any>(`/admin/past-papers/${id}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to delete past paper:', error);
+      throw error;
+    }
+  }
+
+  async publishPastPaper(id: string): Promise<{ success: boolean; data: any }> {
+    try {
+      const response = await apiPost<any>(`/admin/past-papers/${id}/publish`);
+      return response;
+    } catch (error) {
+      console.error('Failed to publish past paper:', error);
+      throw error;
+    }
+  }
+
+  async unpublishPastPaper(id: string): Promise<{ success: boolean; data: any }> {
+    try {
+      const response = await apiPost<any>(`/admin/past-papers/${id}/unpublish`);
+      return response;
+    } catch (error) {
+      console.error('Failed to unpublish past paper:', error);
+      throw error;
+    }
+  }
+
+  async getPastPaperStatistics(id: string): Promise<{
+    success: boolean;
+    data: {
+      pastPaper: any;
+      statistics: {
+        totalAttempts: number;
+        averageScore: number;
+        passRate: number;
+        attemptsByMonth: Record<string, number>;
+        scoreRanges: Record<string, number>;
+        topicPerformance: Record<string, any>;
+      };
+    };
+  }> {
+    try {
+      const response = await apiGet<any>(`/admin/past-papers/${id}/statistics`);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch past paper statistics:', error);
+      throw error;
+    }
+  }
+
+  async getPastPaperAttempts(id: string, filters: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  } = {}): Promise<{
+    success: boolean;
+    data: {
+      attempts: any[];
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalItems: number;
+        itemsPerPage: number;
+      };
+    };
+  }> {
+    try {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, value.toString());
+        }
+      });
+      const response = await apiGet<any>(`/admin/past-papers/${id}/attempts?${params}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch past paper attempts:', error);
+      throw error;
+    }
+  }
+
+  async getOverallStatistics(): Promise<{
+    success: boolean;
+    data: {
+      overview: {
+        totalPastPapers: number;
+        publishedPastPapers: number;
+        totalAttempts: number;
+        totalStudents: number;
+      };
+      pastPapersBySubject: Array<{ _id: string; count: number }>;
+      pastPapersByLevel: Array<{ _id: string; count: number }>;
+      attemptsByMonth: Array<{ _id: { year: number; month: number }; count: number }>;
+      averageScoresBySubject: Array<{ _id: string; averageScore: number; totalAttempts: number }>;
+    };
+  }> {
+    try {
+      const response = await apiGet<any>('/admin/past-papers/statistics/overall');
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch overall statistics:', error);
+      throw error;
+    }
+  }
 }
 
 export const superAdminService = new SuperAdminService();

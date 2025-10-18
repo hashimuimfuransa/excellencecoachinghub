@@ -3,7 +3,8 @@ import {
   processDocument, 
   getProcessingStats, 
   testDocumentProcessing,
-  uploadDocument 
+  uploadDocument,
+  extractText
 } from '../controllers/documentProcessorController';
 import { auth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -24,5 +25,10 @@ router.get('/processing-stats', auth, requireRole(['teacher', 'admin']), getProc
 // @route   POST /api/documents/test-process
 // @access  Private (Admin only)
 router.post('/test-process', auth, requireRole(['admin']), uploadDocument.single('file'), testDocumentProcessing);
+
+// @desc    Extract text from document (for past papers)
+// @route   POST /api/documents/extract-text
+// @access  Private (Super Admin only)
+router.post('/extract-text', auth, requireRole(['super_admin']), extractText);
 
 export default router;

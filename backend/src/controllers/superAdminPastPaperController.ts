@@ -221,7 +221,7 @@ export const publishPastPaper = async (req: Request, res: Response) => {
     if (pastPaper.questions.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot publish past paper without questions'
+        message: 'Cannot publish past paper without questions. Please add questions to the past paper before publishing.'
       });
     }
 

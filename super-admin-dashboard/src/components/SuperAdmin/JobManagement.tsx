@@ -38,8 +38,6 @@ import {
 } from '@mui/material';
 import {
   Search,
-  FilterList,
-  Work,
   Add,
   Visibility,
   Edit,
@@ -48,30 +46,22 @@ import {
   CheckCircle,
   MoreVert,
   Download,
-  Upload,
   Business,
   LocationOn,
   Schedule,
-  People,
   Assignment,
-  Warning,
-  Error,
   Info,
   Refresh,
   Star,
   StarBorder,
-  Flag,
   Share,
   Archive,
-  Unarchive,
-  Publish,
   Create,
   Pause,
   PlayArrow
 } from '@mui/icons-material';
 import type { Job } from '../../types/job';
 import { JobStatus, JobType, ExperienceLevel, EducationLevel } from '../../types/job';
-import type { User } from '../../types/user';
 import { superAdminService } from '../../services/superAdminService';
 
 interface JobManagementProps {

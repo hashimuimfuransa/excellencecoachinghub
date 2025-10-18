@@ -32,32 +32,22 @@ import {
   ListItemText,
   Divider,
   LinearProgress,
-  Paper,
-  Stack,
-  Badge
-} from '@mui/material';
+  Paper} from '@mui/material';
 import {
   Search,
-  FilterList,
   Visibility,
   Add,
-  Delete,
   MoreVert,
   Download,
   CardMembership,
-  Person,
   School,
   Refresh,
   CheckCircle,
   Warning,
-  Error,
   Info,
   Block,
   Verified,
-  Share,
-  Print,
-  Edit
-} from '@mui/icons-material';
+  Share} from '@mui/icons-material';
 import { superAdminService } from '../../services/superAdminService';
 import type { JobCertificate } from '../../types/common';
 

@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IPastPaperAttemptDocument extends Document {
-  student: mongoose.Types.ObjectId;
+  student: mongoose.Types.ObjectId | string; // Can be ObjectId for authenticated users or string for anonymous
   pastPaper: mongoose.Types.ObjectId;
   attemptNumber: number;
   answers: Record<string, any>;
@@ -47,6 +47,12 @@ export interface IPastPaperAttemptDocument extends Document {
     timeLimit?: number;
   };
   
+  // Anonymous student info (for public attempts)
+  anonymousStudent?: {
+    name: string;
+    email?: string;
+  };
+  
   // Metadata
   ipAddress?: string;
   userAgent?: string;
@@ -85,9 +91,14 @@ export interface IPastPaperAttemptModel extends Model<IPastPaperAttemptDocument>
 
 const pastPaperAttemptSchema = new Schema<IPastPaperAttemptDocument>({
   student: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'Student reference is required']
+    type: Schema.Types.Mixed, // Can be ObjectId for authenticated users or string for anonymous
+    required: [true, 'Student reference is required'],
+    validate: {
+      validator: function(v: any) {
+        return mongoose.Types.ObjectId.isValid(v) || typeof v === 'string';
+      },
+      message: 'Student must be a valid ObjectId or string'
+    }
   },
   pastPaper: {
     type: Schema.Types.ObjectId,
@@ -220,6 +231,25 @@ const pastPaperAttemptSchema = new Schema<IPastPaperAttemptDocument>({
     timeLimit: {
       type: Number,
       min: 1
+    }
+  },
+  
+  // Anonymous student info (for public attempts)
+  anonymousStudent: {
+    name: {
+      type: String,
+      required: function(this: any) {
+        return !this.student || typeof this.student === 'string';
+      }
+    },
+    email: {
+      type: String,
+      validate: {
+        validator: function(v: string) {
+          return !v || /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
+        },
+        message: 'Please enter a valid email address'
+      }
     }
   },
   

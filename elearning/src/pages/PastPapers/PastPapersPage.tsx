@@ -236,10 +236,6 @@ const PastPapersPage: React.FC = () => {
   };
 
   const handleTakeExam = (paperId: string) => {
-    if (!isAuthenticated) {
-      navigate('/login?redirect=/past-papers');
-      return;
-    }
     navigate(`/past-papers/${paperId}/take`);
   };
 
@@ -608,7 +604,7 @@ const PastPapersPage: React.FC = () => {
                     }
                   }}
                 >
-                  {isAuthenticated ? 'Take Exam' : 'Login to Take Exam'}
+                  Take Exam
                 </Button>
               </CardContent>
             </Card>

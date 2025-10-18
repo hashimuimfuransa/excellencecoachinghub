@@ -194,13 +194,7 @@ export const startPastPaperAttempt = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
+    const { studentName, studentEmail } = req.body; // Optional student info for anonymous attempts
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -225,8 +219,11 @@ export const startPastPaperAttempt = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if multiple attempts are allowed
-    if (!pastPaper.allowMultipleAttempts) {
+    // For anonymous attempts, we'll use a session-based identifier
+    const sessionId = userId || `anonymous_${req.ip}_${Date.now()}`;
+    
+    // Check if multiple attempts are allowed (only for authenticated users)
+    if (userId && !pastPaper.allowMultipleAttempts) {
       const existingAttempt = await PastPaperAttempt.findOne({
         student: userId,
         pastPaper: id,
@@ -243,14 +240,21 @@ export const startPastPaperAttempt = async (req: Request, res: Response) => {
 
     // Get attempt number
     const attemptCount = await PastPaperAttempt.countDocuments({
-      student: userId,
+      student: sessionId,
       pastPaper: id
     });
 
     const attempt = new PastPaperAttempt({
-      student: userId,
+      student: sessionId,
       pastPaper: id,
       attemptNumber: attemptCount + 1,
+      // Store anonymous student info if provided
+      ...(userId ? {} : { 
+        anonymousStudent: {
+          name: studentName || 'Anonymous Student',
+          email: studentEmail || null
+        }
+      }),
       maxScore: pastPaper.totalMarks,
       settings: {
         randomizeQuestions: pastPaper.randomizeQuestions,
@@ -297,13 +301,6 @@ export const submitPastPaperAttempt = async (req: Request, res: Response) => {
     const { answers, questionResults } = req.body;
     const userId = req.user?.id;
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
     if (!mongoose.Types.ObjectId.isValid(attemptId)) {
       return res.status(400).json({
         success: false,
@@ -311,11 +308,19 @@ export const submitPastPaperAttempt = async (req: Request, res: Response) => {
       });
     }
 
-    const attempt = await PastPaperAttempt.findOne({
+    // For anonymous users, we need to find the attempt by ID only
+    // For authenticated users, we can also check the student field
+    const query: any = {
       _id: attemptId,
-      student: userId,
       status: 'in_progress'
-    }).populate('pastPaper');
+    };
+    
+    // Only add student filter for authenticated users
+    if (userId) {
+      query.student = userId;
+    }
+    
+    const attempt = await PastPaperAttempt.findOne(query).populate('pastPaper');
 
     if (!attempt) {
       return res.status(404).json({

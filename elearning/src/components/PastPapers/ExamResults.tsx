@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -20,7 +20,11 @@ import {
   AccordionDetails,
   Alert,
   IconButton,
-  Tooltip
+  Tooltip,
+  CircularProgress,
+  CardMedia,
+  CardActions,
+  Rating
 } from '@mui/material';
 import {
   ArrowBack,
@@ -33,8 +37,15 @@ import {
   HelpOutline,
   ExpandMore,
   Share,
-  Download
+  Download,
+  School,
+  PlayArrow,
+  Star,
+  AccessTime,
+  People
 } from '@mui/icons-material';
+import { courseService, ICourse } from '../../services/courseService';
+import { useNavigate } from 'react-router-dom';
 
 interface PastPaper {
   _id: string;
@@ -81,9 +92,47 @@ const ExamResults: React.FC<ExamResultsProps> = ({
   onBackToPapers
 }) => {
   const [expandedSection, setExpandedSection] = useState<string | false>('overview');
+  const [recommendedCourses, setRecommendedCourses] = useState<ICourse[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const navigate = useNavigate();
 
   const handleSectionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedSection(isExpanded ? panel : false);
+  };
+
+  // Fetch recommended courses based on exam results
+  useEffect(() => {
+    const fetchRecommendedCourses = async () => {
+      setLoadingCourses(true);
+      try {
+        // Create search terms based on weaknesses and subject
+        const searchTerms = [
+          pastPaper.subject.toLowerCase(),
+          ...results.weaknesses.map(w => w.toLowerCase()),
+          ...results.strengths.map(s => s.toLowerCase())
+        ].join(' ');
+
+        // Fetch courses related to the subject and performance areas
+        const courseResponse = await courseService.getPublicCourses({
+          search: searchTerms,
+          limit: 6,
+          sortBy: 'rating',
+          sortOrder: 'desc'
+        });
+
+        setRecommendedCourses(courseResponse.courses);
+      } catch (error) {
+        console.error('Error fetching recommended courses:', error);
+      } finally {
+        setLoadingCourses(false);
+      }
+    };
+
+    fetchRecommendedCourses();
+  }, [pastPaper.subject, results.weaknesses, results.strengths]);
+
+  const handleEnrollCourse = (courseId: string) => {
+    navigate(`/courses/${courseId}`);
   };
 
   const getGradeColor = (grade: string) => {
@@ -399,6 +448,155 @@ const ExamResults: React.FC<ExamResultsProps> = ({
               </Grid>
             </AccordionDetails>
           </Accordion>
+        </Grid>
+
+        {/* AI-Powered Course Recommendations */}
+        <Grid item xs={12}>
+          <Card sx={{ mt: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                <School color="primary" />
+                <Typography variant="h6" gutterBottom>
+                  Recommended Courses to Help You Succeed
+                </Typography>
+              </Box>
+              
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Based on your performance in {pastPaper.subject}, we've found courses that can help you improve in areas where you need more practice.
+              </Typography>
+
+              {loadingCourses ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : recommendedCourses.length > 0 ? (
+                <Grid container spacing={3}>
+                  {recommendedCourses.map((course) => (
+                    <Grid item xs={12} sm={6} md={4} key={course._id}>
+                      <Card 
+                        sx={{ 
+                          height: '100%', 
+                          display: 'flex', 
+                          flexDirection: 'column',
+                          transition: 'transform 0.2s ease-in-out',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: 4
+                          }
+                        }}
+                      >
+                        <CardMedia
+                          component="div"
+                          sx={{
+                            height: 140,
+                            backgroundColor: 'primary.light',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                          }}
+                        >
+                          <School sx={{ fontSize: 48 }} />
+                        </CardMedia>
+                        
+                        <CardContent sx={{ flexGrow: 1 }}>
+                          <Typography variant="h6" gutterBottom noWrap>
+                            {course.title}
+                          </Typography>
+                          
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary" 
+                            sx={{ 
+                              mb: 2,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {course.description}
+                          </Typography>
+
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Rating 
+                              value={course.rating} 
+                              readOnly 
+                              size="small"
+                              precision={0.1}
+                            />
+                            <Typography variant="body2" color="text.secondary">
+                              ({course.ratingCount})
+                            </Typography>
+                          </Box>
+
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <AccessTime fontSize="small" color="action" />
+                              <Typography variant="caption" color="text.secondary">
+                                {course.duration}h
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <People fontSize="small" color="action" />
+                              <Typography variant="caption" color="text.secondary">
+                                {course.enrollmentCount} enrolled
+                              </Typography>
+                            </Box>
+                          </Box>
+
+                          <Chip 
+                            label={course.level} 
+                            size="small" 
+                            color="primary" 
+                            variant="outlined"
+                            sx={{ mb: 2 }}
+                          />
+                        </CardContent>
+                        
+                        <CardActions sx={{ p: 2, pt: 0 }}>
+                          <Button
+                            variant="contained"
+                            startIcon={<PlayArrow />}
+                            onClick={() => handleEnrollCourse(course._id)}
+                            fullWidth
+                            sx={{
+                              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                              '&:hover': {
+                                background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
+                              }
+                            }}
+                          >
+                            Enroll Now
+                          </Button>
+                        </CardActions>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    No specific course recommendations available at the moment. 
+                    Check out our course catalog for more learning opportunities!
+                  </Typography>
+                </Alert>
+              )}
+
+              {recommendedCourses.length > 0 && (
+                <Box sx={{ mt: 3, textAlign: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate('/courses')}
+                    size="large"
+                    startIcon={<School />}
+                  >
+                    View All Courses
+                  </Button>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
     </Container>

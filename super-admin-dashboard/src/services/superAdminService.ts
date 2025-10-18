@@ -326,6 +326,8 @@ class SuperAdminService {
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   }): Promise<{
+    success: any;
+    data: any;
     users: User[];
     total: number;
     page: number;
@@ -561,6 +563,8 @@ class SuperAdminService {
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   }): Promise<{
+    success: any;
+    data: any;
     jobs: Job[];
     total: number;
     page: number;
@@ -1138,6 +1142,8 @@ class SuperAdminService {
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   }): Promise<{
+    data: any;
+    success: any;
     applications: JobApplication[];
     total: number;
     page: number;
@@ -1882,6 +1888,39 @@ class SuperAdminService {
       return response;
     } catch (error) {
       console.error('Failed to fetch overall statistics:', error);
+      throw error;
+    }
+  }
+
+  async extractTextFromDocument(data: {
+    fileData: string;
+    fileName: string;
+    mimeType: string;
+  }): Promise<{
+    success: boolean;
+    extractedText?: string;
+    processingTime?: number;
+    error?: string;
+  }> {
+    try {
+      const response = await apiPost<any>('/documents/extract-text', data);
+      return response;
+    } catch (error) {
+      console.error('Failed to extract text from document:', error);
+      throw error;
+    }
+  }
+
+  async generateAIContent(prompt: string): Promise<{
+    success: boolean;
+    content?: string;
+    error?: string;
+  }> {
+    try {
+      const response = await apiPost<any>('/ai/generate-content', { prompt });
+      return response;
+    } catch (error) {
+      console.error('Failed to generate AI content:', error);
       throw error;
     }
   }

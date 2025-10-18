@@ -876,3 +876,45 @@ export const generateRubric = async (req: Request, res: Response): Promise<void>
     });
   }
 };
+
+// Generate general AI content
+export const generateGeneralContent = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+      return;
+    }
+
+    const { prompt } = req.body;
+
+    // Check if AI service is available
+    const isAvailable = await aiService.isAvailable();
+    if (!isAvailable) {
+      res.status(503).json({
+        success: false,
+        message: 'AI service is not available. Please check your Gemini API key configuration.'
+      });
+      return;
+    }
+
+    // Use the AI service to generate content
+    const content = await aiService.generateContent(prompt);
+
+    res.status(200).json({
+      success: true,
+      content: content
+    });
+  } catch (error) {
+    console.error('Error generating AI content:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate AI content',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
+  }
+};

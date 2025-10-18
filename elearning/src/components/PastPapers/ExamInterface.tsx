@@ -13,7 +13,6 @@ import {
   useMediaQuery
 } from '@mui/material';
 import {
-  ArrowBack,
   Timer,
   Quiz,
   CheckCircle,
@@ -65,15 +64,13 @@ interface ExamInterfaceProps {
   questions: Question[];
   attemptId: string | null;
   onComplete: (answers: Record<string, any>, questionResults: any[]) => void;
-  onBack: () => void;
 }
 
 const ExamInterface: React.FC<ExamInterfaceProps> = ({
   pastPaper,
   questions,
   attemptId,
-  onComplete,
-  onBack
+  onComplete
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -139,16 +136,63 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
     setCurrentQuestionIndex(index);
   }, []);
 
+  // Enhanced answer validation for different question types
+  const validateAnswer = (question: Question, studentAnswer: any): boolean => {
+    if (!studentAnswer || studentAnswer === '') return false;
+
+    switch (question.type) {
+      case 'multiple-choice':
+      case 'multiple_choice':
+      case 'true-false':
+      case 'true_false':
+        return studentAnswer === question.correctAnswer;
+
+      case 'multiple_choice_multiple':
+        if (!Array.isArray(studentAnswer) || !Array.isArray(question.correctAnswer)) {
+          return false;
+        }
+        // Check if all correct answers are selected and no incorrect ones
+        const correctAnswers = question.correctAnswer || [];
+        return correctAnswers.every((correct: string) => studentAnswer.includes(correct)) &&
+               studentAnswer.every((selected: string) => correctAnswers.includes(selected));
+
+      case 'short-answer':
+      case 'short_answer':
+      case 'essay':
+      case 'numerical':
+      case 'fill_in_blank':
+        // For text-based answers, do case-insensitive comparison
+        const studentText = String(studentAnswer).toLowerCase().trim();
+        const correctText = String(question.correctAnswer || '').toLowerCase().trim();
+        return studentText === correctText;
+
+      case 'matching':
+        if (!Array.isArray(studentAnswer) || !Array.isArray(question.correctAnswer)) {
+          return false;
+        }
+        return JSON.stringify(studentAnswer) === JSON.stringify(question.correctAnswer);
+
+      case 'ordering':
+        if (!Array.isArray(studentAnswer) || !Array.isArray(question.correctAnswer)) {
+          return false;
+        }
+        return JSON.stringify(studentAnswer) === JSON.stringify(question.correctAnswer);
+
+      default:
+        return studentAnswer === question.correctAnswer;
+    }
+  };
+
   const handleSubmitExam = useCallback(async () => {
     if (isSubmitting) return;
 
     setIsSubmitting(true);
 
     try {
-      // Calculate question results
+      // Calculate question results with enhanced validation
       const questionResults = questions.map(question => {
         const studentAnswer = answers[question.id];
-        const isCorrect = studentAnswer === question.correctAnswer;
+        const isCorrect = validateAnswer(question, studentAnswer);
         const pointsEarned = isCorrect ? question.points : 0;
 
         return {
@@ -171,6 +215,34 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
       setIsSubmitting(false);
     }
   }, [answers, questions, onComplete, isSubmitting]);
+
+  const getQuestionTypeLabel = (type: string) => {
+    switch (type) {
+      case 'multiple-choice':
+      case 'multiple_choice':
+        return 'Multiple Choice';
+      case 'true-false':
+      case 'true_false':
+        return 'True/False';
+      case 'short-answer':
+      case 'short_answer':
+        return 'Short Answer';
+      case 'essay':
+        return 'Essay';
+      case 'numerical':
+        return 'Numerical';
+      case 'matching':
+        return 'Matching';
+      case 'ordering':
+        return 'Ordering';
+      case 'fill_in_blank':
+        return 'Fill in Blank';
+      case 'multiple_choice_multiple':
+        return 'Multiple Select';
+      default:
+        return 'Question';
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -196,16 +268,6 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
               {pastPaper.subject} • {pastPaper.level} • {pastPaper.year}
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Button
-              variant="outlined"
-              startIcon={<ArrowBack />}
-              onClick={onBack}
-              sx={{ minWidth: 120 }}
-            >
-              Back
-            </Button>
-          </Box>
         </Box>
 
         {/* Progress and Timer */}
@@ -227,8 +289,11 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
       {/* Question Navigation */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {questions.map((_, index) => (
-            <Tooltip key={index} title={`Question ${index + 1}`}>
+          {questions.map((question, index) => (
+            <Tooltip 
+              key={index} 
+              title={`Question ${index + 1} - ${getQuestionTypeLabel(question.type)} (${question.points} pts)`}
+            >
               <Button
                 variant={index === currentQuestionIndex ? 'contained' : 'outlined'}
                 size="small"
@@ -236,11 +301,23 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
                 sx={{
                   minWidth: 40,
                   height: 40,
-                  position: 'relative'
+                  position: 'relative',
+                  ...(question.type === 'essay' && {
+                    borderColor: 'warning.main',
+                    '&:hover': {
+                      borderColor: 'warning.dark'
+                    }
+                  }),
+                  ...(question.type === 'multiple_choice_multiple' && {
+                    borderColor: 'info.main',
+                    '&:hover': {
+                      borderColor: 'info.dark'
+                    }
+                  })
                 }}
               >
                 {index + 1}
-                {answers[questions[index].id] !== undefined && (
+                {answers[question.id] !== undefined && (
                   <CheckCircle
                     sx={{
                       position: 'absolute',

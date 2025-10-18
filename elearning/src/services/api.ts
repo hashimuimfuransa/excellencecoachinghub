@@ -63,7 +63,10 @@ api.interceptors.response.use(
       // Only redirect if we're not already on a public page
       if (!window.location.pathname.includes('/login') && 
           !window.location.pathname.includes('/register') &&
-          !window.location.pathname.includes('/') &&
+          !window.location.pathname.includes('/past-papers') &&
+          !window.location.pathname.includes('/courses') &&
+          !window.location.pathname.includes('/about') &&
+          !window.location.pathname.includes('/contact') &&
           window.location.pathname !== '/') {
         window.location.href = '/login';
       }

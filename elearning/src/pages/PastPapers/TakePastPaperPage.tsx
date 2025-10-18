@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
 import ExamInterface from '../../components/PastPapers/ExamInterface';
 import ExamResults from '../../components/PastPapers/ExamResults';
+import ExamLayout from '../../components/Layout/ExamLayout';
 
 interface PastPaper {
   _id: string;
@@ -55,15 +56,10 @@ const TakePastPaperPage: React.FC = () => {
   const [examResults, setExamResults] = useState<any>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login?redirect=/past-papers');
-      return;
-    }
-
     if (id) {
       loadPastPaper();
     }
-  }, [id, isAuthenticated, navigate]);
+  }, [id]);
 
   const loadPastPaper = async () => {
     try {
@@ -78,8 +74,13 @@ const TakePastPaperPage: React.FC = () => {
         setQuestions(questionsResponse.data.data.questions);
       }
 
-      // Start attempt
-      const attemptResponse = await api.post(`/past-papers/${id}/start`);
+      // Start attempt (with optional student info for anonymous users)
+      const attemptData = isAuthenticated ? {} : {
+        studentName: 'Anonymous Student',
+        studentEmail: ''
+      };
+      
+      const attemptResponse = await api.post(`/past-papers/${id}/start`, attemptData);
       
       if (attemptResponse.data.success) {
         setAttemptId(attemptResponse.data.data.attemptId);
@@ -124,54 +125,63 @@ const TakePastPaperPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
-        <CircularProgress size={60} />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading exam...
-        </Typography>
-      </Container>
+      <ExamLayout title="Loading Exam...">
+        <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
+          <CircularProgress size={60} />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Loading exam...
+          </Typography>
+        </Container>
+      </ExamLayout>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      </Container>
+      <ExamLayout title="Exam Error">
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        </Container>
+      </ExamLayout>
     );
   }
 
   if (!pastPaper || !questions.length) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="warning">
-          Past paper not found or no questions available.
-        </Alert>
-      </Container>
+      <ExamLayout title="Exam Not Available">
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Alert severity="warning">
+            Past paper not found or no questions available.
+          </Alert>
+        </Container>
+      </ExamLayout>
     );
   }
 
   if (examCompleted && examResults) {
     return (
-      <ExamResults
-        pastPaper={pastPaper}
-        results={examResults}
-        onRetake={handleRetakeExam}
-        onBackToPapers={handleBackToPapers}
-      />
+      <ExamLayout title={`${pastPaper.title} - Results`}>
+        <ExamResults
+          pastPaper={pastPaper}
+          results={examResults}
+          onRetake={handleRetakeExam}
+          onBackToPapers={handleBackToPapers}
+        />
+      </ExamLayout>
     );
   }
 
   return (
-    <ExamInterface
-      pastPaper={pastPaper}
-      questions={questions}
-      attemptId={attemptId}
-      onComplete={handleExamComplete}
-      onBack={handleBackToPapers}
-    />
+    <ExamLayout title={pastPaper.title}>
+      <ExamInterface
+        pastPaper={pastPaper}
+        questions={questions}
+        attemptId={attemptId}
+        onComplete={handleExamComplete}
+      />
+    </ExamLayout>
   );
 };
 

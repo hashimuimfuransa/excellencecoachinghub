@@ -16,7 +16,8 @@ import {
   gradeMathExpression,
   gradeCode,
   detectPlagiarism,
-  generateRubric
+  generateRubric,
+  generateGeneralContent
 } from '../controllers/aiController';
 import { protect } from '../middleware/auth';
 import { authorizeRoles } from '../middleware/roleAuth';
@@ -312,6 +313,19 @@ router.post('/generate-rubric',
       .withMessage('Max points must be a positive integer')
   ],
   generateRubric
+);
+
+// Generate general AI content (Super Admin only)
+router.post('/generate-content',
+  authorizeRoles(['super_admin']),
+  [
+    body('prompt')
+      .notEmpty()
+      .withMessage('Prompt is required')
+      .isLength({ min: 10 })
+      .withMessage('Prompt must be at least 10 characters long')
+  ],
+  generateGeneralContent
 );
 
 export default router;

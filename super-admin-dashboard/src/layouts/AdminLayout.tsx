@@ -80,6 +80,7 @@ const navigationItems: NavigationItem[] = [
   { text: 'Psychometric Tests', icon: <Psychology />, path: '/psychometric-tests', category: 'Content Management' },
   { text: 'Smart Tests', icon: <QuestionAnswer />, path: '/smart-tests', category: 'Content Management' },
   { text: 'AI Interviews', icon: <RecordVoiceOver />, path: '/ai-interviews', category: 'Content Management' },
+  { text: 'Past Papers', icon: <Assessment />, path: '/past-papers', category: 'Content Management' },
   { text: 'Certificates', icon: <CardMembership />, path: '/certificates', category: 'Content Management' },
   
   // System Management

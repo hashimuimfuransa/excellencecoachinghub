@@ -176,11 +176,13 @@ const App: React.FC = () => {
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="past-papers" element={<PastPapersPage />} />
-        <Route path="past-papers/:id/take" element={<TakePastPaperPage />} />
         <Route path="help" element={<div>Help Center - Coming Soon</div>} />
         <Route path="privacy" element={<div>Privacy Policy - Coming Soon</div>} />
         <Route path="terms" element={<div>Terms of Service - Coming Soon</div>} />
       </Route>
+
+      {/* Exam routes with dedicated exam layout */}
+      <Route path="past-papers/:id/take" element={<TakePastPaperPage />} />
 
       {/* Community routes with standalone layout (no public navbar/footer) */}
       <Route path="community/*" element={<CommunityRouter />} />

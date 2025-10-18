@@ -29,6 +29,18 @@ export const enum CertificateType {
 }
 
 export interface JobApplication {
+  id: Key;
+  jobTitle: ReactNode;
+  experience: ReactNode;
+  expectedSalary: any;
+  education: ReactNode;
+  availableFrom: ReactNode;
+  reviewedAt: any;
+  interviewScore: any;
+  skills: any;
+  reviewerNotes: any;
+  rejectionReason: any;
+  applicantEmail: ReactNode;
   _id: string;
   job: Job;
   applicant: User;

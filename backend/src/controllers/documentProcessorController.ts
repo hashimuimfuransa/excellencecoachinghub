@@ -209,3 +209,60 @@ export const testDocumentProcessing = asyncHandler(async (req: Request, res: Res
     });
   }
 });
+
+// @desc    Extract text from document (for past papers)
+// @route   POST /api/documents/extract-text
+// @access  Private (Super Admin only)
+export const extractText = asyncHandler(async (req: Request, res: Response) => {
+  const { fileData, fileName, mimeType } = req.body;
+
+  console.log('📄 Text extraction request:', {
+    user: req.user?.email,
+    fileName,
+    mimeType
+  });
+
+  if (!fileData || !fileName || !mimeType) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: fileData, fileName, mimeType'
+    });
+  }
+
+  try {
+    // Convert base64 to buffer
+    const fileBuffer = Buffer.from(fileData, 'base64');
+    
+    // Use the document processor service to extract text
+    const processor = DocumentProcessorService.getInstance();
+    const result = await processor.processDocument(fileBuffer, fileName, mimeType);
+    
+    if (result.success && result.extractedText) {
+      console.log(`✅ Text extraction successful for ${fileName}: ${result.extractedText.length} characters`);
+      
+      res.json({
+        success: true,
+        extractedText: result.extractedText,
+        processingTime: result.processingTime,
+        fileName,
+        mimeType
+      });
+    } else {
+      console.log(`❌ Text extraction failed for ${fileName}:`, result.error);
+      
+      res.status(400).json({
+        success: false,
+        message: 'Text extraction failed',
+        error: result.error || 'Unknown error occurred'
+      });
+    }
+
+  } catch (error: any) {
+    console.error('Text extraction error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Text extraction failed',
+      error: error.message
+    });
+  }
+});

@@ -47,8 +47,8 @@ export class CentralAIManager extends EventEmitter {
   private dailyRequestLimit: number = 300; // Reduced due to quota issues
   private minuteRequestCount: number = 0;
   private lastMinuteReset: number = Date.now();
-  private readonly MINUTE_REQUEST_LIMIT = 3; // Increased for faster processing
-  private readonly MIN_REQUEST_INTERVAL = 15000; // Reduced to 15 seconds for faster processing
+  private readonly MINUTE_REQUEST_LIMIT = 2; // Reduced to prevent quota issues
+  private readonly MIN_REQUEST_INTERVAL = 30000; // Increased to 30 seconds to prevent quota issues
   private lastRequestTime: number = 0;
   private requestQueue: Array<{
     resolve: (value: string) => void;
@@ -375,9 +375,28 @@ export class CentralAIManager extends EventEmitter {
       throw new Error('Invalid response format from Gemini API');
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.error?.message || error.message;
+        const errorData = error.response?.data?.error;
+        const errorCode = errorData?.code;
+        const errorMessage = errorData?.message || error.message;
+        
         console.log(`🔍 DEBUG - Error response: ${JSON.stringify(error.response?.data)}`);
-        throw new Error(`Gemini API error: ${errorMessage}`);
+        
+        // Handle specific error types
+        if (errorCode === 429) {
+          console.warn('⚠️ Gemini API quota exceeded. Consider upgrading or waiting.');
+          throw new Error('QUOTA_EXCEEDED: Gemini API quota exceeded. Please try again later or contact support.');
+        } else if (errorCode === 400) {
+          console.warn('⚠️ Bad request to Gemini API. Check prompt content.');
+          throw new Error('BAD_REQUEST: Invalid request to Gemini API. Please check your input.');
+        } else if (errorCode === 403) {
+          console.warn('⚠️ Gemini API access forbidden. Check API key permissions.');
+          throw new Error('FORBIDDEN: Gemini API access denied. Please check your API key.');
+        } else if (errorCode === 500) {
+          console.warn('⚠️ Gemini API server error. Retrying may help.');
+          throw new Error('SERVER_ERROR: Gemini API server error. Please try again.');
+        }
+        
+        throw new Error(`Gemini API error (${errorCode}): ${errorMessage}`);
       }
       throw error;
     }

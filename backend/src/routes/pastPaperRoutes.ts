@@ -23,9 +23,11 @@ router.get('/search', searchPastPapers);
 router.get('/:id', getPastPaperById);
 router.get('/:id/questions', getPastPaperQuestions);
 
-// Protected routes (authentication required)
-router.post('/:id/start', auth, startPastPaperAttempt);
-router.post('/attempts/:attemptId/submit', auth, submitPastPaperAttempt);
+// Public routes for taking past papers (no authentication required)
+router.post('/:id/start', startPastPaperAttempt);
+router.post('/attempts/:attemptId/submit', submitPastPaperAttempt);
+
+// Protected routes (authentication required for viewing personal data)
 router.get('/student/attempts', auth, getStudentAttempts);
 router.get('/student/progress', auth, getStudentProgress);
 

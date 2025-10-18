@@ -135,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasAnyRole
   };
 
+
   return (
     <AuthContext.Provider value={value}>
       {children}

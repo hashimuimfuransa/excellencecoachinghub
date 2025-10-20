@@ -591,69 +591,68 @@ const CategoriesSection: React.FC = () => {
   const navigate = useNavigate();
   
   const categories = [
-    { 
-      name: 'Business Leadership & Communication', 
-      icon: Business, 
-      color: '#667eea', 
+    {
+      name: 'Professional Coaching',
+      id: 'professional_coaching',
+      icon: Business,
+      color: '#667eea',
       gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      count: '50+ courses',
-      description: 'Leadership, Strategy, Communication Skills'
+      count: '⭐ Popular',
+      description: 'Leadership, Executive, Project Management, CPA/CAT/ACCA'
     },
-    { 
-      name: 'Digital Marketing Mastery', 
-      icon: TrendingUp, 
-      color: '#4facfe', 
+    {
+      name: 'Business & Entrepreneurship Coaching',
+      id: 'business_entrepreneurship',
+      icon: TrendingUp,
+      color: '#4facfe',
       gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      count: '35+ courses',
-      description: 'Social Media, SEO, Content Marketing'
+      count: '⭐ Popular',
+      description: 'Startup, Strategy, Finance, Marketing, Innovation'
     },
-    { 
-      name: 'Personal Growth & Productivity', 
-      icon: Psychology, 
-      color: '#f093fb', 
-      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      count: '40+ courses',
-      description: 'Goal Setting, Time Management, Mindfulness'
-    },
-    { 
-      name: 'In-Demand Tech Skills', 
-      icon: Code, 
-      color: '#43e97b', 
-      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-      count: '30+ courses',
-      description: 'High-demand skills for tech job market'
-    },
-    { 
-      name: 'Public Speaking & Confidence', 
-      icon: QuestionAnswer, 
-      color: '#fa709a', 
-      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      count: '25+ courses',
-      description: 'Presentation Skills, Confidence Building'
-    },
-    { 
-      name: 'Academic Coaching', 
-      icon: School, 
-      color: '#a8edea', 
+    {
+      name: 'Academic Coaching',
+      id: 'academic_coaching',
+      icon: School,
+      color: '#a8edea',
       gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-      count: '45+ courses',
-      description: 'Study Skills, Research Methods, Exam Prep'
+      count: 'All levels',
+      description: 'Primary, Secondary, University, Exams, Research'
     },
-    { 
-      name: 'Job-Ready Professional Skills', 
-      icon: WorkspacePremium, 
-      color: '#fdbb2d', 
-      gradient: 'linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%)',
-      count: '60+ courses',
-      description: 'Future-proof skills for career success'
+    {
+      name: 'Language Coaching',
+      id: 'language_coaching',
+      icon: QuestionAnswer,
+      color: '#fa709a',
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      count: 'Fluency',
+      description: 'English, French, Kinyarwanda, Business Communication'
     },
-    { 
-      name: 'Business Coaching', 
-      icon: Analytics, 
-      color: '#ff9a9e', 
-      gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
-      count: '35+ courses',
-      description: 'Entrepreneurship, Business Strategy, Finance'
+    {
+      name: 'Technical & Digital Coaching',
+      id: 'technical_digital_coaching',
+      icon: Code,
+      color: '#43e97b',
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      count: 'In-demand',
+      description: 'AI, Data, Cybersecurity, Cloud, Dev, Digital Marketing'
+    },
+    {
+      name: 'Job Seeker Coaching',
+      id: 'job_seeker_coaching',
+      icon: WorkspacePremium,
+      color: '#ff9966',
+      gradient: 'linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)',
+      count: 'Career-ready',
+      description: 'Career choice, skills, exams, interview, resume'
+    },
+    {
+      name: 'Personal & Corporate Development',
+      id: 'personal_corporate_coaching',
+      icon: Psychology,
+      color: '#b06ab3',
+      gradient: 'linear-gradient(135deg, #b06ab3 0%, #4568dc 100%)',
+      count: 'Growth',
+      description: 'Communication, EI, Time, Team, HR, Ethics'
     }
   ];
 
@@ -760,7 +759,15 @@ const CategoriesSection: React.FC = () => {
                     }
                   }
                 }}
-                onClick={() => navigate(`/courses?category=${encodeURIComponent(category.name)}`)}
+                onClick={() => {
+                  if ((category as any).id) {
+                    const interests = { categories: [(category as any).id] } as any;
+                    const encoded = encodeURIComponent(JSON.stringify(interests));
+                    navigate(`/dashboard/student/courses?tab=discover&interests=${encoded}`);
+                  } else {
+                    navigate(`/courses?category=${encodeURIComponent(category.name)}`);
+                  }
+                }}
               >
                 {/* Gradient Overlay */}
                 <Box
@@ -1557,7 +1564,7 @@ const FeaturedCoursesSection: React.FC = () => {
           )}
 
           {/* Error State */}
-          {error && (
+          {!!error && (
             <Alert severity="error" sx={{ mb: 4 }}>
               Failed to load courses. Please try again later.
             </Alert>

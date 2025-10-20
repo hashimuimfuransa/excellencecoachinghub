@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
+import { 
   Container,
   Typography,
   Box,
@@ -58,6 +58,9 @@ import {
   AutoAwesome
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
+import { motion, useScroll, useSpring } from 'framer-motion';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import TextField from '@mui/material/TextField';
 import { courseService, ICourse } from '../../services/courseService';
 import { weekService, Week, WeekMaterial } from '../../services/weekService';
 import { assessmentService, IAssessment } from '../../services/assessmentService';
@@ -165,6 +168,9 @@ const UnifiedLearningPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  // Scroll progress for modern feel
+  const { scrollYProgress } = useScroll();
+  const progressSpring = useSpring(scrollYProgress, { stiffness: 120, damping: 20, mass: 0.2 });
 
   const [course, setCourse] = useState<ICourse | null>(null);
   const [weeks, setWeeks] = useState<Week[]>([]);
@@ -180,7 +186,44 @@ const UnifiedLearningPage: React.FC = () => {
   const [unseenRecordings, setUnseenRecordings] = useState<number>(0);
   const [organizingAssessment, setOrganizingAssessment] = useState<Set<string>>(new Set());
   const [organizationProgress, setOrganizationProgress] = useState<Record<string, string>>({});
+  // Improve organization: collapse/expand weeks
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
+  // AI assistant state
+  const [aiOpen, setAiOpen] = useState<boolean>(false);
+  // Materials quick filter
+  const [materialFilter, setMaterialFilter] = useState<'all' | 'required' | 'completed' | 'video' | 'document'>('all');
   const liveSectionRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Local helper types and utilities for organizing assessment questions in fallback
+  type SimpleSection = {
+    id: string;
+    title: string;
+    description?: string;
+    questions: any[];
+    instructions?: string;
+    timeAllocation?: number;
+  };
+
+  const organizeQuestionsIntoSections = (questions: any[]): SimpleSection[] => {
+    const sectionMap = new Map<string, any[]>();
+    (questions || []).forEach((q: any) => {
+      const key = q?.section || 'A';
+      if (!sectionMap.has(key)) sectionMap.set(key, []);
+      sectionMap.get(key)!.push(q);
+    });
+    const instructionsByKey: Record<string, string> = {
+      A: 'Choose the best answer for each question.',
+      B: 'Provide concise answers and show your work when applicable.',
+      C: 'Write detailed responses supported by examples.'
+    };
+    return Array.from(sectionMap.entries()).map(([key, qs]) => ({
+      id: key,
+      title: `Section ${key}`,
+      description: `Section ${key} with ${qs.length} questions`,
+      questions: qs,
+      instructions: instructionsByKey[key] || 'Answer all questions in this section.'
+    }));
+  };
 
   const loadCourseData = async () => {
     if (!courseId) {
@@ -293,6 +336,13 @@ const UnifiedLearningPage: React.FC = () => {
     loadCourseData();
   }, [courseId]);
 
+  // Expand the first week by default after weeks load
+  useEffect(() => {
+    if (weeks && weeks.length > 0) {
+      setExpandedWeeks(new Set([weeks[0]._id]));
+    }
+  }, [weeks]);
+
   // Scroll to live section when navigated with ?section=live
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -333,6 +383,14 @@ const UnifiedLearningPage: React.FC = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
+  const toggleWeekExpanded = (weekId: string) => {
+    setExpandedWeeks(prev => {
+      const next = new Set(prev);
+      if (next.has(weekId)) next.delete(weekId); else next.add(weekId);
+      return next;
+    });
+  };
+
   const getMaterialIcon = (type: string) => {
     switch (type) {
       case 'document':
@@ -352,6 +410,16 @@ const UnifiedLearningPage: React.FC = () => {
 
   const isMaterialCompleted = (materialId: string) => {
     return progress?.materialProgresses?.some((mp: any) => mp.materialId === materialId && mp.status === 'completed') || false;
+  };
+
+  const getMaterialProgressPct = (materialId: string): number => {
+    const mp = progress?.materialProgresses?.find((m: any) => m.materialId === materialId);
+    if (!mp) return 0;
+    const pct = typeof mp.progressPercentage === 'number' ? mp.progressPercentage
+      : typeof mp.progress === 'number' ? mp.progress
+      : mp.status === 'completed' ? 100 : 0;
+    const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+    return Number.isFinite(clamped) ? clamped : 0;
   };
 
   const getWeekProgress = (weekId: string) => {
@@ -433,7 +501,7 @@ const UnifiedLearningPage: React.FC = () => {
           completedTopics: getCompletedTopics()
         },
         studentProfile: {
-          preferredLearningStyle: user?.preferences?.learningStyle || 'visual',
+          preferredLearningStyle: (user && (user as unknown as { preferences?: { learningStyle?: string } }).preferences?.learningStyle) || 'visual',
           // Add more student profile data if available
         }
       };
@@ -636,9 +704,29 @@ const UnifiedLearningPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}>
+      {/* Animated background gradient */}
+      <motion.div
+        aria-hidden
+        initial={{ backgroundPosition: '0% 50%' }}
+        animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+        transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 0,
+          backgroundImage: 'linear-gradient(120deg, #f7f9ff 0%, #eef2ff 35%, #fdf2f8 70%, #eef2ff 100%)',
+          backgroundSize: '200% 200%'
+        }}
+      />
+      {/* Subtle grid overlay */}
+      <Box aria-hidden sx={{ position: 'fixed', inset: 0, zIndex: 1, backgroundImage: 'radial-gradient(rgba(99,102,241,0.08) 1px, transparent 1px)', backgroundSize: '18px 18px', pointerEvents: 'none' }} />
+      {/* Scroll progress bar */}
+      <Box sx={{ position: 'sticky', top: 0, zIndex: 30, pt: 0.25, px: 0.5 }}>
+        <Box sx={{ height: 3, borderRadius: 2, bgcolor: 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+          <motion.div style={{ scaleX: progressSpring, height: 3, transformOrigin: '0 0', backgroundImage: 'linear-gradient(90deg,#6366f1,#a855f7,#06b6d4)', backgroundSize: '200% 100%' }} />
+        </Box>
+      </Box>
       {/* Top App Bar */}
-      <AppBar position="static" sx={{ backgroundColor: 'white', color: 'text.primary', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+      <AppBar position="sticky" sx={{ backgroundColor: 'white', color: 'text.primary', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', zIndex: 5 }}>
         <Toolbar sx={{ 
           minHeight: { xs: 56, sm: 64 },
           px: { xs: 1, sm: 2 }
@@ -745,7 +833,9 @@ const UnifiedLearningPage: React.FC = () => {
         ml: { xs: 0, sm: 0, md: sidebarOpen ? '320px' : 0 },
         transition: 'margin-left 200ms ease',
       }}>
-        <LiveSessionStatus courseId={courseId!} fullWidth />
+        <Box component={motion.div} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+          <LiveSessionStatus courseId={courseId!} fullWidth />
+        </Box>
       </Box>
 
       {/* Main Content Area */}
@@ -782,7 +872,7 @@ const UnifiedLearningPage: React.FC = () => {
             }
           }}>
             {/* Course Info */}
-            <Card sx={{ 
+            <Card component={motion.div} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} sx={{ 
               mb: { xs: 1.5, sm: 2 }, 
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
               color: 'white' 
@@ -842,7 +932,7 @@ const UnifiedLearningPage: React.FC = () => {
 
             {/* Course Progress Overview */}
             {progress && (
-              <Card sx={{ mb: { xs: 1.5, sm: 2 } }}>
+              <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} sx={{ mb: { xs: 1.5, sm: 2 } }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                   <Typography 
                     variant="h6" 
@@ -885,7 +975,7 @@ const UnifiedLearningPage: React.FC = () => {
             )}
 
             {/* Announcements */}
-            <Card sx={{ mb: { xs: 1.5, sm: 2 } }}>
+            <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} sx={{ mb: { xs: 1.5, sm: 2 } }}>
               <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                 <Typography 
                   variant="h6" 
@@ -1074,7 +1164,7 @@ const UnifiedLearningPage: React.FC = () => {
             </Card>
 
             {/* Quick Actions */}
-            <Card>
+            <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}>
               <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                 <Typography 
                   variant="h6" 
@@ -1137,12 +1227,42 @@ const UnifiedLearningPage: React.FC = () => {
             p: { xs: 1.5, sm: 3 },
             backgroundColor: 'grey.50',
             minHeight: 'calc(100vh - 64px)',
+            position: 'relative',
+            zIndex: 5,
             // Mobile optimizations
             '@media (max-width: 600px)': {
               p: 1
             }
           }}
         >
+          <Container maxWidth="lg" sx={{ p: 0 }}>
+          {/* Hero header with key actions */}
+          <Card component={motion.div} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} sx={{ mb: { xs: 2, sm: 3 }, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} md={8}>
+                  <Typography variant="h5" sx={{ fontWeight: 900, lineHeight: 1.2, backgroundImage: 'linear-gradient(90deg,#6366f1,#a855f7)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
+                    {course?.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Jump back in or explore assessments and assignments curated for you.
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+                    <Button variant="contained" onClick={() => navigate(`/dashboard/student/course/${courseId}/weeks`)} sx={{ textTransform: 'none' }}>Open Course Plan</Button>
+                    <Button variant="outlined" onClick={() => liveSectionRef.current?.scrollIntoView({ behavior: 'smooth' })} sx={{ textTransform: 'none' }}>Upcoming Events</Button>
+                  </Stack>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+          {/* Section quick nav */}
+          <Stack direction="row" spacing={1} sx={{ mb: { xs: 1.5, sm: 2 } }}>
+            <Chip clickable label="Assessments" onClick={() => document.getElementById('assessments-section')?.scrollIntoView({ behavior: 'smooth' })} />
+            <Chip clickable label="Assignments" onClick={() => document.getElementById('assignments-section')?.scrollIntoView({ behavior: 'smooth' })} />
+            <Chip clickable label="Weeks" onClick={() => document.getElementById('weeks-section')?.scrollIntoView({ behavior: 'smooth' })} />
+          </Stack>
           {/* Course Progress Overview */}
           {progress && (
             <Card sx={{ mb: { xs: 2, sm: 3 } }}>
@@ -1191,7 +1311,7 @@ const UnifiedLearningPage: React.FC = () => {
 
           {/* Assessments Section */}
           {assessments.length > 0 && (
-            <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+            <Card id="assessments-section" component={motion.div} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
               <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                 <Typography 
                   variant="h6" 
@@ -1384,7 +1504,7 @@ const UnifiedLearningPage: React.FC = () => {
 
           {/* Assignments Section */}
           {assignments.length > 0 && (
-            <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+            <Card id="assignments-section" component={motion.div} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
               <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                 <Typography 
                   variant="h6" 
@@ -1513,10 +1633,19 @@ const UnifiedLearningPage: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <Grid container spacing={{ xs: 2, sm: 3 }}>
+            <>
+            {/* Materials filter chips */}
+            <Stack direction="row" spacing={1} sx={{ mb: { xs: 1.5, sm: 2 }, flexWrap: 'wrap' }}>
+              <Chip clickable color={materialFilter === 'all' ? 'primary' : 'default'} label="All" onClick={() => setMaterialFilter('all')} />
+              <Chip clickable color={materialFilter === 'required' ? 'primary' : 'default'} label="Required" onClick={() => setMaterialFilter('required')} />
+              <Chip clickable color={materialFilter === 'completed' ? 'primary' : 'default'} label="Completed" onClick={() => setMaterialFilter('completed')} />
+              <Chip clickable color={materialFilter === 'video' ? 'primary' : 'default'} label="Videos" onClick={() => setMaterialFilter('video')} />
+              <Chip clickable color={materialFilter === 'document' ? 'primary' : 'default'} label="Documents" onClick={() => setMaterialFilter('document')} />
+            </Stack>
+            <Grid id="weeks-section" container spacing={{ xs: 2, sm: 3 }}>
               {weeks.map((week, index) => (
                 <Grid item xs={12} key={week._id}>
-                  <Card sx={{
+                  <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} sx={{
                     transition: 'all 0.3s ease',
                     '&:hover': {
                       transform: { xs: 'none', sm: 'translateY(-2px)' },
@@ -1541,7 +1670,7 @@ const UnifiedLearningPage: React.FC = () => {
                               fontWeight: 'bold'
                             }}
                           >
-                            Week {week.weekNumber}: {week.title}
+                            {week.title}
                           </Typography>
                           <Typography 
                             variant="body2" 
@@ -1634,11 +1763,21 @@ const UnifiedLearningPage: React.FC = () => {
                           >
                             {Math.round(getWeekProgress(week._id))}%
                           </Typography>
+                          <Box sx={{ mt: 1 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => toggleWeekExpanded(week._id)}
+                              sx={{ textTransform: 'none' }}
+                            >
+                              {expandedWeeks.has(week._id) ? 'Hide Content' : 'Show Content'}
+                            </Button>
+                          </Box>
                         </Box>
                       </Box>
                       
                       {/* Materials List */}
-                      {week.materials.filter(mat => mat.isPublished).length === 0 ? (
+                      {expandedWeeks.has(week._id) && (week.materials.filter(mat => mat.isPublished).length === 0 ? (
                         <Typography 
                           variant="body2" 
                           color="text.secondary" 
@@ -1651,7 +1790,17 @@ const UnifiedLearningPage: React.FC = () => {
                         </Typography>
                       ) : (
                         <List>
-                          {week.materials.filter(mat => mat.isPublished).map((material, matIndex) => {
+                          {week.materials
+                            .filter(mat => mat.isPublished)
+                            .filter(material => {
+                              if (materialFilter === 'all') return true;
+                              if (materialFilter === 'required') return material.isRequired;
+                              if (materialFilter === 'completed') return isMaterialCompleted(material._id);
+                              if (materialFilter === 'video') return material.type === 'video';
+                              if (materialFilter === 'document') return material.type === 'document';
+                              return true;
+                            })
+                            .map((material, matIndex) => {
                             const isCompleted = isMaterialCompleted(material._id);
                             return (
                               <React.Fragment key={material._id}>
@@ -1664,9 +1813,9 @@ const UnifiedLearningPage: React.FC = () => {
                                     cursor: 'pointer',
                                     px: { xs: 1, sm: 2 },
                                     py: { xs: 1, sm: 1.5 },
-                                    '&:hover': {
-                                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                                    }
+                                      '&:hover': {
+                                      backgroundColor: 'rgba(99,102,241,0.06)',
+                                      }
                                   }}
                                   onClick={() => handleMaterialClick(material)}
                                 >
@@ -1696,6 +1845,12 @@ const UnifiedLearningPage: React.FC = () => {
                                         >
                                           {material.title}
                                         </Typography>
+                                        <Chip 
+                                          label={material.type}
+                                          size="small"
+                                          variant="outlined"
+                                          sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
+                                        />
                                         {material.isRequired && (
                                           <Chip 
                                             label="Required" 
@@ -1737,15 +1892,6 @@ const UnifiedLearningPage: React.FC = () => {
                                           gap: { xs: 0.5, sm: 1 }, 
                                           flexWrap: 'wrap'
                                         }}>
-                                          <Chip 
-                                            label={material.type} 
-                                            size="small" 
-                                            variant="outlined"
-                                            sx={{ 
-                                              fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                                              height: { xs: 20, sm: 24 }
-                                            }}
-                                          />
                                           <Chip
                                             icon={<Timer sx={{ fontSize: { xs: 12, sm: 16 } }} />}
                                             label={`${material.estimatedDuration} min`}
@@ -1756,6 +1902,17 @@ const UnifiedLearningPage: React.FC = () => {
                                               height: { xs: 20, sm: 24 }
                                             }}
                                           />
+                                        </Box>
+                                        {/* Per-material progress */}
+                                        <Box sx={{ mt: 0.75 }}>
+                                          <LinearProgress 
+                                            variant="determinate" 
+                                            value={getMaterialProgressPct(material._id)} 
+                                            sx={{ height: 6, borderRadius: 3 }} 
+                                          />
+                                          <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                                            {getMaterialProgressPct(material._id)}%
+                                          </Typography>
                                         </Box>
                                       </Box>
                                     }
@@ -1802,15 +1959,71 @@ const UnifiedLearningPage: React.FC = () => {
                             );
                           })}
                         </List>
-                      )}
+                      ))}
                     </CardContent>
                   </Card>
                 </Grid>
               ))}
             </Grid>
+            </>
           )}
+          </Container>
         </Box>
       </Box>
+
+      {/* Floating AI Assistant */}
+      <Box sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 50 }}>
+        <Tooltip title="AI Study Assistant">
+          <Fab color="primary" onClick={() => setAiOpen(true)}>
+            <SmartToyIcon />
+          </Fab>
+        </Tooltip>
+      </Box>
+
+      {/* AI Assistant Drawer */}
+      <Drawer anchor="right" open={aiOpen} onClose={() => setAiOpen(false)} sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: 420 } } }}>
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <SmartToyIcon color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>AI Study Assistant</Typography>
+          </Stack>
+          <Button onClick={() => setAiOpen(false)}>Close</Button>
+        </Box>
+
+        <Box sx={{ p: 2 }}>
+          {/* Quick suggestions based on context */}
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Quick Suggestions</Typography>
+          <Stack spacing={1} sx={{ mb: 2 }}>
+            <Button variant="outlined" size="small" sx={{ justifyContent: 'flex-start' }} onClick={() => navigate(`/dashboard/student/course/${courseId}/weeks`)}>
+              Suggest next material
+            </Button>
+            {assessments.length > 0 && (
+              <Button variant="outlined" size="small" sx={{ justifyContent: 'flex-start' }} onClick={() => handleTakeAssessment(assessments[0]._id)}>
+                Help me prepare for: {assessments[0].title}
+              </Button>
+            )}
+            {assignments.length > 0 && (
+              <Button variant="outlined" size="small" sx={{ justifyContent: 'flex-start' }} onClick={() => handleTakeAssignment(assignments[0]._id)}>
+                Guide me through assignment: {assignments[0].title}
+              </Button>
+            )}
+            <Button variant="outlined" size="small" sx={{ justifyContent: 'flex-start' }} onClick={() => handleGoToLiveSessions()}>
+              Show upcoming live sessions
+            </Button>
+          </Stack>
+
+          {/* Simple chat mockup - placeholder for real AI */}
+          <Paper variant="outlined" sx={{ p: 1.5, height: 280, overflowY: 'auto', mb: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              AI: Hi! I can recommend materials, summarize a week, or help plan your study.
+            </Typography>
+          </Paper>
+          <Stack direction="row" spacing={1}>
+            <TextField fullWidth placeholder="Ask anything... e.g., ‘What should I study next?’" size="small" />
+            <Button variant="contained">Send</Button>
+          </Stack>
+        </Box>
+      </Drawer>
     </Box>
   );
 };

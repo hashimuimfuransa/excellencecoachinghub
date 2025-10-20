@@ -70,6 +70,7 @@ export interface ICourseDocument extends Document {
   learningStyle: string; // Primary learning style
   specificInterests: string[]; // Specific topics and skills covered
   learningCategories: string[]; // Learning categories for better discoverability
+  learningSubcategories?: string[]; // Specific subcategories within learning categories
   isPublished: boolean;
   publishedAt?: Date;
   enrollmentDeadline?: Date; // When enrollment closes
@@ -362,8 +363,21 @@ const courseSchema = new Schema<ICourseDocument>({
   }],
   learningCategories: [{
     type: String,
-    enum: ['professional', 'business', 'academic', 'technical', 'creative', 'healthcare'],
+    enum: [
+      'professional_coaching',
+      'business_entrepreneurship_coaching',
+      'academic_coaching',
+      'language_coaching',
+      'technical_digital_coaching',
+      'job_seeker_coaching',
+      'personal_corporate_development_coaching'
+    ],
     trim: true
+  }],
+  learningSubcategories: [{
+    type: String,
+    trim: true,
+    maxlength: [100, 'Subcategory cannot exceed 100 characters']
   }],
   courseEndDate: {
     type: Date,

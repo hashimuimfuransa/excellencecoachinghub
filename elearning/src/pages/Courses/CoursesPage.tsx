@@ -269,13 +269,14 @@ const CoursesPage: React.FC = () => {
     
     // Map learning categories to course categories
     const categoryMapping: { [key: string]: string } = {
-      'professional': 'Professional Development',
-      'business': 'Business',
-      'academic': 'Education',
-      'technical': 'Technology',
-      'creative': 'Design',
-      'healthcare': 'Healthcare'
-    };
+      professional_coaching: 'Professional Coaching',
+      business_entrepreneurship: 'Business & Entrepreneurship Coaching',
+      academic_coaching: 'Academic Coaching',
+      language_coaching: 'Language Coaching',
+      technical_digital_coaching: 'Technical & Digital Coaching',
+      job_seeker_coaching: 'Job Seeker Coaching',
+      personal_corporate_coaching: 'Personal & Corporate Development Coaching'
+    } as any;
     
     // Set category filter based on selected categories
     if (interests.categories && interests.categories.length > 0) {
@@ -284,7 +285,7 @@ const CoursesPage: React.FC = () => {
         .filter(Boolean);
       
       if (mappedCategories.length > 0) {
-        setCategoryFilter(mappedCategories[0]); // Set first category as default
+        setCategoryFilter(mappedCategories[0]);
       }
     }
     

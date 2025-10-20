@@ -473,7 +473,7 @@ const MaterialView: React.FC = () => {
   };
 
   const handleBackToCourse = () => {
-    navigate(`/course/${courseId}/learn`);
+    navigate(`/course/${courseId}/hub`);
   };
 
   // PDF Document Handlers
@@ -610,7 +610,7 @@ const MaterialView: React.FC = () => {
           href="#" 
           onClick={(e) => {
             e.preventDefault();
-            navigate(`/course/${courseId}/learn`);
+            navigate(`/course/${courseId}/hub`);
           }}
         >
           {week.title}

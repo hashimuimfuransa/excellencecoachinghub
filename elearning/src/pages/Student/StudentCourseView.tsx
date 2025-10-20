@@ -12,6 +12,7 @@ import {
   Avatar,
   List,
   ListItem,
+  ListItemIcon,
   ListItemText,
   ListItemAvatar,
   ListItemSecondaryAction,
@@ -40,7 +41,6 @@ import {
   Schedule,
   Assignment,
   Quiz,
-  VideoFile,
   Description,
   Link,
   VolumeUp,
@@ -53,14 +53,15 @@ import {
   Grade,
   Bookmark,
   Share,
-  Download
+  Download,
+  VideoFile,
+  InsertDriveFile
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService } from '../../services/courseService';
 import { weekService, Week, WeekMaterial } from '../../services/weekService';
 import { progressService, WeekProgress, StudentProgress } from '../../services/progressService';
-import CourseMaterials from '../../components/CourseMaterials/CourseMaterials';
 
 interface CourseProgress {
   weekProgresses: WeekProgress[];
@@ -68,7 +69,7 @@ interface CourseProgress {
 }
 
 const StudentCourseView: React.FC = () => {
-  const { courseId } = useParams<{ courseId: string }>();
+  const { id: courseId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -89,7 +90,7 @@ const StudentCourseView: React.FC = () => {
       const [course, weeksData, progressData] = await Promise.all([
         courseService.getCourseById(courseId),
         weekService.getCourseWeeks(courseId),
-        progressService.getStudentCourseProgress(courseId)
+        progressService.getCourseProgress(courseId)
       ]);
 
       setCourseData(course);
@@ -144,9 +145,9 @@ const StudentCourseView: React.FC = () => {
 
   const handleMarkComplete = async (week: Week, material: WeekMaterial) => {
     try {
-      await progressService.markMaterialCompleted(week._id, material._id, material.estimatedDuration);
+      await progressService.markContentCompleted(week._id, material._id);
       // Refresh progress data
-      const progressData = await progressService.getStudentCourseProgress(courseId!);
+      const progressData = await progressService.getCourseProgress(courseId!);
       setProgress(progressData);
     } catch (err: any) {
       console.error('Error marking material complete:', err);
@@ -223,13 +224,13 @@ const StudentCourseView: React.FC = () => {
                 />
                 <Chip 
                   icon={<TrendingUp />} 
-                  label={`${getOverallProgress()}% Complete`} 
+                  label={`${getOverallProgress}% Complete`} 
                   variant="outlined" 
                   sx={{ color: 'white', borderColor: 'white' }}
                 />
                 <Chip 
                   icon={<CheckCircle />} 
-                  label={`${getCompletedWeeks()} Weeks Completed`} 
+                  label={`${getCompletedWeeks} Weeks Completed`} 
                   variant="outlined" 
                   sx={{ color: 'white', borderColor: 'white' }}
                 />
@@ -250,11 +251,11 @@ const StudentCourseView: React.FC = () => {
           <Box sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2">Overall Progress</Typography>
-              <Typography variant="body2">{getOverallProgress()}%</Typography>
+              <Typography variant="body2">{getOverallProgress}%</Typography>
             </Box>
             <LinearProgress 
               variant="determinate" 
-              value={getOverallProgress()} 
+              value={getOverallProgress} 
               sx={{ 
                 height: 8, 
                 borderRadius: 4,
@@ -381,14 +382,70 @@ const StudentCourseView: React.FC = () => {
                         Materials ({week.materials.length})
                       </Typography>
                       
-                      <CourseMaterials
-                        materials={week.materials}
-                        onMaterialComplete={(materialId) => handleMarkComplete(week, week.materials.find(m => m._id === materialId)!)}
-                        isCompleted={(materialId) => isMaterialCompleted(week._id, materialId)}
-                        showCompletionActions={true}
-                        onQuizClick={handleQuizClick}
-                        onCertificateClick={handleCertificateClick}
-                      />
+                      <List sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                        {week.materials.map((material) => {
+                          const isCompleted = isMaterialCompleted(week._id, material._id);
+                          return (
+                            <ListItem
+                              key={material._id}
+                              sx={{
+                                border: '1px solid',
+                                borderColor: isCompleted ? 'success.main' : 'divider',
+                                borderRadius: 1,
+                                mb: 1,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(99,102,241,0.06)',
+                                }
+                              }}
+                              onClick={() => handleMaterialClick(week, material)}
+                            >
+                              <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                                {isCompleted ? (
+                                  <CheckCircle color="success" sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                                ) : (
+                                  <Box sx={{ fontSize: { xs: 20, sm: 24 } }}>
+                                    {material.type === 'video' ? <VideoFile /> : 
+                                     material.type === 'document' ? <Description /> :
+                                     material.type === 'audio' ? <VolumeUp /> : <InsertDriveFile />}
+                                  </Box>
+                                )}
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexWrap: 'wrap' }}>
+                                    <Typography variant="subtitle1" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' }, fontWeight: 'bold' }}>
+                                      {material.title}
+                                    </Typography>
+                                    <Chip label={material.type} size="small" variant="outlined" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
+                                    {material.isRequired && (
+                                      <Chip label="Required" size="small" color="error" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
+                                    )}
+                                    {isCompleted && (
+                                      <Chip label="Completed" size="small" color="success" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
+                                    )}
+                                  </Box>
+                                }
+                                secondary={
+                                  <Box>
+                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: { xs: 0.5, sm: 0.5 } }}>
+                                      {material.description}
+                                    </Typography>
+                                    <Chip
+                                      icon={<Timer sx={{ fontSize: { xs: 12, sm: 16 } }} />}
+                                      label={`${material.estimatedDuration} min`}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 }, mt: 0.5 }}
+                                    />
+                                  </Box>
+                                }
+                              />
+                            </ListItem>
+                          );
+                        })}
+                      </List>
 
                       {/* Week Assessment/Assignment */}
                       {(week.assessment || week.assignment) && (

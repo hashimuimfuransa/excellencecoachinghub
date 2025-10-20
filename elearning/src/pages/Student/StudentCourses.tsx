@@ -204,7 +204,7 @@ const StudentCourses: React.FC = () => {
   const buttonSize = isSmallMobile ? 'small' : isMobile ? 'medium' : 'large';
 
   // State management
-  const [tabValue, setTabValue] = useState(0); // Default to My Learning tab
+  const [tabValue, setTabValue] = useState(1); // Default to Discover tab for minimal view
   const [enrolledCourses, setEnrolledCourses] = useState<ICourse[]>([]);
   const [availableCourses, setAvailableCourses] = useState<ICourse[]>([]);
   const [enrollments, setEnrollments] = useState<IEnrollment[]>([]);
@@ -252,19 +252,11 @@ const StudentCourses: React.FC = () => {
         // Load available courses and enrollments
         const courseFilters: any = {
           search: searchTerm,
-          category: categoryFilter,
           limit: 50 // Increased limit to allow for better client-side filtering
         };
         
         // Only add interest-based filters if interests are set
-        if (learningInterests) {
-          if (learningInterests.categories && learningInterests.categories.length > 0) {
-            courseFilters.learningCategories = learningInterests.categories;
-          }
-          if (learningInterests.experienceLevel) {
-            courseFilters.level = learningInterests.experienceLevel.charAt(0).toUpperCase() + learningInterests.experienceLevel.slice(1);
-          }
-        }
+        // Fetch broadly; apply interest filters on the client to avoid API mismatches
         
         console.log('🔍 Loading courses with filters:', courseFilters);
         
@@ -312,6 +304,76 @@ const StudentCourses: React.FC = () => {
             console.log('📚 No learning interests set - showing all courses:', courses.length);
           }
           
+          // Apply category dropdown filter (by new category ID)
+          if (categoryFilter) {
+            const keywordMap: { [key: string]: string[] } = {
+              professional_coaching: ['Professional Coaching', 'Leadership', 'Executive', 'Project Management', 'CPA', 'ACCA', 'CAT', 'Career'],
+              business_entrepreneurship_coaching: ['Business', 'Entrepreneurship', 'Startup', 'SME', 'Strategy', 'Finance', 'Marketing', 'Branding'],
+              academic_coaching: ['Academic', 'Education', 'Primary', 'Secondary', 'University', 'Exam', 'Study Skills', 'Research', 'Thesis'],
+              language_coaching: ['Language', 'English', 'French', 'Kinyarwanda', 'Business Communication', 'Public Speaking', 'Writing'],
+              technical_digital_coaching: ['Technology', 'Programming', 'Web', 'Software', 'AI', 'Machine Learning', 'Data', 'Cybersecurity', 'Cloud', 'IT', 'Digital Marketing', 'Vocational'],
+              job_seeker_coaching: ['Job', 'Career', 'Resume', 'Portfolio', 'Interview'],
+              personal_corporate_development_coaching: ['Personal Development', 'Corporate', 'Communication', 'Confidence', 'Time Management', 'Emotional Intelligence', 'Public Speaking', 'Parenting', 'Team', 'HR', 'Compliance', 'Customer Service', 'Ethics']
+            };
+            const keywords = keywordMap[categoryFilter] || [];
+            courses = courses.filter((course: any) => {
+              if (Array.isArray(course.learningCategories) && course.learningCategories.includes(categoryFilter)) {
+                return true;
+              }
+              const hay = [course.category, course.title, course.description].join(' ').toLowerCase();
+              return keywords.some(k => hay.includes(k.toLowerCase()));
+            });
+          }
+
+          // Apply search filter across title, description, tags, specificInterests, subcategories, and categories
+          if (searchTerm && searchTerm.trim().length > 0) {
+            const term = searchTerm.trim().toLowerCase();
+            const categoryLabels: { [key: string]: string } = {
+              professional_coaching: 'Professional Coaching',
+              business_entrepreneurship_coaching: 'Business & Entrepreneurship Coaching',
+              academic_coaching: 'Academic Coaching',
+              language_coaching: 'Language Coaching',
+              technical_digital_coaching: 'Technical & Digital Coaching',
+              job_seeker_coaching: 'Job Seeker Coaching',
+              personal_corporate_development_coaching: 'Personal & Corporate Development Coaching'
+            };
+            const categoryKeywords: { [key: string]: string[] } = {
+              professional_coaching: ['leadership', 'executive', 'project', 'cpa', 'acca', 'cat', 'career'],
+              business_entrepreneurship_coaching: ['business', 'entrepreneurship', 'startup', 'sme', 'strategy', 'finance', 'marketing', 'branding'],
+              academic_coaching: ['academic', 'education', 'primary', 'secondary', 'university', 'exam', 'study', 'research', 'thesis'],
+              language_coaching: ['language', 'english', 'french', 'kinyarwanda', 'communication', 'public speaking', 'writing'],
+              technical_digital_coaching: ['technology', 'programming', 'web', 'software', 'ai', 'machine learning', 'data', 'cybersecurity', 'cloud', 'it', 'digital marketing', 'vocational'],
+              job_seeker_coaching: ['job', 'career', 'resume', 'portfolio', 'interview'],
+              personal_corporate_development_coaching: ['personal', 'corporate', 'communication', 'confidence', 'time management', 'emotional', 'public speaking', 'parenting', 'team', 'hr', 'compliance', 'customer', 'ethics']
+            };
+
+            courses = courses.filter((course: any) => {
+              const haystack = [
+                course.title || '',
+                course.description || '',
+                ...(course.tags || []),
+                ...(course.specificInterests || [])
+              ].join(' ').toLowerCase();
+
+              // Text fields
+              if (haystack.includes(term)) return true;
+
+              // Subcategories
+              if ((course.learningSubcategories || []).some((sub: string) => sub.toLowerCase().includes(term))) return true;
+
+              // Categories by id and labels/keywords
+              const catIds: string[] = Array.isArray(course.learningCategories) ? course.learningCategories : [];
+              if (catIds.some(id => id.toLowerCase().includes(term))) return true;
+              if (catIds.some(id => (categoryLabels[id] || '').toLowerCase().includes(term))) return true;
+              if (catIds.some(id => (categoryKeywords[id] || []).some(k => k.includes(term)))) return true;
+
+              // Fallback to legacy category text
+              if ((course.category || '').toLowerCase().includes(term)) return true;
+
+              return false;
+            });
+          }
+
           setAvailableCourses(courses);
         } else {
           console.error('❌ Failed to load courses:', coursesResponse.reason);
@@ -359,31 +421,41 @@ const StudentCourses: React.FC = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
     const interestsParam = urlParams.get('interests');
+    const urlCategory = urlParams.get('category');
+    const urlSubcategory = urlParams.get('subcategory');
     
     // Set tab if specified in URL
     if (tabParam === 'discover') {
       setTabValue(1);
     }
     
-    // Apply interests if provided in URL
+    // Apply interests
     if (interestsParam) {
       try {
         const interests = JSON.parse(decodeURIComponent(interestsParam));
         setLearningInterests(interests);
         applyInterestFilters(interests);
-        
-        // Save interests to localStorage so they persist
+        // Persist
         localStorage.setItem('learningInterests', JSON.stringify(interests));
         localStorage.setItem('learningInterestsCompleted', 'true');
-        
-        console.log('📚 Interests loaded from URL and saved to localStorage:', interests);
-        
-        // Clean up URL parameters
+        // Clean URL
         const newUrl = window.location.pathname;
         window.history.replaceState({}, document.title, newUrl);
       } catch (error) {
         console.error('Error parsing interests from URL:', error);
       }
+    } else if (urlCategory || urlSubcategory) {
+      // Build interests from category/subcategory params
+      const simpleInterests: any = {
+        categories: urlCategory ? [urlCategory] : [],
+        interests: urlSubcategory ? [urlSubcategory] : []
+      };
+      setLearningInterests(simpleInterests);
+      applyInterestFilters(simpleInterests);
+      localStorage.setItem('learningInterests', JSON.stringify(simpleInterests));
+      localStorage.setItem('learningInterestsCompleted', 'true');
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
     }
   }, []);
 
@@ -578,32 +650,24 @@ const StudentCourses: React.FC = () => {
     
     console.log('🎯 Applying interest filters:', interests);
     
-    // Map learning categories to course categories
-    const categoryMapping: { [key: string]: string } = {
-      'professional': 'Professional Development',
-      'business': 'Business',
-      'academic': 'Education',
-      'technical': 'Technology',
-      'creative': 'Design',
-      'healthcare': 'Healthcare'
+    // Normalize any legacy category ids to the new IDs
+    const normalizeCategoryIds = (cats: string[] = []) => {
+      const mapping: { [k: string]: string } = {
+        business_entrepreneurship: 'business_entrepreneurship_coaching',
+        personal_corporate_coaching: 'personal_corporate_development_coaching'
+      };
+      return cats.map((c) => mapping[c] || c);
     };
-    
-    // Set category filter based on selected categories
+
     if (interests.categories && interests.categories.length > 0) {
-      const mappedCategories = interests.categories
-        .map((cat: string) => categoryMapping[cat])
-        .filter(Boolean);
-      
-      if (mappedCategories.length > 0) {
-        setCategoryFilter(mappedCategories[0]); // Set first category as default
-      }
+      interests.categories = normalizeCategoryIds(interests.categories);
     }
+
+    // Do not set categoryFilter from interests; rely on learningCategories filtering only
+    setCategoryFilter('');
     
-    // Set search term based on specific interests
-    if (interests.specificInterests && interests.specificInterests.length > 0) {
-      const searchTerms = interests.specificInterests.slice(0, 3).join(' ');
-      setSearchTerm(searchTerms);
-    }
+    // Do not inject subcategory text into search; keep search user-driven
+    setSearchTerm('');
     
     // Set level filter based on experience level
     if (interests.experienceLevel) {
@@ -619,194 +683,56 @@ const StudentCourses: React.FC = () => {
   // Filter courses based on learning interests
   const filterCoursesByInterests = (courses: ICourse[], interests: any) => {
     if (!interests || !courses.length) return courses;
-    
-    console.log('🔍 Filtering courses by interests:', { interests, courseCount: courses.length });
-    
-    // If no specific criteria are provided, return all courses
-    const hasCriteria = interests.categories?.length > 0 || 
-                       interests.experienceLevel || 
-                       interests.careerGoal || 
-                       interests.learningStyle || 
-                       interests.timeCommitment || 
-                       interests.specificInterests?.length > 0;
-    
-    if (!hasCriteria) {
-      console.log('🔍 No specific criteria provided, returning all courses');
-      return courses;
-    }
-    
-    const filteredCourses = courses.filter(course => {
-      let matches = 0;
-      let totalCriteria = 0;
-      
-      // Check learning categories match
-      if (interests.categories && interests.categories.length > 0) {
-        if (course.learningCategories && course.learningCategories.length > 0) {
-          const hasMatchingCategory = interests.categories.some((interestCat: string) => 
-            course.learningCategories!.includes(interestCat)
-          );
-          if (hasMatchingCategory) matches++;
-        } else {
-          // If course doesn't have learningCategories, try to match by category field
-          const categoryMapping: { [key: string]: string[] } = {
-            'professional': ['Professional Development', 'Business', 'Leadership'],
-            'business': ['Business', 'Entrepreneurship', 'Marketing', 'Finance'],
-            'academic': ['Education', 'Academic', 'Study', 'Learning'],
-            'technical': ['Technology', 'Programming', 'Web Development', 'Data Science', 'AI'],
-            'creative': ['Design', 'Creative', 'Art', 'Photography', 'Music'],
-            'healthcare': ['Healthcare', 'Medical', 'Nursing', 'Health']
-          };
-          
-          const mappedCategories: string[] = interests.categories.flatMap((cat: string) => categoryMapping[cat] || []);
-          const hasMatchingCategory = mappedCategories.some((mappedCat: string) => 
-            course.category && course.category.toLowerCase().includes(mappedCat.toLowerCase())
-          );
-          if (hasMatchingCategory) matches++;
-        }
-        totalCriteria++;
+    console.log('🔍 Filtering courses by interests (strict):', { interests, courseCount: courses.length });
+
+    // Normalize categories
+    const normalizeCats = (cats: string[] = []) => {
+      const map: { [k: string]: string } = {
+        business_entrepreneurship: 'business_entrepreneurship_coaching',
+        personal_corporate_coaching: 'personal_corporate_development_coaching'
+      };
+      return cats.map(c => map[c] || c);
+    };
+    const selectedCats = normalizeCats(interests.categories || []);
+    const specific = interests.specificInterests || interests.interests || [];
+
+    const keywordMap: { [key: string]: string[] } = {
+      professional_coaching: ['Professional Coaching', 'Leadership', 'Executive', 'Project Management', 'CPA', 'ACCA', 'CAT', 'Career'],
+      business_entrepreneurship_coaching: ['Business', 'Entrepreneurship', 'Startup', 'SME', 'Strategy', 'Finance', 'Marketing', 'Branding'],
+      academic_coaching: ['Academic', 'Education', 'Primary', 'Secondary', 'University', 'Exam', 'Study Skills', 'Research', 'Thesis'],
+      language_coaching: ['Language', 'English', 'French', 'Kinyarwanda', 'Business Communication', 'Public Speaking', 'Writing'],
+      technical_digital_coaching: ['Technology', 'Programming', 'Web', 'Software', 'AI', 'Machine Learning', 'Data', 'Cybersecurity', 'Cloud', 'IT', 'Digital Marketing', 'Vocational'],
+      job_seeker_coaching: ['Job', 'Career', 'Resume', 'Portfolio', 'Interview'],
+      personal_corporate_development_coaching: ['Personal Development', 'Corporate', 'Communication', 'Confidence', 'Time Management', 'Emotional Intelligence', 'Public Speaking', 'Parenting', 'Team', 'HR', 'Compliance', 'Customer Service', 'Ethics']
+    };
+
+    return courses.filter((course: any) => {
+      // Category match required if categories selected
+      if (selectedCats.length > 0) {
+        const hasCat = Array.isArray(course.learningCategories)
+          ? selectedCats.some(c => course.learningCategories.includes(c))
+          : (() => {
+              const hay = [course.category, course.title, course.description].join(' ').toLowerCase();
+              const keywords = selectedCats.flatMap(c => keywordMap[c] || []);
+              return keywords.some(k => hay.includes(k.toLowerCase()));
+            })();
+        if (!hasCat) return false;
       }
-      
-      // Check experience level match
-      if (interests.experienceLevel) {
-        const levelMapping: { [key: string]: string } = {
-          'beginner': 'Beginner',
-          'intermediate': 'Intermediate', 
-          'advanced': 'Advanced'
-        };
-        const mappedLevel = levelMapping[interests.experienceLevel];
-        if (course.level === mappedLevel) {
-          matches++;
-        }
-        totalCriteria++;
-      }
-      
-      // Check career goal match
-      if (interests.careerGoal && course.careerGoal) {
-        if (course.careerGoal === interests.careerGoal) {
-          matches++;
-        }
-        totalCriteria++;
-      }
-      
-      // Check learning style match
-      if (interests.learningStyle && course.learningStyle) {
-        if (course.learningStyle === interests.learningStyle) {
-          matches++;
-        }
-        totalCriteria++;
-      }
-      
-      // Check time commitment match
-      if (interests.timeCommitment && course.timeCommitment) {
-        if (course.timeCommitment === interests.timeCommitment) {
-          matches++;
-        }
-        totalCriteria++;
-      }
-      
-      // Check specific interests match (search in title, description, tags, specificInterests)
-      if (interests.specificInterests && interests.specificInterests.length > 0) {
-        const courseText = [
-          course.title,
-          course.description,
-          ...(course.tags || []),
-          ...(course.specificInterests || [])
-        ].join(' ').toLowerCase();
-        
-        const hasMatchingInterest = interests.specificInterests.some((interest: string) =>
-          courseText.includes(interest.toLowerCase())
+
+      // Subcategory/specific interest match required if provided
+      if (specific.length > 0) {
+        const hasSub = (course.learningSubcategories || []).some((sub: string) =>
+          specific.some((s: string) => sub.toLowerCase() === s.toLowerCase())
         );
-        
-        if (hasMatchingInterest) {
-          matches++;
+        if (!hasSub) {
+          const hay = [course.title, course.description, ...(course.tags || []), ...(course.specificInterests || [])].join(' ').toLowerCase();
+          const hasText = specific.some((s: string) => hay.includes(s.toLowerCase()));
+          if (!hasText) return false;
         }
-        totalCriteria++;
       }
-      
-      // Course matches if it meets at least 1 criteria or 20% of available criteria (more lenient)
-      const minMatches = Math.max(1, Math.ceil(totalCriteria * 0.2));
-      const courseMatches = matches >= minMatches;
-      
-      if (courseMatches) {
-        console.log('✅ Course matches:', {
-          title: course.title,
-          matches,
-          totalCriteria,
-          learningCategories: course.learningCategories,
-          level: course.level
-        });
-      }
-      
-      return courseMatches;
+
+      return true;
     });
-    
-    // If filtering is too restrictive and returns very few courses, show more courses
-    if (filteredCourses.length < 3 && courses.length > 3) {
-      console.log('🔍 Filtering too restrictive, showing more courses. Filtered:', filteredCourses.length, 'Total:', courses.length);
-      
-      // Return courses that match at least one criteria or have no specific filtering
-      return courses.filter(course => {
-        let matches = 0;
-        
-        // Check learning categories match (more lenient)
-        if (interests.categories && interests.categories.length > 0) {
-          if (course.learningCategories && course.learningCategories.length > 0) {
-            const hasMatchingCategory = interests.categories.some((interestCat: string) => 
-              course.learningCategories!.includes(interestCat)
-            );
-            if (hasMatchingCategory) matches++;
-          } else {
-            // Fallback to category matching
-            const categoryMapping: { [key: string]: string[] } = {
-              'professional': ['Professional Development', 'Business', 'Leadership'],
-              'business': ['Business', 'Entrepreneurship', 'Marketing', 'Finance'],
-              'academic': ['Education', 'Academic', 'Study', 'Learning'],
-              'technical': ['Technology', 'Programming', 'Web Development', 'Data Science', 'AI'],
-              'creative': ['Design', 'Creative', 'Art', 'Photography', 'Music'],
-              'healthcare': ['Healthcare', 'Medical', 'Nursing', 'Health']
-            };
-            
-            const mappedCategories: string[] = interests.categories.flatMap((cat: string) => categoryMapping[cat] || []);
-            const hasMatchingCategory = mappedCategories.some((mappedCat: string) => 
-              course.category && course.category.toLowerCase().includes(mappedCat.toLowerCase())
-            );
-            if (hasMatchingCategory) matches++;
-          }
-        }
-        
-        // Check experience level match (more lenient)
-        if (interests.experienceLevel) {
-          const levelMapping: { [key: string]: string } = {
-            'beginner': 'Beginner',
-            'intermediate': 'Intermediate', 
-            'advanced': 'Advanced'
-          };
-          const mappedLevel = levelMapping[interests.experienceLevel];
-          if (course.level === mappedLevel) matches++;
-        }
-        
-        // Check specific interests match (more lenient)
-        if (interests.specificInterests && interests.specificInterests.length > 0) {
-          const courseText = [
-            course.title,
-            course.description,
-            ...(course.tags || []),
-            ...(course.specificInterests || [])
-          ].join(' ').toLowerCase();
-          
-          const hasMatchingInterest = interests.specificInterests.some((interest: string) =>
-            courseText.includes(interest.toLowerCase())
-          );
-          
-          if (hasMatchingInterest) matches++;
-        }
-        
-        // Return course if it matches at least one criteria or if no specific criteria
-        return matches > 0 || (!interests.categories?.length && !interests.experienceLevel && !interests.specificInterests?.length);
-      });
-    }
-    
-    return filteredCourses;
   };
 
   // Handle popup close
@@ -834,128 +760,9 @@ const StudentCourses: React.FC = () => {
       }
     }}>
       <Container maxWidth="lg" sx={{ py: { xs: 1, sm: 2, md: 3 }, position: 'relative', zIndex: 1 }}>
-        {/* Modern Design Indicator */}
-        <Box sx={{ 
-          position: 'fixed', 
-          top: 10, 
-          right: 10, 
-          zIndex: 9999,
-          background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%)',
-          color: 'white',
-          px: 2,
-          py: 1,
-          borderRadius: 2,
-          fontSize: '0.75rem',
-          fontWeight: 600,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-        }}>
-          ✨ Modern Design Active
-        </Box>
-        
-        {/* Mobile Header with Drawer Toggle */}
-        {isMobile && (
-          <Paper sx={{ 
-            mb: 2, 
-            p: 2, 
-            borderRadius: 3,
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-          }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                🎓 Excellence Hub
-              </Typography>
-              <ResponsiveButton
-                variant="outlined"
-                startIcon={<Menu />}
-                onClick={toggleMobileDrawer}
-                size={buttonSize}
-                sx={{
-                  borderRadius: 2,
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
-                  '&:hover': {
-                    backgroundColor: 'primary.main',
-                    color: 'white'
-                  }
-                }}
-              >
-                Menu
-              </ResponsiveButton>
-            </Stack>
-          </Paper>
-        )}
-
-        {/* Mobile Navigation Drawer */}
-        <Drawer
-          anchor="right"
-          open={mobileDrawerOpen}
-          onClose={() => setMobileDrawerOpen(false)}
-          sx={{
-            '& .MuiDrawer-paper': {
-              width: 280,
-              bgcolor: 'background.paper',
-            },
-          }}
-        >
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              📚 Course Navigation
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <List>
-              <ListItem
-                button
-                onClick={() => handleMobileTabChange(0)}
-                sx={{
-                  bgcolor: tabValue === 0 ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
-                  borderRadius: 1,
-                  my: 0.5,
-                }}
-              >
-                <ListItemIcon>
-                  <MenuBook />
-                </ListItemIcon>
-                <ListItemText 
-                  primary="My Learning" 
-                  secondary="View enrolled courses"
-                />
-              </ListItem>
-              <ListItem
-                button
-                onClick={() => handleMobileTabChange(1)}
-                sx={{
-                  bgcolor: tabValue === 1 ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
-                  borderRadius: 1,
-                  my: 0.5,
-                }}
-              >
-                <ListItemIcon>
-                  <Explore />
-                </ListItemIcon>
-                <ListItemText 
-                  primary="Discover Courses" 
-                  secondary="Browse available courses"
-                />
-              </ListItem>
-            </List>
-            <Divider sx={{ my: 2 }} />
-            <ResponsiveButton
-              fullWidth
-              variant="outlined"
-              onClick={clearFilters}
-              startIcon={<ClearAll />}
-              size={buttonSize}
-            >
-              Clear Filters
-            </ResponsiveButton>
-          </Box>
-        </Drawer>
 
         {/* Profile Completion Alert for Students - Ultra Compact */}
-      {user?.role === UserRole.STUDENT && !profileCompletion.isComplete && showProfileAlert && (
+      {false && user?.role === UserRole.STUDENT && !profileCompletion.isComplete && showProfileAlert && (
         <Fade in={showProfileAlert}>
           <Paper
             elevation={0}
@@ -1030,7 +837,7 @@ const StudentCourses: React.FC = () => {
       )}
 
       {/* Welcome Card */}
-      {showWelcome && (
+      {false && showWelcome && (
         <Fade in={showWelcome}>
           <WelcomeCard elevation={0} sx={{
             background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(124, 58, 237, 0.95) 50%, rgba(236, 72, 153, 0.95) 100%)',
@@ -1243,7 +1050,7 @@ const StudentCourses: React.FC = () => {
       )}
 
       {/* Navigation Tabs - Hidden on Mobile */}
-      {!isMobile && (
+      {false && !isMobile && (
         <Paper sx={{ mb: 4, borderRadius: 3, overflow: 'hidden' }}>
           <Tabs 
             value={tabValue} 
@@ -1289,7 +1096,7 @@ const StudentCourses: React.FC = () => {
       )}
 
       {/* Mobile Tab Indicator */}
-      {isMobile && (
+      {false && isMobile && (
         <Paper sx={{ 
           mb: 3, 
           p: 2, 
@@ -1491,7 +1298,7 @@ const StudentCourses: React.FC = () => {
                               variant="contained"
                               size={buttonSize}
                               startIcon={progress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                              onClick={() => navigate(`/course/${course._id}/learn`)}
+                              onClick={() => navigate(`/course/${course._id}/hub`)}
                               sx={{ 
                                 bgcolor: progress >= 100 ? 'success.main' : 'primary.main',
                                 '&:hover': {
@@ -1535,173 +1342,47 @@ const StudentCourses: React.FC = () => {
 
       {/* Discover Courses Tab */}
       <TabPanel value={tabValue} index={1}>
-        {/* Header */}
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
-            🔍 Discover Amazing Courses
-          </Typography>
-          <Typography variant="h6" color="text.secondary">
-            Find the perfect course to expand your knowledge and skills
-          </Typography>
-        </Box>
 
-        {/* Success Message */}
-        {showInterestSuccess && (
-          <Fade in={true}>
-            <Alert 
-              severity="success" 
-              sx={{ 
-                mb: 4, 
-                borderRadius: 3,
-                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(139, 195, 74, 0.1) 100%)',
-                border: '1px solid rgba(76, 175, 80, 0.2)'
-              }}
-              onClose={() => setShowInterestSuccess(false)}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                🎉 Great! We've personalized your course recommendations
-              </Typography>
-              <Typography variant="body2">
-                Based on your interests, we're showing you the most relevant courses. You can always adjust your preferences using the "Update Learning Interests" button above.
-              </Typography>
-            </Alert>
-          </Fade>
-        )}
-
-        {/* Interest-based Filtering Banner */}
-        {learningInterests && (categoryFilter || searchTerm) && (
-          <Fade in={true}>
-            <Paper sx={{ 
-              mb: 4, 
-              p: 3, 
-              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-              border: '1px solid rgba(102, 126, 234, 0.2)',
-              borderRadius: 3
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    width: 40,
-                    height: 40,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(45deg, #667eea, #764ba2)',
-                    color: 'white'
-                  }}>
-                    <Star />
-                  </Box>
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>
-                      🎯 Personalized for You
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Showing courses based on your learning interests
-                      {categoryFilter && ` • ${categoryFilter}`}
-                      {searchTerm && ` • "${searchTerm}"`}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => {
-                    setCategoryFilter('');
-                    setSearchTerm('');
-                    setLearningInterests(null);
-                  }}
-                  sx={{ 
-                    borderColor: 'primary.main',
-                    color: 'primary.main',
-                    '&:hover': {
-                      backgroundColor: 'primary.main',
-                      color: 'white'
-                    }
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </Box>
-            </Paper>
-          </Fade>
-        )}
-
-        {/* Search and Filters */}
-        <Paper sx={{ 
-          p: { xs: 3, md: 4 }, 
-          mb: 4, 
-          borderRadius: 4, 
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-        }}>
-          <Typography 
-            variant={isMobile ? 'subtitle1' : 'h6'} 
-            sx={{ mb: 2, fontWeight: 600, textAlign: { xs: 'center', md: 'left' } }}
-          >
-            🎯 Find Your Perfect Course
-          </Typography>
-          <Grid container spacing={{ xs: 2, md: 3 }}>
+        {/* Search and Filters - Minimal */}
+        <Paper sx={{ p: { xs: 2, md: 2 }, mb: 2, borderRadius: 2, background: 'white', border: '1px solid rgba(0,0,0,0.06)' }}>
+          <Grid container spacing={{ xs: 1.5, md: 2 }} alignItems="center">
             <Grid item xs={12} md={8}>
               <TextField
                 fullWidth
-                placeholder={isMobile ? "What would you like to learn?" : "What would you like to learn today? (e.g., Python, Design, Marketing...)"}
+                placeholder={isMobile ? "Search courses, subcategories, categories..." : "Search courses, subcategories, categories..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                    bgcolor: 'rgba(255, 255, 255, 0.9)',
-                    fontSize: { xs: '0.95rem', md: '1rem' },
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.15)'
-                    },
-                    '&.Mui-focused': {
-                      borderColor: 'primary.main',
-                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
-                    }
+                    borderRadius: 2,
+                    bgcolor: 'white',
+                    fontSize: { xs: '0.9rem', md: '0.95rem' },
+                    border: '1px solid rgba(0,0,0,0.1)'
                   }
                 }}
                 InputProps={{
                   startAdornment: <Search sx={{ mr: 1, color: 'primary.main' }} />
                 }}
-                size={isMobile ? 'small' : 'medium'}
+                size="small"
               />
             </Grid>
             <Grid item xs={12} md={4}>
-              <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
-                <InputLabel>📂 Choose Category</InputLabel>
+              <FormControl fullWidth size="small">
+                <InputLabel>Category</InputLabel>
                 <Select
                   value={categoryFilter}
-                  label="📂 Choose Category"
+                  label="Category"
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  sx={{
-                    borderRadius: 3,
-                    bgcolor: 'rgba(255, 255, 255, 0.9)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.15)'
-                    },
-                    '&.Mui-focused': {
-                      borderColor: 'primary.main',
-                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
-                    }
-                  }}
+                  sx={{ borderRadius: 2, bgcolor: 'white', border: '1px solid rgba(0,0,0,0.1)' }}
                 >
-                  <MenuItem value="">🌟 All Categories</MenuItem>
-                  <MenuItem value="Programming">💻 Programming</MenuItem>
-                  <MenuItem value="Design">🎨 Design</MenuItem>
-                  <MenuItem value="Business">💼 Business</MenuItem>
-                  <MenuItem value="Marketing">📈 Marketing</MenuItem>
-                  <MenuItem value="Data Science">📊 Data Science</MenuItem>
-                  <MenuItem value="Languages">🌍 Languages</MenuItem>
+                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="professional_coaching">Professional Coaching</MenuItem>
+                  <MenuItem value="business_entrepreneurship_coaching">Business & Entrepreneurship</MenuItem>
+                  <MenuItem value="academic_coaching">Academic Coaching</MenuItem>
+                  <MenuItem value="language_coaching">Language Coaching</MenuItem>
+                  <MenuItem value="technical_digital_coaching">Technical & Digital</MenuItem>
+                  <MenuItem value="job_seeker_coaching">Job Seeker Coaching</MenuItem>
+                  <MenuItem value="personal_corporate_development_coaching">Personal & Corporate</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -1709,12 +1390,12 @@ const StudentCourses: React.FC = () => {
           
           {/* Clear Filters Button */}
           {(searchTerm || categoryFilter) && (
-            <Box sx={{ mt: 2, textAlign: 'center' }}>
+            <Box sx={{ mt: 1.5, textAlign: 'right' }}>
               <ResponsiveButton
                 variant="outlined"
                 onClick={clearFilters}
                 startIcon={<ClearAll />}
-                size={buttonSize}
+                size="small"
               >
                 Clear All Filters
               </ResponsiveButton>
@@ -1894,55 +1575,9 @@ const StudentCourses: React.FC = () => {
                           </Stack>
 
                           {/* Price and Rating */}
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                            <Box>
-                              {course.price > 0 ? (
-                                <>
-                                  <Typography variant="h5" color="primary.main" sx={{ fontWeight: 700 }}>
-                                    ${course.price}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    💰 One-time payment
-                                  </Typography>
-                                </>
-                              ) : (
-                                <>
-                                  <Typography variant="h5" color="success.main" sx={{ fontWeight: 700 }}>
-                                    FREE
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    🎉 No cost to enroll
-                                  </Typography>
-                                </>
-                              )}
-                            </Box>
-                            <Box display="flex" alignItems="center">
-                              <Stack direction="row" spacing={0.5}>
-                                {[1,2,3,4,5].map((star) => (
-                                  <Star key={star} sx={{ color: 'gold', fontSize: 16 }} />
-                                ))}
-                              </Stack>
-                              <Typography variant="body2" sx={{ ml: 0.5, fontWeight: 600 }}>
-                                4.8 (124)
-                              </Typography>
-                            </Box>
-                          </Stack>
+                          {/* Minimal: remove rating stars and price block */}
 
-                          {/* Course Features */}
-                          <Stack spacing={0.5} sx={{ mb: 2 }}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <AccessTime sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="caption" color="text.secondary">
-                                ⏱️ Self-paced learning
-                              </Typography>
-                            </Stack>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <Group sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="caption" color="text.secondary">
-                                👥 Join 500+ students
-                              </Typography>
-                            </Stack>
-                          </Stack>
+                          {/* Minimal: remove extra course features */}
                         </CardContent>
                         
                         <Box sx={{ p: { xs: 2, md: 3 }, pt: 0 }}>
@@ -1972,7 +1607,7 @@ const StudentCourses: React.FC = () => {
                                 variant="contained"
                                 size={buttonSize}
                                 startIcon={enrollmentProgress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                                onClick={() => navigate(`/course/${course._id}/learn`)}
+                                onClick={() => navigate(`/course/${course._id}/hub`)}
                                 sx={{ 
                                   bgcolor: enrollmentProgress >= 100 ? 'success.main' : 'primary.main',
                                   '&:hover': {
@@ -2000,11 +1635,11 @@ const StudentCourses: React.FC = () => {
                               <ResponsiveButton
                                 fullWidth
                                 variant="contained"
-                                size={buttonSize}
+                                size="small"
                                 startIcon={<School />}
-                                onClick={() => navigate(`/course/${course._id}/enroll`)}
+                                onClick={() => navigate(`/course/${course._id}/hub`)}
                               >
-                                🚀 Enroll Now
+                                Go to Learning Hub
                               </ResponsiveButton>
                               <ResponsiveButton
                                 fullWidth

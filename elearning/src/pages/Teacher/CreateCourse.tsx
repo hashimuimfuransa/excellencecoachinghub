@@ -113,43 +113,219 @@ const categories = [
   'Career Development', 'Resume Writing', 'Interview Skills', 'Networking'
 ];
 
-// Learning Categories for better course discoverability
+// Learning Categories for better course discoverability (curated)
 const learningCategories = [
   {
-    id: 'professional',
-    title: 'Professional Development',
-    description: 'Advance your career with industry-specific skills',
-    subcategories: ['Leadership', 'Project Management', 'Communication', 'Team Building', 'Strategic Planning']
+    id: 'professional_coaching',
+    title: 'Professional Coaching',
+    description: 'Grow your career with expert coaching',
+    subcategories: [
+      'Leadership & Executive Coaching',
+      'Project Management Coaching',
+      'Career Growth Coaching',
+      'CPA Coaching',
+      'CAT Coaching',
+      'ACCA Coaching'
+    ]
   },
   {
-    id: 'business',
-    title: 'Business & Entrepreneurship',
-    description: 'Start and grow your own business venture',
-    subcategories: ['Startup Fundamentals', 'Marketing', 'Finance', 'Operations', 'Sales']
+    id: 'business_entrepreneurship',
+    title: 'Business & Entrepreneurship Coaching',
+    description: 'Build, grow and scale your business',
+    subcategories: [
+      'Business Startup Coaching',
+      'Entrepreneurship Development Coaching',
+      'Small Business Management Coaching',
+      'Business Strategy & Planning Coaching',
+      'Financial Management Coaching',
+      'Marketing & Branding Coaching',
+      'Innovation & Growth Coaching'
+    ]
   },
   {
-    id: 'academic',
+    id: 'academic_coaching',
     title: 'Academic Coaching',
-    description: 'Excel in your studies and academic pursuits',
-    subcategories: ['Study Techniques', 'Research Methods', 'Academic Writing', 'Time Management', 'Exam Preparation']
+    description: 'Achieve academic excellence at any level',
+    subcategories: [
+      'Primary Coaching',
+      'Secondary Coaching',
+      'University Coaching',
+      'Exam Preparation Coaching',
+      'Study Skills Coaching',
+      'Research & Thesis Coaching'
+    ]
   },
   {
-    id: 'technical',
-    title: 'Technical Skills',
-    description: 'Master cutting-edge technology and programming',
-    subcategories: ['Programming', 'Data Science', 'Web Development', 'Mobile Apps', 'AI & Machine Learning']
+    id: 'language_coaching',
+    title: 'Language Coaching',
+    description: 'Master languages for life and business',
+    subcategories: [
+      'English Language Coaching',
+      'French Language Coaching',
+      'Kinyarwanda Language Coaching',
+      'Business Communication Coaching',
+      'Public Speaking in English Coaching',
+      'Writing & Presentation Skills Coaching'
+    ]
   },
   {
-    id: 'creative',
-    title: 'Creative Arts',
-    description: 'Unleash your creative potential and artistic skills',
-    subcategories: ['Graphic Design', 'Digital Art', 'Photography', 'Video Editing', 'Music Production']
+    id: 'technical_digital_coaching',
+    title: 'Technical & Digital Coaching',
+    description: 'Practical digital skills for today’s world',
+    subcategories: [
+      'Artificial Intelligence (AI) Coaching',
+      'Machine Learning Coaching',
+      'Data Analytics Coaching',
+      'Cybersecurity Coaching',
+      'Cloud Computing Coaching',
+      'Software & Web Development Coaching',
+      'Digital Marketing Coaching',
+      'IT Systems Coaching',
+      'Vocational & Technical Skills Coaching'
+    ]
   },
   {
-    id: 'healthcare',
-    title: 'Healthcare & Medical',
-    description: 'Pursue a career in healthcare and medical fields',
-    subcategories: ['Nursing', 'Medical Research', 'Public Health', 'Mental Health', 'Healthcare Administration']
+    id: 'job_seeker_coaching',
+    title: 'Job Seeker Coaching',
+    description: 'Land the job you want with structured coaching',
+    subcategories: [
+      // Technology & IT
+      'Software Engineer', 'Web Developer', 'Mobile App Developer', 'UI/UX Designer', 
+      'Data Analyst', 'Cybersecurity Analyst', 'IT Support', 'Network Administrator',
+      'Database Administrator', 'System Administrator', 'DevOps Engineer', 'Quality Assurance',
+      'Technical Writer', 'IT Consultant', 'Software Tester', 'Business Intelligence',
+      'Digital Marketing', 'SEO Specialist', 'Content Writer', 'Social Media Manager',
+      
+      // Business & Finance
+      'Accountant', 'Financial Analyst', 'Business Analyst', 'Project Manager',
+      'Operations Manager', 'Product Manager', 'Sales Manager', 'Marketing Manager',
+      'HR Manager', 'Business Development', 'Management Consultant', 'Auditor',
+      'Bookkeeper', 'Payroll Specialist', 'Tax Consultant', 'Financial Advisor',
+      'Insurance Agent', 'Real Estate Agent', 'Banking Professional', 'Investment Analyst',
+      
+      // Healthcare & Medical
+      'Doctor', 'Nurse', 'Pharmacist', 'Medical Technician', 'Dentist',
+      'Physiotherapist', 'Laboratory Technician', 'Radiologist', 'Veterinarian',
+      'Medical Assistant', 'Healthcare Administrator', 'Public Health Officer',
+      
+      // Education & Training
+      'Teacher', 'University Lecturer', 'School Principal', 'Curriculum Developer',
+      'Educational Consultant', 'Librarian', 'Research Assistant', 'Training Specialist',
+      'Language Teacher', 'Translator', 'Interpreter', 'Educational Technology',
+      
+      // Engineering & Construction
+      'Civil Engineer', 'Mechanical Engineer', 'Electrical Engineer', 'Chemical Engineer',
+      'Environmental Engineer', 'Architect', 'Surveyor', 'Construction Manager',
+      'Project Engineer', 'Quality Control Engineer', 'Maintenance Engineer',
+      
+      // Agriculture & Environment
+      'Agricultural Engineer', 'Farm Manager', 'Agribusiness Manager', 'Environmental Engineer',
+      'Environmental Health Officer', 'Food Inspector', 'Agricultural Consultant',
+      
+      // Tourism & Hospitality
+      'Hotel Manager', 'Restaurant Manager', 'Chef', 'Tour Guide', 'Travel Agent',
+      'Event Manager', 'Wedding Planner', 'Tourism Coordinator', 'Hospitality Manager',
+      
+      // Government & Public Service
+      'Civil Servant', 'Policy Analyst', 'Public Administrator', 'Diplomat',
+      'Legal Officer', 'Judge', 'Lawyer', 'Paralegal', 'Legal Secretary',
+      'Government Relations', 'Public Affairs Officer',
+      
+      // Media & Communications
+      'Journalist', 'Radio Presenter', 'TV Producer', 'Content Creator',
+      'Public Relations', 'Advertising', 'Photographer', 'Videographer',
+      'Media Relations', 'Communications Officer', 'Brand Manager',
+      
+      // Transportation & Logistics
+      'Pilot', 'Air Traffic Controller', 'Logistics Coordinator', 'Supply Chain Manager',
+      'Driver', 'Mechanic', 'Aviation Technician', 'Transportation Manager',
+      'Fleet Manager', 'Warehouse Manager', 'Procurement Officer',
+      
+      // Retail & Commerce
+      'Store Manager', 'Sales Representative', 'Cashier', 'Inventory Manager',
+      'Retail Buyer', 'Merchandiser', 'Customer Service', 'Sales Associate',
+      'Import/Export Specialist', 'Customs Officer', 'Trade Specialist',
+      
+      // Non-Profit & NGO
+      'Program Coordinator', 'Grant Writer', 'Community Development Worker',
+      'Social Worker', 'Counselor', 'Youth Worker', 'Environmental Activist',
+      'Development Worker', 'Aid Worker', 'Volunteer Coordinator', 'Fundraising',
+      
+      // Sports & Recreation
+      'Sports Coach', 'Fitness Instructor', 'Sports Administrator', 'Event Coordinator',
+      'Recreation Manager', 'Athletic Trainer', 'Sports Marketing',
+      
+      // Entertainment & Arts
+      'Musician', 'Actor', 'Artist', 'Painter', 'Sculptor', 'Fashion Designer',
+      'Interior Designer', 'Graphic Designer', 'Creative Director', 'Art Director',
+      
+      // Security & Safety
+      'Security Guard', 'Police Officer', 'Military Officer', 'Private Investigator',
+      'Safety Officer', 'Risk Manager', 'Compliance Officer', 'Security Manager',
+      
+      // Beauty & Wellness
+      'Hair Stylist', 'Beautician', 'Massage Therapist', 'Spa Manager',
+      'Wellness Coach', 'Fitness Trainer', 'Nutritionist', 'Beauty Consultant',
+      
+      // Skilled Trades
+      'Electrician', 'Plumber', 'Carpenter', 'Mason', 'Welder', 'Machinist',
+      'Maintenance Worker', 'Technician', 'Repair Specialist', 'Installation Specialist',
+      
+      // Manufacturing & Production
+      'Factory Worker', 'Production Manager', 'Quality Control', 'Machine Operator',
+      'Assembly Worker', 'Packaging Specialist', 'Manufacturing Engineer',
+      
+      // Administrative & Support
+      'Personal Assistant', 'Secretary', 'Receptionist', 'Office Manager',
+      'Administrative Assistant', 'Data Entry Clerk', 'Executive Assistant',
+      'Office Administrator', 'Administrative Coordinator',
+      
+      // Customer Service & Support
+      'Customer Support', 'Call Center Agent', 'Technical Support', 'Help Desk',
+      'Customer Success', 'Account Manager', 'Client Relations', 'Service Representative',
+      
+      // Freelance & Consulting
+      'Freelancer', 'Consultant', 'Independent Contractor', 'Service Provider',
+      'Business Owner', 'Entrepreneur', 'Startup Founder', 'Franchise Owner',
+      
+      // Research & Analysis
+      'Market Research', 'Research Analyst', 'Data Scientist', 'Statistician',
+      'Research Coordinator', 'Survey Researcher', 'Policy Researcher',
+      
+      // Human Resources
+      'Recruiter', 'Training Coordinator', 'Employee Relations', 'Compensation Analyst',
+      'Benefits Administrator', 'HR Generalist', 'Talent Acquisition', 'HR Business Partner',
+      
+      // Sales & Marketing
+      'Sales Representative', 'Account Executive', 'Territory Manager', 'Sales Coordinator',
+      'Marketing Coordinator', 'Brand Specialist', 'Digital Marketing Specialist',
+      'Content Marketing', 'Email Marketing', 'Social Media Specialist',
+      
+      // Operations & Management
+      'Operations Analyst', 'Process Improvement', 'Operations Coordinator',
+      'Facilities Manager', 'Property Manager', 'Asset Manager', 'Space Planner',
+      
+      // International & Development
+      'International Relations', 'Foreign Affairs', 'Development Specialist',
+      'International Business', 'Cross-cultural Consultant', 'Global Program Manager'
+    ]
+  },
+  {
+    id: 'personal_corporate_coaching',
+    title: 'Personal & Corporate Development Coaching',
+    description: 'Unlock personal and team performance',
+    subcategories: [
+      'Personal Growth Coaching',
+      'Confidence & Communication Coaching',
+      'Time Management Coaching',
+      'Emotional Intelligence Coaching',
+      'Public Speaking Coaching',
+      'Parenting Coaching',
+      'Team Performance Coaching',
+      'HR & Legal Compliance Coaching',
+      'Customer Service Coaching',
+      'Workplace Ethics Coaching'
+    ]
   }
 ];
 
@@ -185,7 +361,8 @@ const CreateCourse: React.FC = () => {
     timeCommitment: '',
     learningStyle: '',
     specificInterests: [] as string[],
-    learningCategories: [] as string[]
+    learningCategories: [] as string[],
+    learningSubcategories: [] as string[]
   });
 
   // Temporary input states
@@ -200,6 +377,43 @@ const CreateCourse: React.FC = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  // Handle learning category selection
+  const handleLearningCategoryToggle = (categoryId: string) => {
+    const currentCategories = formData.learningCategories;
+    const currentSubcategories = formData.learningSubcategories;
+    
+    if (currentCategories.includes(categoryId)) {
+      // Remove category and its subcategories
+      const category = learningCategories.find(cat => cat.id === categoryId);
+      const subcategoriesToRemove = category?.subcategories || [];
+      
+      handleInputChange('learningCategories', currentCategories.filter(id => id !== categoryId));
+      handleInputChange('learningSubcategories', currentSubcategories.filter(sub => !subcategoriesToRemove.includes(sub)));
+    } else {
+      // Add category
+      handleInputChange('learningCategories', [...currentCategories, categoryId]);
+    }
+  };
+
+  // Handle subcategory selection
+  const handleSubcategoryToggle = (subcategory: string) => {
+    const currentSubcategories = formData.learningSubcategories;
+    
+    if (currentSubcategories.includes(subcategory)) {
+      handleInputChange('learningSubcategories', currentSubcategories.filter(sub => sub !== subcategory));
+    } else {
+      handleInputChange('learningSubcategories', [...currentSubcategories, subcategory]);
+    }
+  };
+
+  // Get available subcategories for selected categories
+  const getAvailableSubcategories = () => {
+    return formData.learningCategories.flatMap(categoryId => {
+      const category = learningCategories.find(cat => cat.id === categoryId);
+      return category?.subcategories || [];
+    });
   };
 
   // Array management functions
@@ -232,7 +446,7 @@ const CreateCourse: React.FC = () => {
       case 1: // Course Details
         return !!(formData.level && formData.duration > 0);
       case 2: // Discoverability & Target Audience
-        return !!(formData.careerGoal && formData.experienceLevel && formData.timeCommitment && formData.learningStyle && formData.learningCategories.length > 0);
+        return !!(formData.careerGoal && formData.experienceLevel && formData.timeCommitment && formData.learningStyle && formData.learningCategories.length > 0 && formData.learningSubcategories.length > 0);
       default:
         return true;
     }
@@ -834,14 +1048,7 @@ const CreateCourse: React.FC = () => {
                         <Chip
                           key={category.id}
                           label={category.title}
-                          onClick={() => {
-                            const currentCategories = formData.learningCategories;
-                            if (currentCategories.includes(category.id)) {
-                              handleInputChange('learningCategories', currentCategories.filter(id => id !== category.id));
-                            } else {
-                              handleInputChange('learningCategories', [...currentCategories, category.id]);
-                            }
-                          }}
+                          onClick={() => handleLearningCategoryToggle(category.id)}
                           color={formData.learningCategories.includes(category.id) ? 'primary' : 'default'}
                           variant={formData.learningCategories.includes(category.id) ? 'filled' : 'outlined'}
                           size={isMobile ? "small" : "medium"}
@@ -870,10 +1077,75 @@ const CreateCourse: React.FC = () => {
                           mb: 1
                         }}
                       >
-                        Selected: {formData.learningCategories.map(id => 
+                        Selected Categories: {formData.learningCategories.map(id => 
                           learningCategories.find(cat => cat.id === id)?.title
                         ).join(', ')}
                       </Typography>
+                    )}
+
+                    {/* Subcategories Selection */}
+                    {formData.learningCategories.length > 0 && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography 
+                          variant="subtitle2" 
+                          gutterBottom
+                          sx={{ 
+                            fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                            fontWeight: 600,
+                            mb: 1
+                          }}
+                        >
+                          Select Specific Subcategories (Optional but Recommended)
+                        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          sx={{ 
+                            fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                            display: 'block',
+                            mb: 1.5
+                          }}
+                        >
+                          Choose specific subcategories to make your course more discoverable and targeted.
+                        </Typography>
+                        <Box display="flex" flexWrap="wrap" gap={{ xs: 0.5, sm: 1 }} mb={2}>
+                          {getAvailableSubcategories().map((subcategory) => (
+                            <Chip
+                              key={subcategory}
+                              label={subcategory}
+                              onClick={() => handleSubcategoryToggle(subcategory)}
+                              color={formData.learningSubcategories.includes(subcategory) ? 'secondary' : 'default'}
+                              variant={formData.learningSubcategories.includes(subcategory) ? 'filled' : 'outlined'}
+                              size="small"
+                              sx={{ 
+                                fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  backgroundColor: formData.learningSubcategories.includes(subcategory) 
+                                    ? 'secondary.dark' 
+                                    : 'secondary.light',
+                                  color: formData.learningSubcategories.includes(subcategory) 
+                                    ? 'white' 
+                                    : 'secondary.main'
+                                }
+                              }}
+                            />
+                          ))}
+                        </Box>
+                        {formData.learningSubcategories.length > 0 && (
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                            sx={{ 
+                              fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                              display: 'block',
+                              mb: 1
+                            }}
+                          >
+                            Selected Subcategories: {formData.learningSubcategories.join(', ')}
+                          </Typography>
+                        )}
+                      </Box>
                     )}
                   </Grid>
 
@@ -1062,6 +1334,14 @@ const CreateCourse: React.FC = () => {
                               learningCategories.find(cat => cat.id === id)?.title
                             ).join(', ')}
                           </Typography>
+                          {formData.learningSubcategories.length > 0 && (
+                            <Typography 
+                              variant="body2" 
+                              sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                            >
+                              <strong>Subcategories:</strong> {formData.learningSubcategories.join(', ')}
+                            </Typography>
+                          )}
                         </Stack>
                       </CardContent>
                     </Card>

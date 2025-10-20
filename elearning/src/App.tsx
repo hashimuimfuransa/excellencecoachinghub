@@ -52,6 +52,7 @@ import Assessments from './pages/Student/Assessments';
 import TakeAssessment from './pages/Student/TakeAssessment';
 import EnhancedAssessments from './pages/Student/EnhancedAssessments';
 import UnifiedLearningPage from './pages/Student/UnifiedLearningPage';
+import LearningHub from './pages/Student/LearningHub';
 import TeacherCourseDashboard from './pages/Teacher/TeacherCourseDashboard';
 import ContentStructureEditor from './pages/Teacher/ContentStructureEditor';
 import CourseEnrollmentSystem from './components/Course/CourseEnrollmentSystem';
@@ -525,6 +526,24 @@ const App: React.FC = () => {
         element={
           <ProtectedRoute requiredRole={UserRole.STUDENT}>
             <UnifiedLearningPage />
+          </ProtectedRoute>
+        }
+      />
+      {/* Standalone Personalized Path - Outside Dashboard Layout */}
+      <Route
+        path="/course/:id/personalized"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <UnifiedLearningPage />
+          </ProtectedRoute>
+        }
+      />
+      {/* New Learning Hub selector */}
+      <Route
+        path="/course/:id/hub"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <LearningHub />
           </ProtectedRoute>
         }
       />

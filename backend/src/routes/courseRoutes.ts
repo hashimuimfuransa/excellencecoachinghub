@@ -149,8 +149,27 @@ const createCourseValidation = [
   body('learningCategories.*')
     .optional()
     .isString()
-    .isIn(['professional', 'business', 'academic', 'technical', 'creative', 'healthcare'])
-    .withMessage('Each learning category must be one of: professional, business, academic, technical, creative, healthcare')
+    .isIn([
+      'professional_coaching',
+      'business_entrepreneurship_coaching',
+      'academic_coaching',
+      'language_coaching',
+      'technical_digital_coaching',
+      'job_seeker_coaching',
+      'personal_corporate_development_coaching'
+    ])
+    .withMessage('Each learning category must be one of the updated coaching categories')
+  ,
+  body('learningSubcategories')
+    .optional()
+    .isArray()
+    .withMessage('Learning subcategories must be an array'),
+  body('learningSubcategories.*')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Each subcategory cannot exceed 100 characters')
 ];
 
 const updateCourseValidation = [
@@ -221,8 +240,26 @@ const updateCourseValidation = [
   body('learningCategories.*')
     .optional()
     .isString()
-    .isIn(['professional', 'business', 'academic', 'technical', 'creative', 'healthcare'])
-    .withMessage('Each learning category must be one of: professional, business, academic, technical, creative, healthcare'),
+    .isIn([
+      'professional_coaching',
+      'business_entrepreneurship_coaching',
+      'academic_coaching',
+      'language_coaching',
+      'technical_digital_coaching',
+      'job_seeker_coaching',
+      'personal_corporate_development_coaching'
+    ])
+    .withMessage('Each learning category must be one of the updated coaching categories'),
+  body('learningSubcategories')
+    .optional()
+    .isArray()
+    .withMessage('Learning subcategories must be an array'),
+  body('learningSubcategories.*')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Each subcategory cannot exceed 100 characters'),
   body('prerequisites')
     .optional()
     .isArray()

@@ -58,7 +58,8 @@ import {
   Refresh,
   CheckCircle,
   MenuBook,
-  Storage
+  Storage,
+  ArrowBack
 } from '@mui/icons-material';
 import { useAuth } from '../../store/AuthContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
@@ -321,6 +322,11 @@ const StudentLiveSessions: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>
+        <Button variant="text" startIcon={<ArrowBack />} onClick={() => navigate(-1)} sx={{ color: 'text.primary' }}>
+          Back
+        </Button>
+      </Box>
       {/* Hero Section */}
       <Fade in={true}>
         <HeroCard elevation={0}>

@@ -14,8 +14,8 @@ import {
   Business,
   Psychology,
   Computer,
-  Palette,
-  LocalHospital
+  Language,
+  School
 } from '@mui/icons-material';
 import { styled } from '@mui/system';
 
@@ -53,12 +53,13 @@ export const CategoriesStep: React.FC<StepContentProps> = ({ formData, onCategor
     <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>Choose up to 3 categories:</Typography>
     <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap>
       {[
-        { label: 'Professional Development', value: 'professional', icon: <Work /> },
-        { label: 'Business & Entrepreneurship', value: 'business', icon: <Business /> },
-        { label: 'Academic Coaching', value: 'academic', icon: <Psychology /> },
-        { label: 'Technical Skills', value: 'technical', icon: <Computer /> },
-        { label: 'Creative Arts', value: 'creative', icon: <Palette /> },
-        { label: 'Healthcare & Medical', value: 'healthcare', icon: <LocalHospital /> },
+        { label: 'Professional Coaching', value: 'professional_coaching', icon: <Work /> },
+        { label: 'Business & Entrepreneurship Coaching', value: 'business_entrepreneurship', icon: <Business /> },
+        { label: 'Academic Coaching', value: 'academic_coaching', icon: <School /> },
+        { label: 'Language Coaching', value: 'language_coaching', icon: <Language /> },
+        { label: 'Technical & Digital Coaching', value: 'technical_digital_coaching', icon: <Computer /> },
+        { label: 'Job Seeker Coaching', value: 'job_seeker_coaching', icon: <Work /> },
+        { label: 'Personal & Corporate Development', value: 'personal_corporate_coaching', icon: <Psychology /> },
       ].map((item) => (
         <StyledChip
           key={item.value}
@@ -72,6 +73,212 @@ export const CategoriesStep: React.FC<StepContentProps> = ({ formData, onCategor
     </Stack>
   </Box>
 );
+
+// Curated subcategories for each learning category
+export const learningSubcategories: { [key: string]: string[] } = {
+  professional_coaching: [
+    'Leadership & Executive Coaching',
+    'Project Management Coaching',
+    'Career Growth Coaching',
+    'CPA Coaching',
+    'CAT Coaching',
+    'ACCA Coaching',
+  ],
+  business_entrepreneurship: [
+    'Business Startup Coaching',
+    'Entrepreneurship Development Coaching',
+    'Small Business Management Coaching',
+    'Business Strategy & Planning Coaching',
+    'Financial Management Coaching',
+    'Marketing & Branding Coaching',
+    'Innovation & Growth Coaching',
+  ],
+  academic_coaching: [
+    'Primary Coaching',
+    'Secondary Coaching',
+    'University Coaching',
+    'Exam Preparation Coaching',
+    'Study Skills Coaching',
+    'Research & Thesis Coaching',
+  ],
+  language_coaching: [
+    'English Language Coaching',
+    'French Language Coaching',
+    'Kinyarwanda Language Coaching',
+    'Business Communication Coaching',
+    'Public Speaking in English Coaching',
+    'Writing & Presentation Skills Coaching',
+  ],
+  technical_digital_coaching: [
+    'Artificial Intelligence (AI) Coaching',
+    'Machine Learning Coaching',
+    'Data Analytics Coaching',
+    'Cybersecurity Coaching',
+    'Cloud Computing Coaching',
+    'Software & Web Development Coaching',
+    'Digital Marketing Coaching',
+    'IT Systems Coaching',
+    'Vocational & Technical Skills Coaching',
+  ],
+  job_seeker_coaching: [
+    // Technology & IT
+    'Software Engineer', 'Web Developer', 'Mobile App Developer', 'UI/UX Designer', 
+    'Data Analyst', 'Cybersecurity Analyst', 'IT Support', 'Network Administrator',
+    'Database Administrator', 'System Administrator', 'DevOps Engineer', 'Quality Assurance',
+    'Technical Writer', 'IT Consultant', 'Software Tester', 'Business Intelligence',
+    'Digital Marketing', 'SEO Specialist', 'Content Writer', 'Social Media Manager',
+    
+    // Business & Finance
+    'Accountant', 'Financial Analyst', 'Business Analyst', 'Project Manager',
+    'Operations Manager', 'Product Manager', 'Sales Manager', 'Marketing Manager',
+    'HR Manager', 'Business Development', 'Management Consultant', 'Auditor',
+    'Bookkeeper', 'Payroll Specialist', 'Tax Consultant', 'Financial Advisor',
+    'Insurance Agent', 'Real Estate Agent', 'Banking Professional', 'Investment Analyst',
+    
+    // Healthcare & Medical
+    'Doctor', 'Nurse', 'Pharmacist', 'Medical Technician', 'Dentist',
+    'Physiotherapist', 'Laboratory Technician', 'Radiologist', 'Veterinarian',
+    'Medical Assistant', 'Healthcare Administrator', 'Public Health Officer',
+    
+    // Education & Training
+    'Teacher', 'University Lecturer', 'School Principal', 'Curriculum Developer',
+    'Educational Consultant', 'Librarian', 'Research Assistant', 'Training Specialist',
+    'Language Teacher', 'Translator', 'Interpreter', 'Educational Technology',
+    
+    // Engineering & Construction
+    'Civil Engineer', 'Mechanical Engineer', 'Electrical Engineer', 'Chemical Engineer',
+    'Environmental Engineer', 'Architect', 'Surveyor', 'Construction Manager',
+    'Project Engineer', 'Quality Control Engineer', 'Maintenance Engineer',
+    
+    // Agriculture & Environment
+    'Agricultural Engineer', 'Farm Manager', 'Agribusiness Manager', 'Environmental Engineer',
+    'Environmental Health Officer', 'Food Inspector', 'Agricultural Consultant',
+    
+    // Tourism & Hospitality
+    'Hotel Manager', 'Restaurant Manager', 'Chef', 'Tour Guide', 'Travel Agent',
+    'Event Manager', 'Wedding Planner', 'Tourism Coordinator', 'Hospitality Manager',
+    
+    // Government & Public Service
+    'Civil Servant', 'Policy Analyst', 'Public Administrator', 'Diplomat',
+    'Legal Officer', 'Judge', 'Lawyer', 'Paralegal', 'Legal Secretary',
+    'Government Relations', 'Public Affairs Officer',
+    
+    // Media & Communications
+    'Journalist', 'Radio Presenter', 'TV Producer', 'Content Creator',
+    'Public Relations', 'Advertising', 'Photographer', 'Videographer',
+    'Media Relations', 'Communications Officer', 'Brand Manager',
+    
+    // Transportation & Logistics
+    'Pilot', 'Air Traffic Controller', 'Logistics Coordinator', 'Supply Chain Manager',
+    'Driver', 'Mechanic', 'Aviation Technician', 'Transportation Manager',
+    'Fleet Manager', 'Warehouse Manager', 'Procurement Officer',
+    
+    // Retail & Commerce
+    'Store Manager', 'Sales Representative', 'Cashier', 'Inventory Manager',
+    'Retail Buyer', 'Merchandiser', 'Customer Service', 'Sales Associate',
+    'Import/Export Specialist', 'Customs Officer', 'Trade Specialist',
+    
+    // Non-Profit & NGO
+    'Program Coordinator', 'Grant Writer', 'Community Development Worker',
+    'Social Worker', 'Counselor', 'Youth Worker', 'Environmental Activist',
+    'Development Worker', 'Aid Worker', 'Volunteer Coordinator', 'Fundraising',
+    
+    // Sports & Recreation
+    'Sports Coach', 'Fitness Instructor', 'Sports Administrator', 'Event Coordinator',
+    'Recreation Manager', 'Athletic Trainer', 'Sports Marketing',
+    
+    // Entertainment & Arts
+    'Musician', 'Actor', 'Artist', 'Painter', 'Sculptor', 'Fashion Designer',
+    'Interior Designer', 'Graphic Designer', 'Creative Director', 'Art Director',
+    
+    // Security & Safety
+    'Security Guard', 'Police Officer', 'Military Officer', 'Private Investigator',
+    'Safety Officer', 'Risk Manager', 'Compliance Officer', 'Security Manager',
+    
+    // Beauty & Wellness
+    'Hair Stylist', 'Beautician', 'Massage Therapist', 'Spa Manager',
+    'Wellness Coach', 'Fitness Trainer', 'Nutritionist', 'Beauty Consultant',
+    
+    // Skilled Trades
+    'Electrician', 'Plumber', 'Carpenter', 'Mason', 'Welder', 'Machinist',
+    'Maintenance Worker', 'Technician', 'Repair Specialist', 'Installation Specialist',
+    
+    // Manufacturing & Production
+    'Factory Worker', 'Production Manager', 'Quality Control', 'Machine Operator',
+    'Assembly Worker', 'Packaging Specialist', 'Manufacturing Engineer',
+    
+    // Administrative & Support
+    'Personal Assistant', 'Secretary', 'Receptionist', 'Office Manager',
+    'Administrative Assistant', 'Data Entry Clerk', 'Executive Assistant',
+    'Office Administrator', 'Administrative Coordinator',
+    
+    // Customer Service & Support
+    'Customer Support', 'Call Center Agent', 'Technical Support', 'Help Desk',
+    'Customer Success', 'Account Manager', 'Client Relations', 'Service Representative',
+    
+    // Freelance & Consulting
+    'Freelancer', 'Consultant', 'Independent Contractor', 'Service Provider',
+    'Business Owner', 'Entrepreneur', 'Startup Founder', 'Franchise Owner',
+    
+    // Research & Analysis
+    'Market Research', 'Research Analyst', 'Data Scientist', 'Statistician',
+    'Research Coordinator', 'Survey Researcher', 'Policy Researcher',
+    
+    // Human Resources
+    'Recruiter', 'Training Coordinator', 'Employee Relations', 'Compensation Analyst',
+    'Benefits Administrator', 'HR Generalist', 'Talent Acquisition', 'HR Business Partner',
+    
+    // Sales & Marketing
+    'Sales Representative', 'Account Executive', 'Territory Manager', 'Sales Coordinator',
+    'Marketing Coordinator', 'Brand Specialist', 'Digital Marketing Specialist',
+    'Content Marketing', 'Email Marketing', 'Social Media Specialist',
+    
+    // Operations & Management
+    'Operations Analyst', 'Process Improvement', 'Operations Coordinator',
+    'Facilities Manager', 'Property Manager', 'Asset Manager', 'Space Planner',
+    
+    // International & Development
+    'International Relations', 'Foreign Affairs', 'Development Specialist',
+    'International Business', 'Cross-cultural Consultant', 'Global Program Manager'
+  ],
+  personal_corporate_coaching: [
+    'Personal Growth Coaching',
+    'Confidence & Communication Coaching',
+    'Time Management Coaching',
+    'Emotional Intelligence Coaching',
+    'Public Speaking Coaching',
+    'Parenting Coaching',
+    'Team Performance Coaching',
+    'HR & Legal Compliance Coaching',
+    'Customer Service Coaching',
+    'Workplace Ethics Coaching',
+  ],
+};
+
+interface SubcategoriesStepProps {
+  selectedCategoryId: string;
+  onSelectSubcategory: (subcategory: string) => void;
+}
+
+export const SubcategoriesStep: React.FC<SubcategoriesStepProps> = ({ selectedCategoryId, onSelectSubcategory }) => {
+  const subs = learningSubcategories[selectedCategoryId] || [];
+  return (
+    <Box>
+      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>Select a subcategory:</Typography>
+      <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap>
+        {subs.map((sub) => (
+          <StyledChip
+            key={sub}
+            label={sub}
+            color={'primary'}
+            variant={'outlined'}
+            onClick={() => onSelectSubcategory(sub)}
+          />
+        ))}
+      </Stack>
+    </Box>
+  );
+};
 
 export const CareerGoalStep: React.FC<StepContentProps> = ({ formData, onChange }) => (
   <Box>

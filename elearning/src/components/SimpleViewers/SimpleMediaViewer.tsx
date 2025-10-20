@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Box, Button, IconButton, Tooltip, Typography, Alert, Chip, Paper, Divider } from '@mui/material';
-import { Download, OpenInNew, Fullscreen, FullscreenExit, PlayArrow, VolumeUp, Schedule, Info } from '@mui/icons-material';
+import React, { useState, useRef, useEffect } from 'react';
+import { Box, Button, IconButton, Tooltip, Typography, Alert, Chip, Paper, Divider, Fab } from '@mui/material';
+import { Download, OpenInNew, Fullscreen, FullscreenExit, PlayArrow, VolumeUp, Schedule, Info, ArrowBack } from '@mui/icons-material';
 
 interface SimpleMediaViewerProps {
   url: string;
@@ -11,6 +11,9 @@ interface SimpleMediaViewerProps {
   estimatedDuration?: number;
   isRequired?: boolean;
   materialType?: string;
+  onProgressUpdate?: (progress: number, timeSpent: number) => void;
+  onVideoEnd?: () => void;
+  onVideoStart?: () => void;
 }
 
 const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
@@ -21,10 +24,94 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
   description,
   estimatedDuration,
   isRequired,
-  materialType
+  materialType,
+  onProgressUpdate,
+  onVideoEnd,
+  onVideoStart
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [timeSpent, setTimeSpent] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Video progress tracking functions
+  const startProgressTracking = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    
+    progressIntervalRef.current = setInterval(() => {
+      const mediaElement = type === 'video' ? videoRef.current : audioRef.current;
+      if (mediaElement && isPlaying) {
+        const currentTime = mediaElement.currentTime;
+        const duration = mediaElement.duration;
+        
+        if (duration > 0) {
+          const progress = (currentTime / duration) * 100;
+          const timeSpentMinutes = Math.floor(currentTime / 60);
+          
+          setVideoProgress(progress);
+          setTimeSpent(timeSpentMinutes);
+          
+          // Call the progress update callback
+          if (onProgressUpdate) {
+            onProgressUpdate(progress, timeSpentMinutes);
+          }
+        }
+      }
+    }, 1000); // Update every second
+  };
+
+  const stopProgressTracking = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+
+  // Video event handlers
+  const handleVideoPlay = () => {
+    setIsPlaying(true);
+    startProgressTracking();
+    if (onVideoStart) {
+      onVideoStart();
+    }
+  };
+
+  const handleVideoPause = () => {
+    setIsPlaying(false);
+    stopProgressTracking();
+  };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+    stopProgressTracking();
+    setVideoProgress(100);
+    
+    // Call the video end callback
+    if (onVideoEnd) {
+      onVideoEnd();
+    }
+  };
+
+  const handleVideoTimeUpdate = () => {
+    const mediaElement = type === 'video' ? videoRef.current : audioRef.current;
+    if (mediaElement && mediaElement.duration > 0) {
+      const progress = (mediaElement.currentTime / mediaElement.duration) * 100;
+      setVideoProgress(progress);
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopProgressTracking();
+    };
+  }, []);
 
   const handleOpenInNewTab = () => {
     window.open(url, '_blank');
@@ -337,6 +424,7 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
           <>
             {type === 'video' ? (
               <video
+                ref={videoRef}
                 controls
                 style={{ 
                   width: '100%', 
@@ -346,6 +434,10 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
                 }}
                 onError={() => setError('Failed to load video. Please try opening in a new tab.')}
                 onLoadStart={() => setError(null)}
+                onPlay={handleVideoPlay}
+                onPause={handleVideoPause}
+                onEnded={handleVideoEnded}
+                onTimeUpdate={handleVideoTimeUpdate}
                 preload="metadata"
                 playsInline
                 webkit-playsinline="true"
@@ -393,6 +485,7 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
                   }} 
                 />
                 <audio
+                  ref={audioRef}
                   controls
                   style={{ 
                     width: '100%', 
@@ -401,6 +494,10 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
                   }}
                   onError={() => setError('Failed to load audio. Please try opening in a new tab.')}
                   onLoadStart={() => setError(null)}
+                  onPlay={handleVideoPlay}
+                  onPause={handleVideoPause}
+                  onEnded={handleVideoEnded}
+                  onTimeUpdate={handleVideoTimeUpdate}
                   preload="metadata"
                 >
                   <source src={url} type="audio/mpeg" />
@@ -426,6 +523,34 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
           </>
         )}
       </Box>
+
+      {/* Floating Exit Button for Fullscreen */}
+      {isFullscreen && (
+        <Fab
+          color="primary"
+          aria-label="exit fullscreen"
+          onClick={toggleFullscreen}
+          sx={{
+            position: 'fixed',
+            top: 16,
+            left: 16,
+            zIndex: 10000,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'rgba(0,0,0,0.9)',
+            },
+            '@media (max-width: 480px)': {
+              top: 8,
+              left: 8,
+              width: 48,
+              height: 48,
+            }
+          }}
+        >
+          <ArrowBack />
+        </Fab>
+      )}
     </Box>
   );
 };

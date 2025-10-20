@@ -340,24 +340,36 @@ const MaterialView: React.FC = () => {
     };
   }, [pdfBlobUrl, webViewerInstance, sessionId, courseId]);
 
-  // Track time spent and update progress
+  // Track time spent on page and update progress
   useEffect(() => {
-    if (material && !isCompleted && sessionId) {
+    if (material && !isCompleted) {
+      // Set start time when component mounts
+      if (!startTime) {
+        setStartTime(new Date());
+      }
+
       const interval = setInterval(() => {
-        const elapsed = Math.floor((new Date().getTime() - (startTime?.getTime() || Date.now())) / 1000 / 60);
-        const newTimeSpent = (materialProgress?.timeSpent || 0) + elapsed;
+        const now = new Date();
+        const elapsed = Math.floor((now.getTime() - (startTime?.getTime() || now.getTime())) / 1000 / 60);
+        const newTimeSpent = Math.max(elapsed, timeSpent);
         
         setTimeSpent(newTimeSpent);
         
-        // Update progress tracking
+        // Update progress tracking based on time spent on page
         if (courseId && week && materialId) {
           progressTrackingService.updateTimeSpent(courseId, week._id, materialId, newTimeSpent);
+          
+          // Calculate progress based on time spent vs estimated duration
+          const estimatedDuration = material.estimatedDuration || 10; // Default to 10 minutes
+          const progressPercentage = Math.min((newTimeSpent / estimatedDuration) * 100, 100);
+          
+          console.log(`📊 Page time progress: ${progressPercentage.toFixed(1)}% (${newTimeSpent}/${estimatedDuration} min)`);
         }
-      }, 60000); // Update every minute
+      }, 30000); // Update every 30 seconds
 
       return () => clearInterval(interval);
     }
-  }, [material, isCompleted, sessionId, startTime, materialProgress, courseId, week, materialId]);
+  }, [material, isCompleted, startTime, timeSpent, courseId, week, materialId]);
 
   // Handle PDF loading timeout
   useEffect(() => {
@@ -1187,6 +1199,26 @@ const MaterialView: React.FC = () => {
                                   estimatedDuration={material.estimatedDuration}
                                   isRequired={material.isRequired}
                                   materialType={material.type}
+                                  onProgressUpdate={(progress, timeSpent) => {
+                                    console.log(`📊 Video progress: ${progress.toFixed(1)}%, Time spent: ${timeSpent} min`);
+                                    // Update the time spent state
+                                    setTimeSpent(timeSpent);
+                                    
+                                    // Update progress tracking service
+                                    if (courseId && week && materialId) {
+                                      progressTrackingService.updateTimeSpent(courseId, week._id, materialId, timeSpent);
+                                    }
+                                  }}
+                                  onVideoEnd={() => {
+                                    console.log('🎬 Video ended - marking as completed');
+                                    handleMarkComplete();
+                                  }}
+                                  onVideoStart={() => {
+                                    console.log('▶️ Video started');
+                                    if (!startTime) {
+                                      setStartTime(new Date());
+                                    }
+                                  }}
                                 />
                               );
                             } else if (material.type === 'image') {
@@ -1228,6 +1260,26 @@ const MaterialView: React.FC = () => {
                                   estimatedDuration={material.estimatedDuration}
                                   isRequired={material.isRequired}
                                   materialType={material.type}
+                                  onProgressUpdate={(progress, timeSpent) => {
+                                    console.log(`📊 Video progress: ${progress.toFixed(1)}%, Time spent: ${timeSpent} min`);
+                                    // Update the time spent state
+                                    setTimeSpent(timeSpent);
+                                    
+                                    // Update progress tracking service
+                                    if (courseId && week && materialId) {
+                                      progressTrackingService.updateTimeSpent(courseId, week._id, materialId, timeSpent);
+                                    }
+                                  }}
+                                  onVideoEnd={() => {
+                                    console.log('🎬 Video ended - marking as completed');
+                                    handleMarkComplete();
+                                  }}
+                                  onVideoStart={() => {
+                                    console.log('▶️ Video started');
+                                    if (!startTime) {
+                                      setStartTime(new Date());
+                                    }
+                                  }}
                                 />
                               );
                             } else if (urlLower.match(/\.(mp3|wav|ogg)$/)) {
@@ -1429,7 +1481,6 @@ const MaterialView: React.FC = () => {
                       fullWidth
                       startIcon={<CheckCircle />}
                       onClick={handleMarkComplete}
-                      disabled={timeSpent < material.estimatedDuration * 0.5} // Require at least 50% time spent
                       sx={{
                         // Mobile button styling
                         '@media (max-width: 480px)': {

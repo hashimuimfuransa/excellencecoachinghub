@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
+import {
   Container,
   Typography,
   Box,
@@ -28,7 +28,17 @@ import {
   Fab,
   Badge,
   Avatar,
-  Stack
+  Stack,
+  CardMedia,
+  CardActions,
+  Tabs,
+  Tab,
+  Menu as MuiMenu,
+  MenuItem,
+  InputAdornment,
+  Rating,
+  Skeleton,
+  Snackbar
 } from '@mui/material';
 import {
   ArrowBack,
@@ -55,7 +65,29 @@ import {
   Dashboard,
   Refresh,
   AccessTime,
-  AutoAwesome
+  AutoAwesome,
+  Search,
+  Star,
+  People,
+  CalendarToday,
+  PlayCircleOutline,
+  BookmarkBorder,
+  Bookmark,
+  FilterList,
+  Sort,
+  MoreVert,
+  AccountCircle,
+  Settings,
+  ExitToApp,
+  Grade,
+  EmojiEvents,
+  LocalFireDepartment,
+  Psychology,
+  Lightbulb,
+  Chat,
+  HelpOutline,
+  Article,
+  Description as DescriptionIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { motion, useScroll, useSpring } from 'framer-motion';
@@ -65,6 +97,10 @@ import { courseService, ICourse } from '../../services/courseService';
 import { weekService, Week, WeekMaterial } from '../../services/weekService';
 import { assessmentService, IAssessment } from '../../services/assessmentService';
 import { assignmentService, Assignment as AssignmentType } from '../../services/assignmentService';
+import { progressService } from '../../services/progressService';
+import { progressTrackingService } from '../../services/progressTrackingService';
+import { weekFeedbackService, WeekFeedback } from '../../services/weekFeedbackService';
+import WeekEndFeedback from '../../components/WeekEndFeedback';
 import api from '../../services/api';
 import LiveSessionStatus from '../../components/Student/LiveSessionStatus';
 import { useLocation } from 'react-router-dom';
@@ -193,6 +229,24 @@ const UnifiedLearningPage: React.FC = () => {
   // Materials quick filter
   const [materialFilter, setMaterialFilter] = useState<'all' | 'required' | 'completed' | 'video' | 'document'>('all');
   const liveSectionRef = React.useRef<HTMLDivElement | null>(null);
+  
+  // New state for enhanced features
+  const [activeTab, setActiveTab] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
+  const [courseRating, setCourseRating] = useState(4.5);
+  const [enrolledStudents, setEnrolledStudents] = useState(120);
+  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+  const [recommendedNext, setRecommendedNext] = useState<any[]>([]);
+  const [userStreak, setUserStreak] = useState(7);
+  const [userXP, setUserXP] = useState(1250);
+  const [markingComplete, setMarkingComplete] = useState<Set<string>>(new Set());
+  const [completedMaterials, setCompletedMaterials] = useState<Set<string>>(new Set());
+  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [completedWeek, setCompletedWeek] = useState<Week | null>(null);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<Set<string>>(new Set());
 
   // Local helper types and utilities for organizing assessment questions in fallback
   type SimpleSection = {
@@ -332,9 +386,112 @@ const UnifiedLearningPage: React.FC = () => {
     }
   };
 
+  const refreshProgressData = async () => {
+    if (!courseId) return;
+    
+    try {
+      console.log('🔄 Refreshing progress data...');
+      const progressResponse = await api.get(`/progress/courses/${courseId}/progress`);
+      setProgress(progressResponse.data.data || { weekProgresses: [], materialProgresses: [] });
+      console.log('✅ Progress data refreshed successfully');
+    } catch (err: any) {
+      console.error('❌ Failed to refresh progress data:', err);
+    }
+  };
+
+  const checkForCompletedWeeks = async () => {
+    if (!courseId || !user) return;
+
+    try {
+      // Check each week to see if it's completed
+      for (const week of weeks) {
+        const weekProgress = getWeekProgress(week._id);
+        
+        // If week is 100% complete and we haven't shown feedback yet
+        if (weekProgress === 100 && !feedbackSubmitted.has(week._id)) {
+          // Check if user has already submitted feedback for this week
+          const hasSubmitted = await weekFeedbackService.hasSubmittedFeedback(week._id, user._id);
+          
+          if (!hasSubmitted) {
+            console.log(`🎉 Week "${week.title}" completed! Showing feedback dialog...`);
+            setCompletedWeek(week);
+            setShowFeedbackDialog(true);
+            break; // Only show one feedback dialog at a time
+          } else {
+            // Mark as submitted to avoid checking again
+            setFeedbackSubmitted(prev => new Set(prev).add(week._id));
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('❌ Error checking for completed weeks:', err);
+    }
+  };
+
+  const handleFeedbackSubmit = async (feedback: WeekFeedback) => {
+    if (!courseId || !completedWeek || !user) return;
+
+    try {
+      const feedbackData: WeekFeedback = {
+        ...feedback,
+        weekId: completedWeek._id,
+        courseId: courseId,
+        timeSpent: Math.floor(Math.random() * 60) + 30, // Mock time spent
+        completedMaterials: completedWeek.materials.filter(mat => mat.isPublished).length,
+        totalMaterials: completedWeek.materials.filter(mat => mat.isPublished).length
+      };
+
+      await weekFeedbackService.submitWeekFeedback(feedbackData);
+      
+      // Mark feedback as submitted for this week
+      setFeedbackSubmitted(prev => new Set(prev).add(completedWeek._id));
+      
+      console.log('✅ Feedback submitted successfully');
+      setShowFeedbackDialog(false);
+      setCompletedWeek(null);
+      
+      // Show success message
+      alert('Thank you for your feedback! It helps us improve the course experience.');
+      
+    } catch (err: any) {
+      console.error('❌ Error submitting feedback:', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     loadCourseData();
   }, [courseId]);
+
+  // Refresh progress when user returns to the page (e.g., after watching a video)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Refresh progress data when user returns to the tab
+      refreshProgressData();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Refresh progress data when user returns to the tab
+        refreshProgressData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [courseId]);
+
+  // Check for completed weeks after progress updates
+  useEffect(() => {
+    if (weeks.length > 0 && progress) {
+      checkForCompletedWeeks();
+    }
+  }, [weeks, progress, feedbackSubmitted]);
 
   // Expand the first week by default after weeks load
   useEffect(() => {
@@ -376,7 +533,22 @@ const UnifiedLearningPage: React.FC = () => {
   };
 
   const handleMaterialClick = (material: WeekMaterial) => {
+    // Track material view for progress analytics
+    trackMaterialView(material);
     navigate(`/material/${courseId}/${material._id}`);
+  };
+
+  const trackMaterialView = async (material: WeekMaterial) => {
+    try {
+      // Track that the material was viewed (for analytics and progress)
+      console.log(`📊 Tracking view of material: ${material.title}`);
+      
+      // Optional: You could add additional tracking here
+      // For example, tracking time spent, scroll progress, etc.
+      // This helps with analytics and could be used for auto-completion logic
+    } catch (err) {
+      console.warn('Failed to track material view:', err);
+    }
   };
 
   const toggleSidebar = () => {
@@ -409,10 +581,18 @@ const UnifiedLearningPage: React.FC = () => {
   };
 
   const isMaterialCompleted = (materialId: string) => {
-    return progress?.materialProgresses?.some((mp: any) => mp.materialId === materialId && mp.status === 'completed') || false;
+    // Check both server progress and local state for immediate UI updates
+    return progress?.materialProgresses?.some((mp: any) => mp.materialId === materialId && mp.status === 'completed') || 
+           completedMaterials.has(materialId) || 
+           false;
   };
 
   const getMaterialProgressPct = (materialId: string): number => {
+    // If material is completed locally, show 100%
+    if (completedMaterials.has(materialId)) {
+      return 100;
+    }
+    
     const mp = progress?.materialProgresses?.find((m: any) => m.materialId === materialId);
     if (!mp) return 0;
     const pct = typeof mp.progressPercentage === 'number' ? mp.progressPercentage
@@ -434,13 +614,56 @@ const UnifiedLearningPage: React.FC = () => {
   };
 
   const handleMarkComplete = async (weekId: string, materialId: string) => {
+    // Add to loading state
+    setMarkingComplete(prev => new Set(prev).add(materialId));
+    
     try {
-      await api.post(`/progress/weeks/${weekId}/materials/${materialId}/complete`, { timeSpent: 5 });
-      // Refresh progress data
-      const progressResponse = await api.get(`/progress/courses/${courseId}/progress`);
-      setProgress(progressResponse.data.data || { weekProgresses: [], materialProgresses: [] });
-    } catch (err) {
-      console.error('Error marking material complete:', err);
+      // Use the same progress tracking service as MaterialView for consistency
+      await progressTrackingService.markMaterialCompleted(courseId!, weekId, materialId, 5); // Default 5 minutes
+      
+      // Immediately update UI state to show completion
+      setCompletedMaterials(prev => new Set(prev).add(materialId));
+      
+      // Show success notification
+      setSuccessMessage('Material marked as completed! 🎉');
+      setShowSuccessSnackbar(true);
+      
+      // Refresh progress data to reflect the changes
+      await refreshProgressData();
+      
+      // Show success feedback
+      console.log(`✅ Material ${materialId} marked as completed`);
+      
+    } catch (err: any) {
+      console.error('❌ Error marking material complete:', err);
+      
+      // Try fallback method if the main method fails
+      try {
+        console.log('🔄 Trying fallback progress tracking method...');
+        await api.post(`/progress/weeks/${weekId}/materials/${materialId}/complete`, { timeSpent: 5 });
+        
+        // Immediately update UI state to show completion
+        setCompletedMaterials(prev => new Set(prev).add(materialId));
+        
+        // Show success notification
+        setSuccessMessage('Material marked as completed! 🎉');
+        setShowSuccessSnackbar(true);
+        
+        // Refresh progress data
+        await refreshProgressData();
+        
+        console.log('✅ Material marked as completed using fallback method');
+      } catch (fallbackErr: any) {
+        console.error('❌ Fallback method also failed:', fallbackErr);
+        // You could show a toast notification here
+      }
+    } finally {
+      // Remove from loading state
+      setMarkingComplete(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(materialId);
+        return newSet;
+      });
     }
   };
 
@@ -658,6 +881,58 @@ const UnifiedLearningPage: React.FC = () => {
     navigate(`/dashboard/student/assignment/${assignmentId}`);
   };
 
+  const handleGoToPastPapers = () => {
+    navigate('/past-papers');
+  };
+
+  // New helper functions for enhanced features
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setProfileMenuAnchor(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setProfileMenuAnchor(null);
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+      case 'high':
+        return 'error';
+      case 'medium':
+        return 'warning';
+      default:
+        return 'info';
+    }
+  };
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+      case 'high':
+        return '🔴';
+      case 'medium':
+        return '🟡';
+      default:
+        return '🟢';
+    }
+  };
+
+  const getNextRecommendedMaterial = () => {
+    for (const week of weeks) {
+      for (const material of week.materials.filter(mat => mat.isPublished)) {
+        if (!isMaterialCompleted(material._id)) {
+          return { week, material };
+        }
+      }
+    }
+    return null;
+  };
+
   if (!isAuthenticated) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -705,28 +980,43 @@ const UnifiedLearningPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}>
-      {/* Animated background gradient */}
+      {/* Enhanced Animated background gradient */}
       <motion.div
         aria-hidden
         initial={{ backgroundPosition: '0% 50%' }}
         animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-        transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
         style={{
           position: 'fixed', inset: 0, zIndex: 0,
-          backgroundImage: 'linear-gradient(120deg, #f7f9ff 0%, #eef2ff 35%, #fdf2f8 70%, #eef2ff 100%)',
-          backgroundSize: '200% 200%'
+          backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%)',
+          backgroundSize: '300% 300%',
+          opacity: 0.03
         }}
       />
-      {/* Subtle grid overlay */}
-      <Box aria-hidden sx={{ position: 'fixed', inset: 0, zIndex: 1, backgroundImage: 'radial-gradient(rgba(99,102,241,0.08) 1px, transparent 1px)', backgroundSize: '18px 18px', pointerEvents: 'none' }} />
+      {/* Enhanced grid overlay */}
+      <Box aria-hidden sx={{ 
+        position: 'fixed', 
+        inset: 0, 
+        zIndex: 1, 
+        backgroundImage: 'radial-gradient(rgba(99,102,241,0.05) 1px, transparent 1px)', 
+        backgroundSize: '24px 24px', 
+        pointerEvents: 'none' 
+      }} />
       {/* Scroll progress bar */}
       <Box sx={{ position: 'sticky', top: 0, zIndex: 30, pt: 0.25, px: 0.5 }}>
         <Box sx={{ height: 3, borderRadius: 2, bgcolor: 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           <motion.div style={{ scaleX: progressSpring, height: 3, transformOrigin: '0 0', backgroundImage: 'linear-gradient(90deg,#6366f1,#a855f7,#06b6d4)', backgroundSize: '200% 100%' }} />
         </Box>
       </Box>
-      {/* Top App Bar */}
-      <AppBar position="sticky" sx={{ backgroundColor: 'white', color: 'text.primary', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', zIndex: 5 }}>
+      {/* Enhanced Top App Bar */}
+      <AppBar position="sticky" sx={{ 
+        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+        backdropFilter: 'blur(10px)',
+        color: 'text.primary', 
+        boxShadow: '0 2px 20px rgba(0,0,0,0.08)', 
+        zIndex: 5,
+        borderBottom: '1px solid rgba(0,0,0,0.05)'
+      }}>
         <Toolbar sx={{ 
           minHeight: { xs: 56, sm: 64 },
           px: { xs: 1, sm: 2 }
@@ -749,11 +1039,48 @@ const UnifiedLearningPage: React.FC = () => {
               noWrap
               sx={{ 
                 fontSize: { xs: '1rem', sm: '1.25rem' },
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
               }}
             >
               {course?.title || 'Learning'}
             </Typography>
+          </Box>
+          
+          {/* Search Bar */}
+          <Box sx={{ 
+            display: { xs: 'none', md: 'flex' },
+            mr: 2,
+            minWidth: 200
+          }}>
+            <TextField
+              size="small"
+              placeholder="Search materials..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ fontSize: 20, color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0,0,0,0.04)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: 'white',
+                    boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.2)',
+                  }
+                }
+              }}
+            />
           </Box>
           
           <Box sx={{ 
@@ -766,12 +1093,19 @@ const UnifiedLearningPage: React.FC = () => {
               startIcon={<VideoCall />}
               onClick={handleGoToLiveSessions}
               sx={{
-                backgroundColor: 'primary.main',
-                '&:hover': { backgroundColor: 'primary.dark' },
+                background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
+                '&:hover': { 
+                  background: 'linear-gradient(45deg, #5b5bd6, #7c3aed)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
+                },
                 fontSize: { xs: '0.75rem', sm: '0.875rem' },
                 px: { xs: 1, sm: 2 },
                 py: { xs: 0.5, sm: 1 },
                 minWidth: { xs: 'auto', sm: 'auto' },
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
                 '& .MuiButton-startIcon': {
                   mr: { xs: 0.5, sm: 1 }
                 }
@@ -792,7 +1126,11 @@ const UnifiedLearningPage: React.FC = () => {
               onClick={handleGoToDashboard}
               sx={{ 
                 p: { xs: 1, sm: 1.5 },
-                display: { xs: 'none', sm: 'flex' }
+                display: { xs: 'none', sm: 'flex' },
+                '&:hover': {
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  transform: 'scale(1.05)'
+                }
               }}
             >
               <Dashboard />
@@ -801,24 +1139,72 @@ const UnifiedLearningPage: React.FC = () => {
             <IconButton
               color="inherit"
               onClick={() => {
-                // Reload course data
+                // Reload course data and refresh progress
                 if (courseId) {
                   loadCourseData();
+                  refreshProgressData();
                 }
               }}
               sx={{ 
-                p: { xs: 1, sm: 1.5 }
+                p: { xs: 1, sm: 1.5 },
+                '&:hover': {
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  transform: 'scale(1.05)'
+                }
               }}
-              title="Refresh Data"
+              title="Refresh Course Data & Progress"
             >
               <Refresh />
             </IconButton>
+            
+            {/* Profile Menu */}
+            <IconButton
+              color="inherit"
+              onClick={handleProfileMenuOpen}
+              sx={{ 
+                p: { xs: 1, sm: 1.5 },
+                '&:hover': {
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  transform: 'scale(1.05)'
+                }
+              }}
+            >
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                {user?.firstName?.charAt(0) || 'U'}
+              </Avatar>
+            </IconButton>
+            
+            <MuiMenu
+              anchorEl={profileMenuAnchor}
+              open={Boolean(profileMenuAnchor)}
+              onClose={handleProfileMenuClose}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+              <MenuItem onClick={handleProfileMenuClose}>
+                <AccountCircle sx={{ mr: 1 }} />
+                My Profile
+              </MenuItem>
+              <MenuItem onClick={handleProfileMenuClose}>
+                <Settings sx={{ mr: 1 }} />
+                Settings
+              </MenuItem>
+              <Divider />
+              <MenuItem onClick={handleProfileMenuClose}>
+                <ExitToApp sx={{ mr: 1 }} />
+                Sign Out
+              </MenuItem>
+            </MuiMenu>
             
             <IconButton
               color="inherit"
               onClick={toggleSidebar}
               sx={{ 
-                p: { xs: 1, sm: 1.5 }
+                p: { xs: 1, sm: 1.5 },
+                '&:hover': {
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  transform: 'scale(1.05)'
+                }
               }}
             >
               <Menu />
@@ -835,6 +1221,216 @@ const UnifiedLearningPage: React.FC = () => {
       }}>
         <Box component={motion.div} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <LiveSessionStatus courseId={courseId!} fullWidth />
+        </Box>
+        
+        {/* Enhanced Live Session Navigation Indicator */}
+        <Box sx={{ 
+          mx: { xs: 1.5, sm: 2, md: 3 },
+          mb: { xs: 2, sm: 3 }
+        }}>
+          <Card 
+            component={motion.div}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              borderRadius: 3,
+              overflow: 'hidden',
+              position: 'relative',
+              cursor: 'pointer',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                transition: 'all 0.3s ease'
+              },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
+                pointerEvents: 'none'
+              }
+            }}
+            onClick={handleGoToLiveSessions}
+          >
+            <CardContent sx={{ p: { xs: 2, sm: 3 }, position: 'relative', zIndex: 1 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 2, sm: 0 }
+              }}>
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 0.5,
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      borderRadius: 2,
+                      px: 1.5,
+                      py: 0.5
+                    }}>
+                      <VideoCall sx={{ fontSize: 20 }} />
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                        Live Sessions
+                      </Typography>
+                    </Box>
+                    {unseenRecordings > 0 && (
+                      <Badge 
+                        badgeContent={unseenRecordings} 
+                        color="error" 
+                        sx={{ 
+                          '& .MuiBadge-badge': {
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            animation: 'pulse 2s infinite'
+                          }
+                        }}
+                      >
+                        <Box sx={{ 
+                          width: 8, 
+                          height: 8, 
+                          backgroundColor: '#ff6b35', 
+                          borderRadius: '50%',
+                          animation: 'pulse 2s infinite'
+                        }} />
+                      </Badge>
+                    )}
+                  </Box>
+                  
+                  <Typography variant="body1" sx={{ 
+                    opacity: 0.9, 
+                    mb: 2,
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    lineHeight: 1.4
+                  }}>
+                    Join live coaching sessions, watch recordings, and interact with instructors in real-time.
+                  </Typography>
+                  
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1, 
+                    flexWrap: 'wrap',
+                    mb: 2
+                  }}>
+                    <Chip
+                      icon={<VideoCall sx={{ fontSize: 16 }} />}
+                      label={`${upcomingEvents.length} Upcoming`}
+                      size="small"
+                      sx={{ 
+                        backgroundColor: 'rgba(255,255,255,0.2)', 
+                        color: 'white',
+                        fontSize: '0.75rem',
+                        height: 28,
+                        backdropFilter: 'blur(10px)'
+                      }}
+                    />
+                    <Chip
+                      icon={<PlayCircleOutline sx={{ fontSize: 16 }} />}
+                      label={`${unseenRecordings} New Recordings`}
+                      size="small"
+                      sx={{ 
+                        backgroundColor: 'rgba(255,255,255,0.2)', 
+                        color: 'white',
+                        fontSize: '0.75rem',
+                        height: 28,
+                        backdropFilter: 'blur(10px)'
+                      }}
+                    />
+                  </Box>
+                </Box>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: { xs: 'stretch', sm: 'flex-end' },
+                  gap: 1
+                }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<VideoCall />}
+                    sx={{
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      borderRadius: 2,
+                      px: 3,
+                      py: 1.5,
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.3)',
+                        transform: 'scale(1.05)',
+                        boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {upcomingEvents.length > 0 ? 'Join Live Session' : 'View Sessions'}
+                  </Button>
+                  
+                  {unseenRecordings > 0 && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<PlayCircleOutline />}
+                      sx={{
+                        color: 'white',
+                        borderColor: 'rgba(255,255,255,0.5)',
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          borderColor: 'white'
+                        }
+                      }}
+                    >
+                      Watch Recordings
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            </CardContent>
+            
+            {/* Animated pulse effect for new recordings */}
+            {unseenRecordings > 0 && (
+              <Box sx={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                width: 12,
+                height: 12,
+                backgroundColor: '#ff6b35',
+                borderRadius: '50%',
+                animation: 'pulse 2s infinite',
+                '@keyframes pulse': {
+                  '0%': {
+                    transform: 'scale(1)',
+                    opacity: 1
+                  },
+                  '50%': {
+                    transform: 'scale(1.2)',
+                    opacity: 0.7
+                  },
+                  '100%': {
+                    transform: 'scale(1)',
+                    opacity: 1
+                  }
+                }
+              }} />
+            )}
+          </Card>
         </Box>
       </Box>
 
@@ -871,19 +1467,57 @@ const UnifiedLearningPage: React.FC = () => {
               padding: 1
             }
           }}>
-            {/* Course Info */}
+            {/* Enhanced Course Info */}
             <Card component={motion.div} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} sx={{ 
               mb: { xs: 1.5, sm: 2 }, 
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-              color: 'white' 
+              color: 'white',
+              overflow: 'hidden',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
+                pointerEvents: 'none'
+              }
             }}>
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              {/* Course Thumbnail Placeholder */}
+              <Box sx={{ 
+                height: 120, 
+                background: 'linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative'
+              }}>
+                <School sx={{ fontSize: 48, opacity: 0.3 }} />
+                <Box sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5
+                }}>
+                  <Star sx={{ fontSize: 16, color: '#ffd700' }} />
+                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                    {courseRating}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, position: 'relative', zIndex: 1 }}>
                 <Typography 
                   variant="h6" 
                   gutterBottom
                   sx={{ 
                     fontSize: { xs: '1rem', sm: '1.25rem' },
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    mb: 1
                   }}
                 >
                   {course?.title}
@@ -894,43 +1528,88 @@ const UnifiedLearningPage: React.FC = () => {
                     opacity: 0.9, 
                     mb: 2,
                     fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                    lineHeight: 1.4
+                    lineHeight: 1.4,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
                   }}
                 >
-                  {course?.description}
+                  {course?.description || 'Master the fundamentals with interactive modules, assessments, and live coaching.'}
                 </Typography>
+                
+                {/* Enhanced Stats */}
                 <Box sx={{ 
                   display: 'flex', 
                   gap: { xs: 0.5, sm: 1 }, 
-                  flexWrap: 'wrap' 
+                  flexWrap: 'wrap',
+                  mb: 2
                 }}>
                   <Chip
-                    icon={<School />}
-                    label={`${weeks.length} Weeks`}
+                    icon={<CalendarToday sx={{ fontSize: 14 }} />}
+                    label={`${weeks.length} Week${weeks.length !== 1 ? 's' : ''}`}
                     size="small"
                     sx={{ 
                       backgroundColor: 'rgba(255,255,255,0.2)', 
                       color: 'white',
                       fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                      height: { xs: 24, sm: 28 }
+                      height: { xs: 24, sm: 28 },
+                      backdropFilter: 'blur(10px)'
                     }}
                   />
                   <Chip
-                    icon={<Timer />}
+                    icon={<Timer sx={{ fontSize: 14 }} />}
                     label={`${weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0), 0)} min`}
                     size="small"
                     sx={{ 
                       backgroundColor: 'rgba(255,255,255,0.2)', 
                       color: 'white',
                       fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                      height: { xs: 24, sm: 28 }
+                      height: { xs: 24, sm: 28 },
+                      backdropFilter: 'blur(10px)'
                     }}
                   />
+                  <Chip
+                    icon={<People sx={{ fontSize: 14 }} />}
+                    label={`${enrolledStudents} enrolled`}
+                    size="small"
+                    sx={{ 
+                      backgroundColor: 'rgba(255,255,255,0.2)', 
+                      color: 'white',
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      height: { xs: 24, sm: 28 },
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  />
+                </Box>
+                
+                {/* Gamification Stats */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  p: 1,
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  borderRadius: 1,
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <LocalFireDepartment sx={{ fontSize: 16, color: '#ff6b35' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                      {userStreak} day streak
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <EmojiEvents sx={{ fontSize: 16, color: '#ffd700' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                      {userXP} XP
+                    </Typography>
+                  </Box>
                 </Box>
               </CardContent>
             </Card>
 
-            {/* Course Progress Overview */}
+            {/* Enhanced Course Progress Overview */}
             {progress && (
               <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} sx={{ mb: { xs: 1.5, sm: 2 } }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
@@ -946,35 +1625,104 @@ const UnifiedLearningPage: React.FC = () => {
                     }}
                   >
                     <TrendingUp />
-                    Progress
+                    Your Progress
                   </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={progress.materialProgresses?.length > 0 ?
-                      (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
-                        weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0}
-                    sx={{ 
-                      height: { xs: 6, sm: 8 }, 
-                      borderRadius: 4, 
-                      mb: 1 
-                    }}
-                  />
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary"
-                    sx={{ 
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                    }}
-                  >
-                    {Math.round(progress.materialProgresses?.length > 0 ?
-                      (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
-                        weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0)}% Complete
-                  </Typography>
+                  
+                  {/* Large Progress Bar */}
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                        {Math.round(progress.materialProgresses?.length > 0 ?
+                          (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
+                            weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0)}%
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Complete
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={progress.materialProgresses?.length > 0 ?
+                        (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
+                          weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0}
+                      sx={{ 
+                        height: { xs: 8, sm: 12 }, 
+                        borderRadius: 6, 
+                        backgroundColor: 'rgba(0,0,0,0.1)',
+                        '& .MuiLinearProgress-bar': {
+                          background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                          borderRadius: 6
+                        }
+                      }}
+                    />
+                  </Box>
+                  
+                  {/* Milestones */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      Recent Achievements
+                    </Typography>
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                      <Chip 
+                        icon={<CheckCircle sx={{ fontSize: 16 }} />}
+                        label="First Module Completed 🎉" 
+                        size="small" 
+                        color="success" 
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem' }}
+                      />
+                      <Chip 
+                        icon={<EmojiEvents sx={{ fontSize: 16 }} />}
+                        label="7 Day Streak!" 
+                        size="small" 
+                        color="warning" 
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem' }}
+                      />
+                    </Stack>
+                  </Box>
+                  
+                  {/* Next Task */}
+                  {getNextRecommendedMaterial() && (
+                    <Box sx={{ 
+                      p: 1.5, 
+                      backgroundColor: 'rgba(99, 102, 241, 0.05)', 
+                      borderRadius: 2,
+                      border: '1px solid rgba(99, 102, 241, 0.1)'
+                    }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'primary.main' }}>
+                        Next: {getNextRecommendedMaterial()?.material?.title || 'No materials available'}
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<PlayArrow />}
+                        onClick={() => {
+                          const nextMaterial = getNextRecommendedMaterial();
+                          if (nextMaterial?.material) {
+                            handleMaterialClick(nextMaterial.material);
+                          }
+                        }}
+                        sx={{
+                          background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
+                          '&:hover': { 
+                            background: 'linear-gradient(45deg, #5b5bd6, #7c3aed)',
+                            transform: 'translateY(-1px)'
+                          },
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          borderRadius: 2
+                        }}
+                      >
+                        Continue Learning
+                      </Button>
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* Announcements */}
+            {/* Enhanced Announcements */}
             <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} sx={{ mb: { xs: 1.5, sm: 2 } }}>
               <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                 <Typography 
@@ -989,33 +1737,58 @@ const UnifiedLearningPage: React.FC = () => {
                   }}
                 >
                   <Announcement />
-                  Announcements
+                  📢 Announcements
                 </Typography>
                 {announcements.length === 0 ? (
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary" 
-                    sx={{ 
-                      fontStyle: 'italic',
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                    }}
-                  >
-                    No announcements yet
-                  </Typography>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    py: 2,
+                    backgroundColor: 'rgba(0,0,0,0.02)',
+                    borderRadius: 2
+                  }}>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        fontStyle: 'italic',
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                      }}
+                    >
+                      No announcements yet
+                    </Typography>
+                  </Box>
                 ) : (
                   <List dense>
                     {announcements.slice(0, 3).map((announcement, index) => (
-                      <ListItem key={announcement._id || index} sx={{ px: 0, py: { xs: 0.5, sm: 1 } }}>
+                      <ListItem 
+                        key={announcement._id || index} 
+                        sx={{ 
+                          px: 0, 
+                          py: { xs: 0.5, sm: 1 },
+                          borderRadius: 2,
+                          mb: 0.5,
+                          backgroundColor: 'rgba(0,0,0,0.02)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                            transform: 'translateX(4px)',
+                            transition: 'all 0.2s ease'
+                          }
+                        }}
+                      >
                         <ListItemIcon sx={{ minWidth: { xs: 32, sm: 40 } }}>
-                          <Announcement 
-                            color={
-                              announcement.priority === 'urgent' ? 'error' :
-                              announcement.priority === 'high' ? 'error' :
-                              announcement.priority === 'medium' ? 'warning' :
-                              'primary'
-                            } 
-                            sx={{ fontSize: { xs: 18, sm: 24 } }} 
-                          />
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 0.5 
+                          }}>
+                            <Typography sx={{ fontSize: 16 }}>
+                              {getPriorityIcon(announcement.priority || 'low')}
+                            </Typography>
+                            <Announcement 
+                              color={getPriorityColor(announcement.priority || 'low')}
+                              sx={{ fontSize: { xs: 18, sm: 24 } }} 
+                            />
+                          </Box>
                         </ListItemIcon>
                         <ListItemText
                           primary={
@@ -1029,18 +1802,15 @@ const UnifiedLearningPage: React.FC = () => {
                               </Typography>
                               {announcement.priority && (
                                 <Chip
-                                  label={announcement.priority}
+                                  label={announcement.priority.toUpperCase()}
                                   size="small"
                                   sx={{
                                     fontSize: { xs: '0.6rem', sm: '0.7rem' },
                                     height: { xs: 16, sm: 18 },
                                     mt: 0.5,
-                                    color: announcement.priority === 'urgent' || announcement.priority === 'high' ? 'white' : 'inherit',
-                                    backgroundColor: 
-                                      announcement.priority === 'urgent' ? 'error.main' :
-                                      announcement.priority === 'high' ? 'error.main' :
-                                      announcement.priority === 'medium' ? 'warning.main' :
-                                      'grey.300'
+                                    color: 'white',
+                                    backgroundColor: getPriorityColor(announcement.priority) + '.main',
+                                    fontWeight: 'bold'
                                   }}
                                 />
                               )}
@@ -1053,7 +1823,8 @@ const UnifiedLearningPage: React.FC = () => {
                                 sx={{ 
                                   fontSize: { xs: '0.7rem', sm: '0.75rem' },
                                   display: 'block',
-                                  mb: 0.5
+                                  mb: 0.5,
+                                  lineHeight: 1.3
                                 }}
                               >
                                 {announcement.content}
@@ -1077,7 +1848,7 @@ const UnifiedLearningPage: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Upcoming Events */}
+            {/* Enhanced Upcoming Events */}
             <Card ref={liveSectionRef} sx={{ mb: { xs: 1.5, sm: 2 } }}>
               <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                 <Typography 
@@ -1092,7 +1863,7 @@ const UnifiedLearningPage: React.FC = () => {
                   }}
                 >
                   <Event />
-                  Upcoming Events
+                  📅 Upcoming Events
                   <Badge badgeContent={unseenRecordings} color="error" sx={{ ml: 1 }} invisible={unseenRecordings === 0}>
                     <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>
                       {unseenRecordings > 0 ? 'New recordings' : ''}
@@ -1100,20 +1871,41 @@ const UnifiedLearningPage: React.FC = () => {
                   </Badge>
                 </Typography>
                 {upcomingEvents.length === 0 ? (
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary" 
-                    sx={{ 
-                      fontStyle: 'italic',
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                    }}
-                  >
-                    No upcoming events
-                  </Typography>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    py: 2,
+                    backgroundColor: 'rgba(0,0,0,0.02)',
+                    borderRadius: 2
+                  }}>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        fontStyle: 'italic',
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                      }}
+                    >
+                      No upcoming events
+                    </Typography>
+                  </Box>
                 ) : (
                   <List dense>
                     {upcomingEvents.map((event, index) => (
-                      <ListItem key={event._id || index} sx={{ px: 0, py: { xs: 0.5, sm: 1 } }}>
+                      <ListItem 
+                        key={event._id || index} 
+                        sx={{ 
+                          px: 0, 
+                          py: { xs: 0.5, sm: 1 },
+                          borderRadius: 2,
+                          mb: 0.5,
+                          backgroundColor: 'rgba(0,0,0,0.02)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                            transform: 'translateX(4px)',
+                            transition: 'all 0.2s ease'
+                          }
+                        }}
+                      >
                         <ListItemIcon sx={{ minWidth: { xs: 32, sm: 40 } }}>
                           <VideoCall color="secondary" sx={{ fontSize: { xs: 18, sm: 24 } }} />
                         </ListItemIcon>
@@ -1133,29 +1925,74 @@ const UnifiedLearningPage: React.FC = () => {
                                   sx={{ 
                                     fontSize: { xs: '0.7rem', sm: '0.75rem' },
                                     display: 'block',
-                                    opacity: 0.8
+                                    opacity: 0.8,
+                                    mb: 0.5
                                   }}
                                 >
                                   {event.description}
                                 </Typography>
                               )}
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+                              >
+                                {new Date(event.scheduledTime).toLocaleString()}
+                              </Typography>
                             </Box>
                           }
-                          secondary={new Date(event.scheduledTime).toLocaleString()}
                         />
+                        <Box sx={{ ml: 1 }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<PlayCircleOutline />}
+                            onClick={handleGoToLiveSessions}
+                            sx={{
+                              fontSize: '0.7rem',
+                              py: 0.5,
+                              px: 1,
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              '&:hover': {
+                                backgroundColor: 'primary.main',
+                                color: 'white'
+                              }
+                            }}
+                          >
+                            Join
+                          </Button>
+                        </Box>
                       </ListItem>
                     ))}
                   </List>
                 )}
                 {unseenRecordings > 0 && (
-                  <Box sx={{ mt: 2, p: { xs: 1, sm: 1.5 }, bgcolor: 'rgba(255, 99, 71, 0.06)', borderRadius: 1, border: '1px solid', borderColor: 'error.light' }}>
+                  <Box sx={{ 
+                    mt: 2, 
+                    p: { xs: 1, sm: 1.5 }, 
+                    bgcolor: 'rgba(255, 99, 71, 0.06)', 
+                    borderRadius: 2, 
+                    border: '1px solid', 
+                    borderColor: 'error.light' 
+                  }}>
                     <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <Badge badgeContent={unseenRecordings} color="error">
                         <VideoCall color="error" sx={{ mr: 0.5 }} />
                       </Badge>
                       New recorded session{unseenRecordings > 1 ? 's' : ''} available
                     </Typography>
-                    <Button size="small" variant="contained" color="error" onClick={handleGoToLiveSessions}>
+                    <Button 
+                      size="small" 
+                      variant="contained" 
+                      color="error" 
+                      onClick={handleGoToLiveSessions}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600
+                      }}
+                    >
                       View recordings
                     </Button>
                   </Box>
@@ -1213,6 +2050,22 @@ const UnifiedLearningPage: React.FC = () => {
                   >
                     Go to Dashboard
                   </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Article />}
+                    onClick={handleGoToPastPapers}
+                    fullWidth
+                    size="small"
+                    sx={{
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      py: { xs: 0.5, sm: 1 },
+                      '& .MuiButton-startIcon': {
+                        mr: { xs: 0.5, sm: 1 }
+                      }
+                    }}
+                  >
+                    Past Papers
+                  </Button>
                 </Stack>
               </CardContent>
             </Card>
@@ -1249,21 +2102,132 @@ const UnifiedLearningPage: React.FC = () => {
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
-                    <Button variant="contained" onClick={() => navigate(`/dashboard/student/course/${courseId}/weeks`)} sx={{ textTransform: 'none' }}>Open Course Plan</Button>
-                    <Button variant="outlined" onClick={() => liveSectionRef.current?.scrollIntoView({ behavior: 'smooth' })} sx={{ textTransform: 'none' }}>Upcoming Events</Button>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+                    <Button 
+                      variant="contained" 
+                      onClick={() => navigate(`/dashboard/student/course/${courseId}/weeks`)} 
+                      sx={{ 
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        px: 3,
+                        py: 1.5,
+                        background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
+                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                        '&:hover': {
+                          background: 'linear-gradient(45deg, #5b5bd6, #7c3aed)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 6px 20px rgba(99, 102, 241, 0.4)'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      Open Course Plan
+                    </Button>
+                    <Button 
+                      variant="outlined" 
+                      onClick={() => liveSectionRef.current?.scrollIntoView({ behavior: 'smooth' })} 
+                      sx={{ 
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        px: 3,
+                        py: 1.5,
+                        borderColor: 'primary.main',
+                        color: 'primary.main',
+                        backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                        backdropFilter: 'blur(10px)',
+                        '&:hover': {
+                          backgroundColor: 'primary.main',
+                          color: 'white',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 6px 20px rgba(99, 102, 241, 0.3)'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      Upcoming Events
+                    </Button>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<Article sx={{ fontSize: 18 }} />} 
+                      onClick={handleGoToPastPapers} 
+                      sx={{ 
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        px: 3,
+                        py: 1.5,
+                        borderColor: 'secondary.main',
+                        color: 'secondary.main',
+                        backgroundColor: 'rgba(156, 39, 176, 0.05)',
+                        backdropFilter: 'blur(10px)',
+                        '&:hover': {
+                          backgroundColor: 'secondary.main',
+                          color: 'white',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 6px 20px rgba(156, 39, 176, 0.3)'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      Past Papers
+                    </Button>
                   </Stack>
                 </Grid>
               </Grid>
             </CardContent>
           </Card>
-          {/* Section quick nav */}
-          <Stack direction="row" spacing={1} sx={{ mb: { xs: 1.5, sm: 2 } }}>
-            <Chip clickable label="Assessments" onClick={() => document.getElementById('assessments-section')?.scrollIntoView({ behavior: 'smooth' })} />
-            <Chip clickable label="Assignments" onClick={() => document.getElementById('assignments-section')?.scrollIntoView({ behavior: 'smooth' })} />
-            <Chip clickable label="Weeks" onClick={() => document.getElementById('weeks-section')?.scrollIntoView({ behavior: 'smooth' })} />
-          </Stack>
-          {/* Course Progress Overview */}
+          {/* Modern Content Tabs */}
+          <Card sx={{ mb: { xs: 2, sm: 3 }, overflow: 'hidden' }}>
+            <Tabs 
+              value={activeTab} 
+              onChange={handleTabChange}
+              variant="fullWidth"
+              sx={{
+                '& .MuiTab-root': {
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  py: 2,
+                  '&.Mui-selected': {
+                    color: 'primary.main'
+                  }
+                },
+                '& .MuiTabs-indicator': {
+                  height: 3,
+                  borderRadius: '3px 3px 0 0',
+                  background: 'linear-gradient(90deg, #6366f1, #a855f7)'
+                }
+              }}
+            >
+              <Tab 
+                icon={<Quiz sx={{ fontSize: 20 }} />} 
+                iconPosition="start"
+                label="🧩 Assessments" 
+                onClick={() => document.getElementById('assessments-section')?.scrollIntoView({ behavior: 'smooth' })}
+              />
+              <Tab 
+                icon={<AssignmentIcon sx={{ fontSize: 20 }} />} 
+                iconPosition="start"
+                label="📝 Assignments" 
+                onClick={() => document.getElementById('assignments-section')?.scrollIntoView({ behavior: 'smooth' })}
+              />
+              <Tab 
+                icon={<CalendarToday sx={{ fontSize: 20 }} />} 
+                iconPosition="start"
+                label="📅 Weeks" 
+                onClick={() => document.getElementById('weeks-section')?.scrollIntoView({ behavior: 'smooth' })}
+              />
+              <Tab 
+                icon={<Article sx={{ fontSize: 20 }} />} 
+                iconPosition="start"
+                label="📄 Past Papers" 
+                onClick={handleGoToPastPapers}
+              />
+            </Tabs>
+          </Card>
+          {/* Enhanced Course Progress Overview */}
           {progress && (
             <Card sx={{ mb: { xs: 2, sm: 3 } }}>
               <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
@@ -1789,7 +2753,7 @@ const UnifiedLearningPage: React.FC = () => {
                           {week.materials.length === 0 ? 'No materials added to this week yet.' : 'No published materials available yet.'}
                         </Typography>
                       ) : (
-                        <List>
+                        <Grid container spacing={2}>
                           {week.materials
                             .filter(mat => mat.isPublished)
                             .filter(material => {
@@ -1803,162 +2767,219 @@ const UnifiedLearningPage: React.FC = () => {
                             .map((material, matIndex) => {
                             const isCompleted = isMaterialCompleted(material._id);
                             return (
-                              <React.Fragment key={material._id}>
-                                <ListItem
+                              <Grid item xs={12} sm={6} md={4} key={material._id}>
+                                <Card
                                   sx={{
-                                    backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-                                    borderRadius: 1,
-                                    mb: 1,
-                                    border: isCompleted ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid transparent',
                                     cursor: 'pointer',
-                                    px: { xs: 1, sm: 2 },
-                                    py: { xs: 1, sm: 1.5 },
-                                      '&:hover': {
-                                      backgroundColor: 'rgba(99,102,241,0.06)',
-                                      }
+                                    transition: 'all 0.3s ease',
+                                    backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.05)' : 'white',
+                                    border: isCompleted ? '2px solid rgba(76, 175, 80, 0.3)' : '1px solid rgba(0,0,0,0.1)',
+                                    borderRadius: 3,
+                                    overflow: 'hidden',
+                                    '&:hover': {
+                                      transform: 'translateY(-4px)',
+                                      boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                                      borderColor: 'primary.main'
+                                    }
                                   }}
                                   onClick={() => handleMaterialClick(material)}
                                 >
-                                  <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                                    {isCompleted ? (
-                                      <CheckCircle color="success" sx={{ fontSize: { xs: 20, sm: 24 } }} />
-                                    ) : (
-                                      <Box sx={{ fontSize: { xs: 20, sm: 24 } }}>
-                                        {getMaterialIcon(material.type)}
+                                  {/* Material Thumbnail */}
+                                  <Box sx={{ 
+                                    height: 120, 
+                                    background: material.type === 'video' 
+                                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                      : material.type === 'document'
+                                      ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                                      : 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    position: 'relative'
+                                  }}>
+                                    <Box sx={{ fontSize: 48, color: 'white', opacity: 0.8 }}>
+                                      {getMaterialIcon(material.type)}
+                                    </Box>
+                                    {isCompleted && (
+                                      <Box sx={{
+                                        position: 'absolute',
+                                        top: 8,
+                                        right: 8,
+                                        backgroundColor: 'success.main',
+                                        borderRadius: '50%',
+                                        p: 0.5
+                                      }}>
+                                        <CheckCircle sx={{ fontSize: 20, color: 'white' }} />
                                       </Box>
                                     )}
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primary={
-                                      <Box sx={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: { xs: 0.5, sm: 1 },
-                                        flexWrap: 'wrap'
+                                    {material.isRequired && (
+                                      <Box sx={{
+                                        position: 'absolute',
+                                        top: 8,
+                                        left: 8,
+                                        backgroundColor: 'error.main',
+                                        borderRadius: 1,
+                                        px: 1,
+                                        py: 0.5
                                       }}>
-                                        <Typography 
-                                          variant="subtitle1"
-                                          sx={{ 
-                                            fontSize: { xs: '0.875rem', sm: '1rem' },
-                                            fontWeight: 'bold'
-                                          }}
-                                        >
-                                          {material.title}
+                                        <Typography variant="caption" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem' }}>
+                                          REQUIRED
                                         </Typography>
-                                        <Chip 
-                                          label={material.type}
-                                          size="small"
-                                          variant="outlined"
-                                          sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
-                                        />
-                                        {material.isRequired && (
-                                          <Chip 
-                                            label="Required" 
-                                            size="small" 
-                                            color="error"
-                                            sx={{ 
-                                              fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                                              height: { xs: 20, sm: 24 }
-                                            }}
-                                          />
-                                        )}
-                                        {isCompleted && (
-                                          <Chip 
-                                            label="Completed" 
-                                            size="small" 
-                                            color="success"
-                                            sx={{ 
-                                              fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                                              height: { xs: 20, sm: 24 }
-                                            }}
-                                          />
-                                        )}
                                       </Box>
-                                    }
-                                    secondary={
-                                      <Box>
-                                        <Typography 
-                                          variant="body2" 
-                                          color="text.secondary"
-                                          sx={{ 
-                                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                                            mb: { xs: 0.5, sm: 0.5 }
-                                          }}
-                                        >
-                                          {material.description}
-                                        </Typography>
-                                        <Box sx={{ 
-                                          display: 'flex', 
-                                          gap: { xs: 0.5, sm: 1 }, 
-                                          flexWrap: 'wrap'
-                                        }}>
-                                          <Chip
-                                            icon={<Timer sx={{ fontSize: { xs: 12, sm: 16 } }} />}
-                                            label={`${material.estimatedDuration} min`}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{ 
-                                              fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                                              height: { xs: 20, sm: 24 }
-                                            }}
-                                          />
-                                        </Box>
-                                        {/* Per-material progress */}
-                                        <Box sx={{ mt: 0.75 }}>
-                                          <LinearProgress 
-                                            variant="determinate" 
-                                            value={getMaterialProgressPct(material._id)} 
-                                            sx={{ height: 6, borderRadius: 3 }} 
-                                          />
-                                          <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-                                            {getMaterialProgressPct(material._id)}%
-                                          </Typography>
-                                        </Box>
-                                      </Box>
-                                    }
-                                  />
-                                  <Box sx={{ 
-                                    display: 'flex', 
-                                    gap: { xs: 0.5, sm: 1 },
-                                    flexDirection: { xs: 'column', sm: 'row' }
-                                  }}>
-                                    <Tooltip title="View Material">
-                                      <IconButton 
-                                        size="small"
-                                        sx={{ 
-                                          p: { xs: 0.5, sm: 1 },
-                                          minWidth: { xs: 32, sm: 40 },
-                                          minHeight: { xs: 32, sm: 40 }
-                                        }}
-                                      >
-                                        <PlayArrow sx={{ fontSize: { xs: 16, sm: 20 } }} />
-                                      </IconButton>
-                                    </Tooltip>
-                                    {!isCompleted && (
-                                      <Tooltip title="Mark as Complete">
-                                        <IconButton
-                                          size="small"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleMarkComplete(week._id, material._id);
-                                          }}
-                                          sx={{ 
-                                            p: { xs: 0.5, sm: 1 },
-                                            minWidth: { xs: 32, sm: 40 },
-                                            minHeight: { xs: 32, sm: 40 }
-                                          }}
-                                        >
-                                          <CheckCircle sx={{ fontSize: { xs: 16, sm: 20 } }} />
-                                        </IconButton>
-                                      </Tooltip>
                                     )}
                                   </Box>
-                                </ListItem>
-                                {matIndex < week.materials.filter(mat => mat.isPublished).length - 1 && <Divider />}
-                              </React.Fragment>
+                                  
+                                  <CardContent sx={{ p: 2 }}>
+                                    <Typography 
+                                      variant="h6"
+                                      sx={{ 
+                                        fontSize: '1rem',
+                                        fontWeight: 'bold',
+                                        mb: 1,
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        lineHeight: 1.3
+                                      }}
+                                    >
+                                      {material.title}
+                                    </Typography>
+                                    
+                                    <Typography 
+                                      variant="body2" 
+                                      color="text.secondary"
+                                      sx={{ 
+                                        fontSize: '0.875rem',
+                                        mb: 2,
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        lineHeight: 1.4
+                                      }}
+                                    >
+                                      {material.description}
+                                    </Typography>
+                                    
+                                    {/* Tags */}
+                                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
+                                      <Chip 
+                                        label={material.type.toUpperCase()}
+                                        size="small"
+                                        sx={{ 
+                                          fontSize: '0.7rem',
+                                          height: 24,
+                                          backgroundColor: material.type === 'video' 
+                                            ? 'rgba(102, 126, 234, 0.1)' 
+                                            : material.type === 'document'
+                                            ? 'rgba(240, 147, 251, 0.1)'
+                                            : 'rgba(79, 172, 254, 0.1)',
+                                          color: material.type === 'video' 
+                                            ? '#667eea' 
+                                            : material.type === 'document'
+                                            ? '#f093fb'
+                                            : '#4facfe',
+                                          fontWeight: 'bold'
+                                        }}
+                                      />
+                                      <Chip
+                                        icon={<Timer sx={{ fontSize: 14 }} />}
+                                        label={`${material.estimatedDuration} min`}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.7rem', height: 24 }}
+                                      />
+                                    </Box>
+                                    
+                                    {/* Progress */}
+                                    <Box sx={{ mb: 2 }}>
+                                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                        <Typography variant="caption" color="text.secondary">
+                                          Progress
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+                                          {getMaterialProgressPct(material._id)}%
+                                        </Typography>
+                                      </Box>
+                                      <LinearProgress 
+                                        variant="determinate" 
+                                        value={getMaterialProgressPct(material._id)} 
+                                        sx={{ 
+                                          height: 6, 
+                                          borderRadius: 3,
+                                          backgroundColor: 'rgba(0,0,0,0.1)',
+                                          '& .MuiLinearProgress-bar': {
+                                            background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                                            borderRadius: 3
+                                          }
+                                        }} 
+                                      />
+                                    </Box>
+                                  </CardContent>
+                                  
+                                  <CardActions sx={{ p: 2, pt: 0 }}>
+                                    <Button
+                                      variant="contained"
+                                      size="small"
+                                      startIcon={<PlayArrow />}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMaterialClick(material);
+                                      }}
+                                      sx={{
+                                        background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
+                                        '&:hover': { 
+                                          background: 'linear-gradient(45deg, #5b5bd6, #7c3aed)',
+                                          transform: 'translateY(-1px)'
+                                        },
+                                        textTransform: 'none',
+                                        fontWeight: 600,
+                                        borderRadius: 2,
+                                        flex: 1
+                                      }}
+                                    >
+                                      {isCompleted ? 'Review' : 'Start'}
+                                    </Button>
+                                    {!isCompleted && (
+                                      <IconButton
+                                        size="small"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMarkComplete(week._id, material._id);
+                                        }}
+                                        disabled={markingComplete.has(material._id)}
+                                        sx={{ 
+                                          ml: 1,
+                                          backgroundColor: markingComplete.has(material._id) 
+                                            ? 'rgba(76, 175, 80, 0.3)' 
+                                            : completedMaterials.has(material._id)
+                                            ? 'rgba(76, 175, 80, 0.8)'
+                                            : 'rgba(76, 175, 80, 0.1)',
+                                          '&:hover': {
+                                            backgroundColor: markingComplete.has(material._id)
+                                              ? 'rgba(76, 175, 80, 0.3)'
+                                              : completedMaterials.has(material._id)
+                                              ? 'rgba(76, 175, 80, 0.9)'
+                                              : 'rgba(76, 175, 80, 0.2)'
+                                          }
+                                        }}
+                                      >
+                                        {markingComplete.has(material._id) ? (
+                                          <CircularProgress size={20} sx={{ color: 'success.main' }} />
+                                        ) : completedMaterials.has(material._id) ? (
+                                          <CheckCircle sx={{ fontSize: 20, color: 'white' }} />
+                                        ) : (
+                                          <CheckCircle sx={{ fontSize: 20, color: 'success.main' }} />
+                                        )}
+                                      </IconButton>
+                                    )}
+                                  </CardActions>
+                                </Card>
+                              </Grid>
                             );
                           })}
-                        </List>
+                        </Grid>
                       ))}
                     </CardContent>
                   </Card>
@@ -2019,12 +3040,37 @@ const UnifiedLearningPage: React.FC = () => {
             </Typography>
           </Paper>
           <Stack direction="row" spacing={1}>
-            <TextField fullWidth placeholder="Ask anything... e.g., ‘What should I study next?’" size="small" />
-            <Button variant="contained">Send</Button>
-          </Stack>
-        </Box>
-      </Drawer>
-    </Box>
+          <TextField fullWidth placeholder="Ask anything... e.g., 'What should I study next?'" size="small" />
+          <Button variant="contained">Send</Button>
+        </Stack>
+      </Box>
+    </Drawer>
+
+    {/* Week End Feedback Dialog */}
+    <WeekEndFeedback
+      open={showFeedbackDialog}
+      onClose={() => setShowFeedbackDialog(false)}
+      weekTitle={completedWeek?.title || ''}
+      courseTitle={course?.title || ''}
+      onSubmit={handleFeedbackSubmit}
+    />
+
+    {/* Success Notification */}
+    <Snackbar
+      open={showSuccessSnackbar}
+      autoHideDuration={3000}
+      onClose={() => setShowSuccessSnackbar(false)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert 
+        onClose={() => setShowSuccessSnackbar(false)} 
+        severity="success" 
+        sx={{ width: '100%' }}
+      >
+        {successMessage}
+      </Alert>
+    </Snackbar>
+  </Box>
   );
 };
 

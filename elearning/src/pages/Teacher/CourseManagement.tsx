@@ -72,6 +72,7 @@ import { Week, WeekMaterial } from '../../services/weekService';
 import { SafeDialogTransition } from '../../utils/transitionFix';
 import DocumentProcessor from '../../components/CourseMaterials/DocumentProcessor';
 import MediaUploader from '../../components/CourseMaterials/MediaUploader';
+import ExamUploader from '../../components/CourseMaterials/ExamUploader';
 import CourseMaterials from '../../components/CourseMaterials/CourseMaterials';
 
 interface TabPanelProps {
@@ -310,8 +311,7 @@ const CourseManagement: React.FC = () => {
         title: a.title,
         isPublished: a.isPublished,
         documentUrl: a.documentUrl,
-        attachments: a.attachments,
-        hasFile: a.hasFile
+        attachments: a.attachments
       })));
       setAssessments(assessmentsData || []);
       
@@ -610,6 +610,7 @@ const CourseManagement: React.FC = () => {
       case 'audio': return <AudioFile />;
       case 'image': return <PictureAsPdf />;
       case 'structured_notes': return <MenuBook />;
+      case 'exam': return <Quiz />;
       default: return <InsertDriveFile />;
     }
   };
@@ -1022,13 +1023,13 @@ const CourseManagement: React.FC = () => {
           if (uploadType === 'assignment') {
             setAssignments(prev => prev.map(a => 
               a._id === uploadingItem._id 
-                ? { ...a, uploadedFile: response.data.data, hasFile: true }
+                ? { ...a, uploadedFile: response.data.data }
                 : a
             ));
           } else {
             setAssessments(prev => prev.map(a => 
               a._id === uploadingItem._id 
-                ? { ...a, uploadedFile: response.data.data, hasFile: true }
+                ? { ...a, uploadedFile: response.data.data }
                 : a
             ));
           }
@@ -1644,10 +1645,14 @@ const CourseManagement: React.FC = () => {
                                       }
                                     }}>
                                       <Chip 
-                                        label={material.type === 'structured_notes' ? 'AI Notes' : material.type} 
+                                        label={material.type === 'structured_notes' ? 'AI Notes' : 
+                                               material.type === 'exam' ? `${material.examType || 'Exam'}` : 
+                                               material.type} 
                                         size="small" 
                                         sx={{ 
-                                          backgroundColor: material.type === 'structured_notes' ? 'rgba(76, 175, 80, 0.8)' : 'rgba(255,255,255,0.2)', 
+                                          backgroundColor: material.type === 'structured_notes' ? 'rgba(76, 175, 80, 0.8)' : 
+                                                          material.type === 'exam' ? 'rgba(255, 152, 0, 0.8)' :
+                                                          'rgba(255,255,255,0.2)', 
                                           color: 'white',
                                           border: '1px solid rgba(255,255,255,0.3)'
                                         }}
@@ -1963,6 +1968,66 @@ const CourseManagement: React.FC = () => {
                                 materialData: materialData
                               });
                               setError(err.message || 'Failed to save media material to week');
+                            }
+                          }}
+                          onUploadError={(error) => {
+                            setError(error);
+                          }}
+                        />
+                      </Box>
+
+                      <Divider sx={{ my: 2 }} />
+
+                      {/* Exam Upload */}
+                      <Box>
+                        <Typography variant="subtitle2" gutterBottom>
+                          📝 Exam Upload (Quiz & General Exams)
+                        </Typography>
+                        <ExamUploader
+                          courseId={courseId || ''}
+                          weekId={week._id}
+                          onUploadComplete={async (examData) => {
+                            try {
+                              console.log('🔄 Exam material ready to save to week:', {
+                                weekId: week._id,
+                                examData: examData,
+                                examKeys: Object.keys(examData || {})
+                              });
+
+                              // Dynamically import weekService
+                              const { weekService } = await import('../../services/weekService');
+                              
+                              console.log('📤 Saving exam material data:', {
+                                examData,
+                                weekId: week._id,
+                                weekMaterialsCount: week.materials.length
+                              });
+                              
+                              // Save exam material to the database
+                              const savedMaterial = await weekService.addWeekMaterial(week._id, examData);
+                              
+                              console.log('✅ Exam material saved successfully:', {
+                                materialId: savedMaterial._id,
+                                title: savedMaterial.title,
+                                type: savedMaterial.type,
+                                examType: savedMaterial.examType
+                              });
+                              
+                              // Update frontend state
+                              setWeeks(prev => prev.map(w => 
+                                w._id === week._id 
+                                  ? { ...w, materials: [...w.materials, savedMaterial] }
+                                  : w
+                              ));
+                            } catch (err: any) {
+                              console.error('❌ Error saving exam material to week:', {
+                                error: err,
+                                message: err.message,
+                                response: err.response?.data,
+                                status: err.response?.status,
+                                examData: examData
+                              });
+                              setError(err.message || 'Failed to save exam material to week');
                             }
                           }}
                           onUploadError={(error) => {

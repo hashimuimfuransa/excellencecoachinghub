@@ -213,6 +213,53 @@ export const deleteWeekMaterial = asyncHandler(async (req: Request, res: Respons
   });
 });
 
+// Process exam upload and add to week
+export const processExamUpload = asyncHandler(async (req: Request, res: Response) => {
+  const { weekId } = req.params;
+  const examData = req.body;
+  
+  const week = await Week.findById(weekId);
+  if (!week) {
+    return res.status(404).json({
+      success: false,
+      message: 'Week not found'
+    });
+  }
+  
+  // Generate unique ID for the exam material
+  const materialId = new mongoose.Types.ObjectId();
+  
+  // Create exam material with processing
+  const newExamMaterial = {
+    _id: materialId,
+    title: examData.title,
+    description: examData.description,
+    type: 'exam',
+    examType: examData.examType,
+    url: examData.url,
+    examSettings: examData.examSettings,
+    content: {
+      ...examData.content,
+      processedAt: new Date().toISOString(),
+      processingTime: Date.now()
+    },
+    order: week.materials.length + 1,
+    estimatedDuration: examData.estimatedDuration || examData.examSettings?.timeLimit || 60,
+    isRequired: examData.isRequired !== false,
+    isPublished: examData.isPublished !== false
+  };
+  
+  // Add exam material to week
+  week.materials.push(newExamMaterial);
+  await week.save();
+  
+  res.status(201).json({
+    success: true,
+    message: 'Exam uploaded and processed successfully',
+    data: newExamMaterial
+  });
+});
+
 // Publish/Unpublish a week
 export const toggleWeekPublish = asyncHandler(async (req: Request, res: Response) => {
   const { weekId } = req.params;
@@ -244,3 +291,5 @@ export const toggleWeekPublish = asyncHandler(async (req: Request, res: Response
     data: week
   });
 });
+
+// ... existing code ...

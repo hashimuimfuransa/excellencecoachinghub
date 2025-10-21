@@ -4,7 +4,8 @@ import {
   getProcessingStats, 
   testDocumentProcessing,
   uploadDocument,
-  extractText
+  extractText,
+  processExamDocument
 } from '../controllers/documentProcessorController';
 import { auth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -15,6 +16,11 @@ const router = express.Router();
 // @route   POST /api/documents/process
 // @access  Private (Teacher/Admin)
 router.post('/process', auth, requireRole(['teacher', 'admin']), uploadDocument.single('file'), processDocument);
+
+// @desc    Process exam document and extract questions
+// @route   POST /api/documents/process-exam
+// @access  Private (Teacher/Admin)
+router.post('/process-exam', auth, requireRole(['teacher', 'admin']), processExamDocument);
 
 // @desc    Get processing statistics
 // @route   GET /api/documents/processing-stats

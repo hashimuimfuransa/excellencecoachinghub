@@ -19,13 +19,24 @@ export interface IWeekMaterial {
   _id: mongoose.Types.ObjectId;
   title: string;
   description: string;
-  type: 'document' | 'video' | 'audio' | 'link' | 'quiz' | 'structured_notes' | 'image';
+  type: 'document' | 'video' | 'audio' | 'link' | 'quiz' | 'structured_notes' | 'image' | 'exam';
   url?: string;
   filePath?: string;
   order: number;
   estimatedDuration: number; // in minutes
   isRequired: boolean;
   isPublished: boolean;
+  // Exam-specific fields
+  examType?: 'quiz' | 'general_exam';
+  examSettings?: {
+    timeLimit?: number; // in minutes
+    totalMarks?: number;
+    passingScore?: number;
+    attempts?: number;
+    instructions?: string;
+    isTimed?: boolean;
+    allowReview?: boolean;
+  };
   content?: {
     extractedText?: string;
     structuredNotes?: {
@@ -45,6 +56,27 @@ export interface IWeekMaterial {
         topics: string[];
       };
     };
+    // Exam-specific content
+    examContent?: {
+      questions?: Array<{
+        id: string;
+        type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay';
+        question: string;
+        options?: string[];
+        correctAnswer?: string;
+        points: number;
+        order: number;
+      }>;
+      totalQuestions?: number;
+      examStructure?: {
+        sections: Array<{
+          title: string;
+          questionCount: number;
+          points: number;
+          order: number;
+        }>;
+      };
+    };
     originalFileName?: string;
     fileSize?: number;
     mimeType?: string;
@@ -58,7 +90,7 @@ const weekMaterialSchema = new Schema<IWeekMaterial>({
   description: { type: String, required: true },
   type: { 
     type: String, 
-    enum: ['document', 'video', 'audio', 'link', 'quiz', 'structured_notes', 'image'],
+    enum: ['document', 'video', 'audio', 'link', 'quiz', 'structured_notes', 'image', 'exam'],
     required: true 
   },
   url: { type: String },
@@ -67,6 +99,20 @@ const weekMaterialSchema = new Schema<IWeekMaterial>({
   estimatedDuration: { type: Number, required: true, default: 30 },
   isRequired: { type: Boolean, default: true },
   isPublished: { type: Boolean, default: true },
+  // Exam-specific fields
+  examType: { 
+    type: String, 
+    enum: ['quiz', 'general_exam'] 
+  },
+  examSettings: {
+    timeLimit: { type: Number },
+    totalMarks: { type: Number },
+    passingScore: { type: Number },
+    attempts: { type: Number },
+    instructions: { type: String },
+    isTimed: { type: Boolean },
+    allowReview: { type: Boolean }
+  },
   content: {
     extractedText: { type: String },
     structuredNotes: {
@@ -87,6 +133,30 @@ const weekMaterialSchema = new Schema<IWeekMaterial>({
           enum: ['beginner', 'intermediate', 'advanced'] 
         },
         topics: [{ type: String }]
+      }
+    },
+    // Exam-specific content
+    examContent: {
+      questions: [{
+        id: { type: String },
+        type: { 
+          type: String, 
+          enum: ['multiple_choice', 'true_false', 'short_answer', 'essay'] 
+        },
+        question: { type: String },
+        options: [{ type: String }],
+        correctAnswer: { type: String },
+        points: { type: Number },
+        order: { type: Number }
+      }],
+      totalQuestions: { type: Number },
+      examStructure: {
+        sections: [{
+          title: { type: String },
+          questionCount: { type: Number },
+          points: { type: Number },
+          order: { type: Number }
+        }]
       }
     },
     originalFileName: { type: String },

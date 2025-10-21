@@ -83,6 +83,7 @@ import TakeAssessmentStandalone from './pages/Assessment/TakeAssessment';
 import PastPapersPage from './pages/PastPapers/PastPapersPage';
 import TakePastPaperPage from './pages/PastPapers/TakePastPaperPage';
 import EnhancedTakeAssessment from './pages/Assessment/EnhancedTakeAssessment';
+import EnhancedProctoredAssessment from './pages/Assessment/EnhancedProctoredAssessment';
 import AssessmentResults from './pages/Assessment/AssessmentResults';
 import EnhancedWorkOnAssignment from './pages/Assignment/EnhancedWorkOnAssignment';
 import EnhancedTakeAssignment from './pages/Assignment/EnhancedTakeAssignment';
@@ -430,6 +431,14 @@ const App: React.FC = () => {
         element={
           <ProtectedRoute requiredRole={UserRole.STUDENT}>
             <EnhancedAssessments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessment/:assessmentId"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <EnhancedProctoredAssessment />
           </ProtectedRoute>
         }
       />

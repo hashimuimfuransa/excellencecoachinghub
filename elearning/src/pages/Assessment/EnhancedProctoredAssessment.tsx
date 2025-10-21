@@ -167,8 +167,47 @@ const EnhancedProctoredAssessment: React.FC = () => {
       try {
         setLoading(true);
         
-        // Check if we have AI-organized assessment data
-        if (organizedAssessment) {
+        // Check if we have exam material data from week navigation
+        const examMaterial = location.state?.examMaterial;
+        const weekAssessment = location.state?.assessment;
+        const fromWeek = location.state?.fromWeek;
+        
+        if (fromWeek && weekAssessment && examMaterial) {
+          console.log('📝 Loading exam from week material:', examMaterial.title);
+          setAssessment(weekAssessment);
+          
+          // Create sections from exam content
+          const examSections: AssessmentSection[] = [];
+          
+          if (examMaterial.content?.examContent?.questions && examMaterial.content.examContent.questions.length > 0) {
+            // Use extracted questions from exam content
+            const questions = examMaterial.content.examContent.questions;
+            examSections.push({
+              id: 'A',
+              title: 'Exam Questions',
+              description: `Complete all ${questions.length} questions`,
+              questions: questions,
+              timeLimit: examMaterial.examSettings?.timeLimit || 60,
+              instructions: examMaterial.examSettings?.instructions || 'Answer all questions to the best of your ability.'
+            });
+          } else {
+            // Fallback: create a basic section if no questions are extracted
+            examSections.push({
+              id: 'A',
+              title: 'Exam Questions',
+              description: 'Complete the exam questions',
+              questions: [],
+              timeLimit: examMaterial.examSettings?.timeLimit || 60,
+              instructions: examMaterial.examSettings?.instructions || 'Answer all questions to the best of your ability.'
+            });
+          }
+          
+          setSections(examSections);
+          setTimeRemaining((examMaterial.examSettings?.timeLimit || 60) * 60);
+          setProctoringEnabled(true); // Enable proctoring for exams
+          
+        } else if (organizedAssessment) {
+          // Check if we have AI-organized assessment data
           console.log('🤖 Using AI-organized assessment data');
           setAssessment(organizedAssessment.originalAssessment);
           setAiEnhanced(organizedAssessment.aiOrganized);
@@ -193,14 +232,14 @@ const EnhancedProctoredAssessment: React.FC = () => {
           setAssessment(assessmentData);
           
           // Organize questions into sections using the existing method
-          const organizedSections = organizeQuestionsIntoSections(assessmentData.questions);
+          const organizedSections = organizeQuestionsIntoSections(assessmentData.questions || []);
           setSections(organizedSections);
           
           setTimeRemaining(assessmentData.timeLimit ? assessmentData.timeLimit * 60 : 3600);
         }
         
         // Check if proctoring is required
-        const currentAssessment = organizedAssessment?.originalAssessment || assessment;
+        const currentAssessment = weekAssessment || organizedAssessment?.originalAssessment || assessment;
         if (currentAssessment && (currentAssessment.requireProctoring || currentAssessment.proctoringEnabled)) {
           setProctoringEnabled(true);
         }
@@ -214,7 +253,7 @@ const EnhancedProctoredAssessment: React.FC = () => {
     };
 
     loadAssessment();
-  }, [assessmentId, organizedAssessment]);
+  }, [assessmentId, organizedAssessment, location.state]);
 
   // Organize questions into sections based on their section property or create default sections
   const organizeQuestionsIntoSections = (questions: IQuestion[]): AssessmentSection[] => {
@@ -231,7 +270,7 @@ const EnhancedProctoredAssessment: React.FC = () => {
     return Array.from(sectionMap.entries()).map(([sectionKey, sectionQuestions], index) => ({
       id: sectionKey,
       title: `Section ${sectionKey}`,
-      description: getSectionDescription(sectionKey, sectionQuestions.length),
+      description: getSectionDescription(sectionKey, sectionQuestions),
       questions: sectionQuestions,
       timeLimit: Math.ceil(sectionQuestions.length * 2), // 2 minutes per question
       instructions: getSectionInstructions(sectionKey)
@@ -241,10 +280,11 @@ const EnhancedProctoredAssessment: React.FC = () => {
   const getSectionDescription = (section: string, sectionQuestions: IQuestion[]): string => {
     const questionCount = sectionQuestions.length;
     const questionTypes = sectionQuestions.map(q => q.type);
-    const uniqueTypes = [...new Set(questionTypes)];
+    const uniqueTypes = new Set(questionTypes);
     
     // Generate description based on actual question types
-    const typeDescriptions = uniqueTypes.map(type => {
+    const typeDescriptions: string[] = [];
+    for (const type of uniqueTypes) {
       const count = questionTypes.filter(t => t === type).length;
       const typeNames: Record<string, string> = {
         multiple_choice: 'Multiple Choice',
@@ -255,10 +295,12 @@ const EnhancedProctoredAssessment: React.FC = () => {
         fill_in_blank: 'Fill in the Blank',
         numerical: 'Numerical'
       };
-      return `${count} ${typeNames[type] || type}`;
-    }).join(', ');
+      typeDescriptions.push(`${count} ${typeNames[type] || type}`);
+    }
     
-    return `Section ${section} - ${typeDescriptions} (${questionCount} total)`;
+    const typeDescriptionsText = typeDescriptions.join(', ');
+    
+    return `Section ${section} - ${typeDescriptionsText} (${questionCount} total)`;
   };
 
   const getSectionInstructions = (section: string): string => {
@@ -506,7 +548,46 @@ const EnhancedProctoredAssessment: React.FC = () => {
     try {
       setSubmitting(true);
       
-      // Prepare submission data
+      // Check if this is an exam from a week
+      const examMaterial = location.state?.examMaterial;
+      const fromWeek = location.state?.fromWeek;
+      const weekId = location.state?.weekId;
+      
+      if (fromWeek && examMaterial) {
+        // Handle exam submission from week
+        console.log('📝 Submitting exam from week:', examMaterial.title);
+        
+        // Calculate score based on answers
+        const totalQuestions = sections.reduce((sum, section) => sum + section.questions.length, 0);
+        const answeredQuestions = Object.keys(answers).length;
+        const score = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
+        
+        // Mark exam as completed in progress
+        try {
+          const { progressService } = await import('../../services/progressService');
+          await progressService.markContentCompleted(
+            weekId || examMaterial.weekId || '',
+            examMaterial._id
+          );
+          
+          console.log('✅ Exam progress saved successfully');
+        } catch (progressError) {
+          console.error('❌ Failed to save exam progress:', progressError);
+        }
+        
+        // Navigate back to the course with success message
+        navigate(`/course/${location.state?.courseId || 'unknown'}`, {
+          state: {
+            examCompleted: true,
+            examTitle: examMaterial.title,
+            score: score,
+            timeSpent: assessment?.timeLimit ? (assessment.timeLimit * 60 - timeRemaining) : 0
+          }
+        });
+        return;
+      }
+      
+      // Original assessment submission logic
       const submissionData = {
         assessmentId: assessmentId!,
         answers: Object.entries(answers).map(([questionId, answer]) => ({
@@ -514,7 +595,7 @@ const EnhancedProctoredAssessment: React.FC = () => {
           answer,
           timeSpent: 0 // Calculate based on tracking
         })),
-        timeSpent: assessment?.timeLimit ? (assessment.timeLimit * 60 - timeRemaining) : 0,
+        totalTimeSpent: assessment?.timeLimit ? (assessment.timeLimit * 60 - timeRemaining) : 0,
         proctoringData: proctoringEnabled ? {
           violations: proctoringData.violations,
           tabSwitches: proctoringData.tabSwitches,

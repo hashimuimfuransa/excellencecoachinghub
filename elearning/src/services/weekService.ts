@@ -4,13 +4,24 @@ export interface WeekMaterial {
   _id: string;
   title: string;
   description: string;
-  type: 'document' | 'video' | 'audio' | 'link' | 'quiz' | 'structured_notes';
+  type: 'document' | 'video' | 'audio' | 'link' | 'quiz' | 'structured_notes' | 'exam';
   url?: string;
   filePath?: string;
   order: number;
   estimatedDuration: number;
   isRequired: boolean;
   isPublished: boolean;
+  // Exam-specific fields
+  examType?: 'quiz' | 'general_exam';
+  examSettings?: {
+    timeLimit?: number; // in minutes
+    totalMarks?: number;
+    passingScore?: number;
+    attempts?: number;
+    instructions?: string;
+    isTimed?: boolean;
+    allowReview?: boolean;
+  };
   content?: {
     extractedText?: string;
     structuredNotes?: {
@@ -28,6 +39,27 @@ export interface WeekMaterial {
         estimatedReadingTime: number;
         difficulty: 'beginner' | 'intermediate' | 'advanced';
         topics: string[];
+      };
+    };
+    // Exam-specific content
+    examContent?: {
+      questions?: Array<{
+        id: string;
+        type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay';
+        question: string;
+        options?: string[];
+        correctAnswer?: string;
+        points: number;
+        order: number;
+      }>;
+      totalQuestions?: number;
+      examStructure?: {
+        sections: Array<{
+          title: string;
+          questionCount: number;
+          points: number;
+          order: number;
+        }>;
       };
     };
     originalFileName?: string;

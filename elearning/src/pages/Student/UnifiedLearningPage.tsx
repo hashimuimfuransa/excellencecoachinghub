@@ -294,7 +294,7 @@ const UnifiedLearningPage: React.FC = () => {
   // AI assistant state
   const [aiOpen, setAiOpen] = useState<boolean>(false);
   // Materials quick filter
-  const [materialFilter, setMaterialFilter] = useState<'all' | 'required' | 'completed' | 'video' | 'document'>('all');
+  const [materialFilter, setMaterialFilter] = useState<'all' | 'required' | 'completed' | 'video' | 'document' | 'exam'>('all');
   const liveSectionRef = React.useRef<HTMLDivElement | null>(null);
   
   // New state for enhanced features
@@ -696,6 +696,53 @@ const UnifiedLearningPage: React.FC = () => {
   const handleMaterialClick = (material: WeekMaterial) => {
     // Track material view for progress analytics
     trackMaterialView(material);
+    
+    // Handle exam materials differently - redirect to proctored assessment
+    if (material.type === 'exam') {
+      // Create a mock assessment object from the exam material
+      const examAssessment = {
+        _id: material._id,
+        title: material.title,
+        description: material.description,
+        type: material.examType || 'quiz',
+        questions: material.content?.examContent?.questions || [],
+        totalPoints: material.examSettings?.totalMarks || 100,
+        totalQuestions: material.content?.examContent?.totalQuestions || 0,
+        timeLimit: material.examSettings?.timeLimit || 60,
+        attempts: material.examSettings?.attempts || 1,
+        passingScore: material.examSettings?.passingScore || 70,
+        instructions: material.examSettings?.instructions || '',
+        requireProctoring: true,
+        proctoringEnabled: true,
+        isPublished: material.isPublished,
+        allowLateSubmission: false,
+        lateSubmissionPenalty: 0,
+        randomizeQuestions: false,
+        showResultsImmediately: true,
+        course: {
+          _id: courseId,
+          title: course?.title || 'Course'
+        },
+        instructor: {
+          _id: course?.instructor?._id || '',
+          firstName: course?.instructor?.firstName || '',
+          lastName: course?.instructor?.lastName || ''
+        }
+      };
+      
+      // Navigate to the proctored assessment page with the exam data
+      navigate(`/assessment/${material._id}`, {
+        state: {
+          examMaterial: material,
+          assessment: examAssessment,
+          fromWeek: true,
+          courseId: courseId
+        }
+      });
+      return;
+    }
+    
+    // For other materials, use the existing navigation
     navigate(`/material/${courseId}/${material._id}`);
   };
 
@@ -736,6 +783,8 @@ const UnifiedLearningPage: React.FC = () => {
         return <Quiz />;
       case 'assignment':
         return <AssignmentIcon />;
+      case 'exam':
+        return <Quiz />;
       default:
         return <Description />;
     }
@@ -2999,7 +3048,8 @@ const UnifiedLearningPage: React.FC = () => {
                   { key: 'required', label: 'Required', icon: <Star sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
                   { key: 'completed', label: 'Completed', icon: <CheckCircle sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
                   { key: 'video', label: 'Videos', icon: <VideoFile sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
-                  { key: 'document', label: 'Documents', icon: <Description sx={{ fontSize: { xs: 14, sm: 16 } }} /> }
+                  { key: 'document', label: 'Documents', icon: <Description sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'exam', label: 'Exams', icon: <Quiz sx={{ fontSize: { xs: 14, sm: 16 } }} /> }
                 ].map((filter) => (
                   <Chip 
                     key={filter.key}
@@ -3229,6 +3279,7 @@ const UnifiedLearningPage: React.FC = () => {
                               if (materialFilter === 'completed') return isMaterialCompleted(material._id);
                               if (materialFilter === 'video') return material.type === 'video';
                               if (materialFilter === 'document') return material.type === 'document';
+                              if (materialFilter === 'exam') return material.type === 'exam';
                               return true;
                             })
                             .map((material, matIndex) => {
@@ -3275,6 +3326,8 @@ const UnifiedLearningPage: React.FC = () => {
                                         ? 'rgba(102, 126, 234, 0.1)'
                                         : material.type === 'document'
                                         ? 'rgba(240, 147, 251, 0.1)'
+                                        : material.type === 'exam'
+                                        ? 'rgba(255, 152, 0, 0.1)'
                                         : 'rgba(79, 172, 254, 0.1)',
                                       borderRadius: 2,
                                       display: 'flex',
@@ -3346,18 +3399,22 @@ const UnifiedLearningPage: React.FC = () => {
                                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
                                     <Chip 
                                       icon={getMaterialIcon(material.type)}
-                                      label={material.type.toUpperCase()}
+                                      label={material.type === 'exam' ? (material.examType || 'EXAM').toUpperCase() : material.type.toUpperCase()}
                                       size="small"
                                       sx={{ 
                                         backgroundColor: material.type === 'video' 
                                           ? 'rgba(102, 126, 234, 0.1)' 
                                           : material.type === 'document'
                                           ? 'rgba(240, 147, 251, 0.1)'
+                                          : material.type === 'exam'
+                                          ? 'rgba(255, 152, 0, 0.1)'
                                           : 'rgba(79, 172, 254, 0.1)',
                                         color: material.type === 'video' 
                                           ? '#667eea' 
                                           : material.type === 'document'
                                           ? '#f093fb'
+                                          : material.type === 'exam'
+                                          ? '#ff9800'
                                           : '#4facfe',
                                         fontWeight: 600
                                       }}

@@ -26,7 +26,49 @@ import {
   Grid,
   Tabs,
   Tab,
-  Zoom
+  Zoom,
+  AppBar,
+  Toolbar,
+  Fade,
+  Slide,
+  Grow,
+  Badge,
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon,
+  TextField,
+  InputAdornment,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Switch,
+  FormControlLabel,
+  Slider,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemAvatar,
+  ListItemSecondaryAction,
+  Collapse,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  AlertTitle,
+  Skeleton,
+  Backdrop,
+  Modal,
+  Fade as MuiFade,
+  useTheme,
+  useMediaQuery,
+  alpha,
+  styled,
+  keyframes
 } from '@mui/material';
 import {
   ArrowBack,
@@ -56,7 +98,112 @@ import {
   Print,
   Search,
   MenuBook,
-  VisibilityOff
+  VisibilityOff,
+  Translate,
+  Mic,
+  MicOff,
+  VolumeOff,
+  VolumeUp as VolumeUpIcon,
+  RecordVoiceOver,
+  Hearing,
+  Accessibility,
+  AutoAwesome,
+  Star,
+  StarBorder,
+  Favorite,
+  FavoriteBorder,
+  ThumbUp,
+  ThumbDown,
+  Comment,
+  Notes,
+  Highlight,
+  ContentCopy,
+  Refresh,
+  Settings,
+  MoreVert,
+  ExpandMore,
+  ExpandLess,
+  KeyboardArrowUp,
+  KeyboardArrowDown,
+  PlayCircleOutline,
+  PauseCircleOutline,
+  StopCircle,
+  SkipNext,
+  SkipPrevious,
+  Replay,
+  Speed,
+  Close,
+  Check,
+  Error,
+  Warning,
+  Info,
+  Lightbulb,
+  TrendingUp,
+  Assessment,
+  Analytics,
+  Timeline,
+  BarChart,
+  PieChart,
+  TableChart,
+  ViewModule,
+  ViewList,
+  ViewComfy,
+  ViewStream,
+  ViewCarousel,
+  ViewQuilt,
+  ViewSidebar,
+  ViewWeek,
+  ViewDay,
+  ViewAgenda,
+  ViewHeadline,
+  ViewColumn,
+  ViewArray,
+  ViewCompact,
+  ViewKanban,
+  ViewTimeline,
+  ViewInAr,
+  ViewInArOutlined,
+  View3D,
+  View3DOutlined,
+  View360,
+  View360Outlined,
+  ViewComfyOutlined,
+  ViewListOutlined,
+  ViewModuleOutlined,
+  ViewQuiltOutlined,
+  ViewStreamOutlined,
+  ViewCarouselOutlined,
+  ViewSidebarOutlined,
+  ViewWeekOutlined,
+  ViewDayOutlined,
+  ViewAgendaOutlined,
+  ViewHeadlineOutlined,
+  ViewColumnOutlined,
+  ViewArrayOutlined,
+  ViewCompactOutlined,
+  ViewKanbanOutlined,
+  ViewTimelineOutlined,
+  ViewInArOutlined as ViewInArOutlinedIcon,
+  View3DOutlined as View3DOutlinedIcon,
+  View360Outlined as View360OutlinedIcon,
+  ViewComfyOutlined as ViewComfyOutlinedIcon,
+  ViewListOutlined as ViewListOutlinedIcon,
+  ViewModuleOutlined as ViewModuleOutlinedIcon,
+  ViewQuiltOutlined as ViewQuiltOutlinedIcon,
+  ViewStreamOutlined as ViewStreamOutlinedIcon,
+  ViewCarouselOutlined as ViewCarouselOutlinedIcon,
+  ViewSidebarOutlined as ViewSidebarOutlinedIcon,
+  ViewWeekOutlined as ViewWeekOutlinedIcon,
+  ViewDayOutlined as ViewDayOutlinedIcon,
+  ViewAgendaOutlined as ViewAgendaOutlinedIcon,
+  ViewHeadlineOutlined as ViewHeadlineOutlinedIcon,
+  ViewColumnOutlined as ViewColumnOutlinedIcon,
+  ViewArrayOutlined as ViewArrayOutlinedIcon,
+  ViewCompactOutlined as ViewCompactOutlinedIcon,
+  ViewKanbanOutlined as ViewKanbanOutlinedIcon,
+  ViewTimelineOutlined as ViewTimelineOutlinedIcon,
+  SmartToy,
+  Send
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -81,6 +228,7 @@ import {
 
 // Import Cloudinary URL processor
 import { getDocumentViewingUrl, needsCloudinarySpecialHandling } from '../../utils/cloudinaryUrlProcessor';
+import { geminiAIService } from '../../services/geminiAIService';
 
 // Import custom styles
 import './MaterialView.css';
@@ -104,6 +252,30 @@ const MaterialView: React.FC = () => {
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
   const [documentError, setDocumentError] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(true);
+
+  // Voice and Translation State
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [translatedText, setTranslatedText] = useState('');
+  const [voiceRecognition, setVoiceRecognition] = useState<any>(null);
+  const [speechSynthesis, setSpeechSynthesis] = useState<any>(null);
+  const [voiceSettings, setVoiceSettings] = useState({
+    rate: 1,
+    pitch: 1,
+    volume: 1,
+    voice: null as any
+  });
+  const [showVoicePanel, setShowVoicePanel] = useState(false);
+  const [voiceCommands, setVoiceCommands] = useState<string[]>([]);
+  const [isVoiceAssistantActive, setIsVoiceAssistantActive] = useState(false);
+
+  // AI Assistant State
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{id: string, text: string, isUser: boolean, timestamp: Date}>>([]);
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
 
   // Modern Document Viewer State
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -390,6 +562,418 @@ const MaterialView: React.FC = () => {
     }
   }, [material?.url, pdfLoading]);
 
+  // Voice and Translation Functions
+  const initializeVoiceFeatures = () => {
+    // Initialize Speech Recognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = selectedLanguage;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        console.log('Voice recognition started');
+      };
+
+      recognition.onresult = (event: any) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setVoiceCommands(prev => [...prev, finalTranscript]);
+          handleVoiceCommand(finalTranscript);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      setVoiceRecognition(recognition);
+    }
+
+    // Initialize Speech Synthesis
+    if ('speechSynthesis' in window) {
+      setSpeechSynthesis(window.speechSynthesis);
+    }
+  };
+
+  const handleVoiceCommand = (command: string) => {
+    const lowerCommand = command.toLowerCase();
+    
+    if (lowerCommand.includes('scroll down') || lowerCommand.includes('scroll down')) {
+      window.scrollBy(0, 200);
+    } else if (lowerCommand.includes('scroll up') || lowerCommand.includes('scroll up')) {
+      window.scrollBy(0, -200);
+    } else if (lowerCommand.includes('next page') || lowerCommand.includes('next')) {
+      if (pageNumber < (numPages || 1)) {
+        setPageNumber(prev => prev + 1);
+      }
+    } else if (lowerCommand.includes('previous page') || lowerCommand.includes('previous')) {
+      if (pageNumber > 1) {
+        setPageNumber(prev => prev - 1);
+      }
+    } else if (lowerCommand.includes('zoom in')) {
+      setScale(prev => Math.min(prev + 0.2, 3));
+    } else if (lowerCommand.includes('zoom out')) {
+      setScale(prev => Math.max(prev - 0.2, 0.5));
+    } else if (lowerCommand.includes('fullscreen') || lowerCommand.includes('full screen')) {
+      toggleFullscreen();
+    } else if (lowerCommand.includes('translate') || lowerCommand.includes('translation')) {
+      setShowVoicePanel(true);
+    } else if (lowerCommand.includes('read aloud') || lowerCommand.includes('read')) {
+      readCurrentContent();
+    } else if (lowerCommand.includes('stop') || lowerCommand.includes('pause')) {
+      stopReading();
+    }
+  };
+
+  const startVoiceRecognition = () => {
+    if (voiceRecognition) {
+      voiceRecognition.start();
+    }
+  };
+
+  const stopVoiceRecognition = () => {
+    if (voiceRecognition) {
+      voiceRecognition.stop();
+    }
+  };
+
+  const readCurrentContent = () => {
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
+      
+      let textToRead = '';
+      if (material?.type === 'structured_notes' && material?.content?.summary) {
+        textToRead = material.content.summary;
+      } else if (material?.title) {
+        textToRead = material.title;
+      }
+
+      if (textToRead) {
+        const utterance = new SpeechSynthesisUtterance(textToRead);
+        utterance.rate = voiceSettings.rate;
+        utterance.pitch = voiceSettings.pitch;
+        utterance.volume = voiceSettings.volume;
+        utterance.voice = voiceSettings.voice;
+        
+        utterance.onstart = () => {
+          console.log('Reading started');
+        };
+        
+        utterance.onend = () => {
+          console.log('Reading completed');
+        };
+        
+        speechSynthesis.speak(utterance);
+      }
+    }
+  };
+
+  const stopReading = () => {
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
+    }
+  };
+
+  const translateText = async (text: string, targetLang: string) => {
+    setIsTranslating(true);
+    try {
+      // This would integrate with a translation service like Google Translate API
+      // For now, we'll simulate translation
+      const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`);
+      const data = await response.json();
+      
+      if (data.responseStatus === 200) {
+        setTranslatedText(data.responseData.translatedText);
+      } else {
+        throw new Error('Translation failed');
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+      setTranslatedText('Translation not available');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const speakTranslatedText = () => {
+    if (speechSynthesis && translatedText) {
+      const utterance = new SpeechSynthesisUtterance(translatedText);
+      utterance.lang = selectedLanguage;
+      utterance.rate = voiceSettings.rate;
+      utterance.pitch = voiceSettings.pitch;
+      utterance.volume = voiceSettings.volume;
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Initialize voice features on component mount
+  useEffect(() => {
+    initializeVoiceFeatures();
+  }, [selectedLanguage]);
+
+  // Initialize AI Assistant with welcome message
+  useEffect(() => {
+    if (showAIAssistant && chatMessages.length === 0) {
+      const generateWelcomeMessage = async () => {
+        try {
+          // Use Gemini AI to generate a personalized welcome message
+          const response = await geminiAIService.sendMessage({
+            userMessage: `Generate a personalized welcome message for a student studying "${material?.title || 'this material'}"`,
+            context: {
+              page: 'material-view',
+              courseId: courseId,
+              courseTitle: material?.title,
+              content: material?.content
+            }
+          });
+
+          const welcomeMessage = {
+            id: 'welcome-1',
+            text: response.message || `Hello! I'm your AI learning assistant. I can help you understand "${material?.title || 'this material'}", answer questions, create quizzes, and provide study tips. What would you like to know?`,
+            isUser: false,
+            timestamp: new Date()
+          };
+          setChatMessages([welcomeMessage]);
+        } catch (error) {
+          console.error('Error generating welcome message:', error);
+          // Fallback welcome message
+          const welcomeMessage = {
+            id: 'welcome-1',
+            text: `Hello! I'm your AI learning assistant. I can help you understand "${material?.title || 'this material'}", answer questions, create quizzes, and provide study tips. What would you like to know?`,
+            isUser: false,
+            timestamp: new Date()
+          };
+          setChatMessages([welcomeMessage]);
+        }
+      };
+
+      generateWelcomeMessage();
+    }
+  }, [showAIAssistant, material?.title, material?.content, courseId, chatMessages.length]);
+
+  // AI Assistant Chat Functions
+  const sendMessage = async () => {
+    if (!currentMessage.trim()) return;
+
+    const userMessage = {
+      id: `user-${Date.now()}`,
+      text: currentMessage.trim(),
+      isUser: true,
+      timestamp: new Date()
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setCurrentMessage('');
+    setIsTyping(true);
+
+    try {
+      // Simulate AI response with a delay
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+
+      // Generate AI response based on the message and material context
+      const aiResponse = await generateAIResponse(currentMessage.trim(), material);
+      
+      const aiMessage = {
+        id: `ai-${Date.now()}`,
+        text: aiResponse,
+        isUser: false,
+        timestamp: new Date()
+      };
+
+      setChatMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      const errorMessage = {
+        id: `error-${Date.now()}`,
+        text: "I'm sorry, I encountered an error. Please try again or ask a different question.",
+        isUser: false,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const generateAIResponse = async (message: string, material: any) => {
+    try {
+      // Use Gemini AI to generate contextual responses
+      const materialContext = {
+        title: material?.title || 'this material',
+        content: material?.content || '',
+        type: material?.type || 'text',
+        courseId: courseId
+      };
+
+      const contextPrompt = `You are an AI learning assistant helping a student with their course material. 
+
+MATERIAL CONTEXT:
+- Title: ${materialContext.title}
+- Content: ${materialContext.content}
+- Material Type: ${materialContext.type}
+
+STUDENT'S QUESTION: "${message}"
+
+Please provide a helpful, educational response that:
+1. Directly addresses the student's question
+2. Uses the material content to provide specific, relevant information
+3. Offers additional learning suggestions or clarifications
+4. Maintains a friendly, encouraging tone
+5. Keeps responses concise but informative (2-3 paragraphs max)
+
+If the question is about creating quizzes, offer to help generate practice questions.
+If the question is about explanations, provide clear, detailed explanations with examples.
+If the question is about study tips, give specific, actionable advice.
+If the question is about translations, offer to help with language support.
+
+Respond as a knowledgeable tutor who has access to the course material.`;
+
+      const response = await geminiAIService.sendMessage({
+        userMessage: message,
+        context: {
+          page: 'material-view',
+          courseId: courseId,
+          courseTitle: materialContext.title,
+          content: materialContext.content
+        }
+      });
+
+      return response.message || `I understand you're asking about "${message}" regarding "${materialContext.title}". Let me help you with that based on the course material.`;
+      
+    } catch (error) {
+      console.error('Error calling Gemini AI:', error);
+      
+      // Fallback to contextual responses if Gemini AI fails
+      const lowerMessage = message.toLowerCase();
+      
+      if (lowerMessage.includes('quiz') || lowerMessage.includes('test')) {
+        return `I can help you create a quiz about "${material?.title || 'this material'}". Based on the content, I can generate practice questions that test your understanding of the key concepts. Would you like me to create some questions for you?`;
+      }
+      
+      if (lowerMessage.includes('explain') || lowerMessage.includes('what is') || lowerMessage.includes('how does')) {
+        return `I'd be happy to explain "${material?.title || 'this topic'}" in more detail. The material covers important concepts that I can break down for you. What specific aspect would you like me to focus on?`;
+      }
+      
+      if (lowerMessage.includes('summary') || lowerMessage.includes('summarize')) {
+        return `Here's a summary of "${material?.title || 'this material'}": The content covers key concepts that are important for your understanding. Would you like me to create a detailed summary or highlight the main points?`;
+      }
+      
+      if (lowerMessage.includes('help') || lowerMessage.includes('stuck')) {
+        return `I'm here to help! I can assist you with understanding the material, creating study aids, answering questions, and providing learning strategies. What specific help do you need with "${material?.title || 'this topic'}"?`;
+      }
+      
+      if (lowerMessage.includes('study') || lowerMessage.includes('learn')) {
+        return `Great question about studying! For "${material?.title || 'this material'}", I recommend: 1) Review the key concepts regularly, 2) Create practice questions, 3) Use active recall techniques, and 4) Connect new information to what you already know. Would you like specific study tips?`;
+      }
+      
+      // Default response
+      return `That's an interesting question about "${material?.title || 'this material'}". I can help you understand this better by explaining concepts, creating practice questions, or providing study strategies. Could you be more specific about what you'd like to know?`;
+    }
+  };
+
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Fullscreen functionality
+  const toggleFullscreen = async () => {
+    try {
+      if (!isFullscreen) {
+        // Enter fullscreen
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        } else if ((document.documentElement as any).webkitRequestFullscreen) {
+          await (document.documentElement as any).webkitRequestFullscreen();
+        } else if ((document.documentElement as any).msRequestFullscreen) {
+          await (document.documentElement as any).msRequestFullscreen();
+        }
+        setIsFullscreen(true);
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen();
+        }
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      console.error('Fullscreen error:', error);
+      // Fallback to simple state toggle if fullscreen API fails
+      setIsFullscreen(!isFullscreen);
+    }
+  };
+
+  // Handle fullscreen change events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Handle back to course navigation
+  const handleBackToCourse = () => {
+    navigate(`/course/${courseId}/hub`);
+  };
+
+  // PDF navigation functions
+  const goToPrevPage = () => {
+    if (pageNumber > 1) {
+      setPageNumber(pageNumber - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (pageNumber < (numPages || 1)) {
+      setPageNumber(pageNumber + 1);
+    }
+  };
+
+  const zoomIn = () => {
+    setScale(prev => Math.min(prev + 0.2, 3));
+  };
+
+  const zoomOut = () => {
+    setScale(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const rotateDocument = () => {
+    setRotation(prev => (prev + 90) % 360);
+  };
+
   const loadMaterialData = async () => {
     try {
       setLoading(true);
@@ -484,10 +1068,6 @@ const MaterialView: React.FC = () => {
     }
   };
 
-  const handleBackToCourse = () => {
-    navigate(`/course/${courseId}/hub`);
-  };
-
   // PDF Document Handlers
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -519,27 +1099,6 @@ const MaterialView: React.FC = () => {
     console.error('Page load error:', error);
     setDocumentError(true);
     setPdfLoading(false);
-  };
-
-  // PDF Navigation Functions
-  const goToPrevPage = () => {
-    setPageNumber(prev => Math.max(prev - 1, 1));
-  };
-
-  const goToNextPage = () => {
-    setPageNumber(prev => Math.min(prev + 1, numPages || 1));
-  };
-
-  const zoomIn = () => {
-    setScale(prev => Math.min(prev + 0.2, 3.0));
-  };
-
-  const zoomOut = () => {
-    setScale(prev => Math.max(prev - 0.2, 0.5));
-  };
-
-  const rotateDocument = () => {
-    setRotation(prev => (prev + 90) % 360);
   };
 
   const getFileIcon = (type: string) => {
@@ -604,31 +1163,335 @@ const MaterialView: React.FC = () => {
   const urlLower = url.toLowerCase();
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Breadcrumbs */}
-      <Breadcrumbs sx={{ mb: 3 }}>
-        <Link 
-          color="inherit" 
-          href="#" 
-          onClick={(e) => {
-            e.preventDefault();
-            navigate('/dashboard/student/courses');
-          }}
-        >
-          Courses
-        </Link>
-        <Link 
-          color="inherit" 
-          href="#" 
-          onClick={(e) => {
-            e.preventDefault();
-            navigate(`/course/${courseId}/hub`);
-          }}
-        >
+    <Box sx={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      position: 'relative'
+    }}>
+      {/* Enhanced Header with Voice Controls */}
+      <AppBar 
+        position="sticky" 
+        elevation={0}
+        sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
+        }}
+      >
+        <Toolbar sx={{ justifyContent: 'space-between', py: 1 }}>
+          {/* Left Section - Navigation */}
+          <Box display="flex" alignItems="center" gap={2}>
+            <IconButton 
+              onClick={() => navigate('/dashboard/student/courses')}
+              sx={{ 
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.1)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
+              }}
+            >
+              <ArrowBack />
+            </IconButton>
+            
+            <Box>
+              <Typography variant="h6" noWrap sx={{ fontWeight: 600 }}>
+                {material.title}
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.8 }}>
           {week.title}
-        </Link>
-        <Typography color="text.primary">{material.title}</Typography>
-      </Breadcrumbs>
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Right Section - Voice Controls */}
+          <Box display="flex" alignItems="center" gap={1}>
+            {/* Voice Assistant Toggle */}
+            <Tooltip title={isVoiceEnabled ? "Disable Voice Assistant" : "Enable Voice Assistant"}>
+              <IconButton
+                onClick={() => {
+                  setIsVoiceEnabled(!isVoiceEnabled);
+                  if (!isVoiceEnabled) {
+                    startVoiceRecognition();
+                  } else {
+                    stopVoiceRecognition();
+                  }
+                }}
+                sx={{
+                  color: isVoiceEnabled ? '#4caf50' : 'white',
+                  bgcolor: isVoiceEnabled ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255,255,255,0.1)',
+                  '&:hover': { 
+                    bgcolor: isVoiceEnabled ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255,255,255,0.2)' 
+                  }
+                }}
+              >
+                {isVoiceEnabled ? <Mic /> : <MicOff />}
+              </IconButton>
+            </Tooltip>
+
+            {/* Translation Button */}
+            <Tooltip title="Voice Translation">
+              <IconButton
+                onClick={() => setShowVoicePanel(!showVoicePanel)}
+                sx={{
+                  color: showVoicePanel ? '#ff9800' : 'white',
+                  bgcolor: showVoicePanel ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255,255,255,0.1)',
+                  '&:hover': { 
+                    bgcolor: showVoicePanel ? 'rgba(255, 152, 0, 0.3)' : 'rgba(255,255,255,0.2)' 
+                  }
+                }}
+              >
+                <Translate />
+              </IconButton>
+            </Tooltip>
+
+            {/* Read Aloud Button */}
+            <Tooltip title="Read Aloud">
+              <IconButton
+                onClick={readCurrentContent}
+                sx={{
+                  color: 'white',
+                  bgcolor: 'rgba(255,255,255,0.1)',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
+                }}
+              >
+                <VolumeUp />
+              </IconButton>
+            </Tooltip>
+
+            {/* Fullscreen Toggle */}
+            <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}>
+              <IconButton
+                onClick={toggleFullscreen}
+                sx={{
+                  color: 'white',
+                  bgcolor: 'rgba(255,255,255,0.1)',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
+                }}
+              >
+                {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      {/* Voice Commands Display */}
+      {isVoiceEnabled && voiceCommands.length > 0 && (
+        <Fade in={voiceCommands.length > 0}>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              position: 'fixed', 
+              top: 80, 
+              right: 16, 
+              zIndex: 1000,
+              p: 2,
+              maxWidth: 300,
+              bgcolor: 'rgba(0,0,0,0.8)',
+              color: 'white',
+              backdropFilter: 'blur(10px)'
+            }}
+          >
+            <Typography variant="subtitle2" gutterBottom>
+              Voice Commands:
+            </Typography>
+            {voiceCommands.slice(-3).map((command, index) => (
+              <Chip 
+                key={index}
+                label={command}
+                size="small"
+                sx={{ mr: 1, mb: 1, bgcolor: 'rgba(255,255,255,0.2)' }}
+              />
+            ))}
+          </Paper>
+        </Fade>
+      )}
+
+      {/* Voice Panel Drawer */}
+      <Drawer
+        anchor="right"
+        open={showVoicePanel}
+        onClose={() => setShowVoicePanel(false)}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: 400,
+            bgcolor: 'background.paper',
+            p: 3
+          }
+        }}
+      >
+        <Box>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h6">Voice & Translation</Typography>
+            <IconButton onClick={() => setShowVoicePanel(false)}>
+              <Close />
+            </IconButton>
+          </Box>
+
+          {/* Language Selection */}
+          <Box mb={3}>
+            <Typography variant="subtitle1" gutterBottom>
+              Target Language
+            </Typography>
+            <TextField
+              select
+              fullWidth
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              SelectProps={{
+                native: true,
+              }}
+            >
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="pt">Portuguese</option>
+              <option value="ru">Russian</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh">Chinese</option>
+            </TextField>
+          </Box>
+
+          {/* Voice Settings */}
+          <Box mb={3}>
+            <Typography variant="subtitle1" gutterBottom>
+              Voice Settings
+            </Typography>
+            
+            <Box mb={2}>
+              <Typography variant="body2" gutterBottom>
+                Speed: {voiceSettings.rate}x
+              </Typography>
+              <Slider
+                value={voiceSettings.rate}
+                onChange={(_, value) => setVoiceSettings(prev => ({ ...prev, rate: value as number }))}
+                min={0.5}
+                max={2}
+                step={0.1}
+                marks
+                valueLabelDisplay="auto"
+              />
+            </Box>
+
+            <Box mb={2}>
+              <Typography variant="body2" gutterBottom>
+                Pitch: {voiceSettings.pitch}
+              </Typography>
+              <Slider
+                value={voiceSettings.pitch}
+                onChange={(_, value) => setVoiceSettings(prev => ({ ...prev, pitch: value as number }))}
+                min={0.5}
+                max={2}
+                step={0.1}
+                marks
+                valueLabelDisplay="auto"
+              />
+            </Box>
+
+            <Box mb={2}>
+              <Typography variant="body2" gutterBottom>
+                Volume: {Math.round(voiceSettings.volume * 100)}%
+              </Typography>
+              <Slider
+                value={voiceSettings.volume}
+                onChange={(_, value) => setVoiceSettings(prev => ({ ...prev, volume: value as number }))}
+                min={0}
+                max={1}
+                step={0.1}
+                marks
+                valueLabelDisplay="auto"
+              />
+            </Box>
+          </Box>
+
+          {/* Translation Section */}
+          <Box mb={3}>
+            <Typography variant="subtitle1" gutterBottom>
+              Text Translation
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              placeholder="Enter text to translate..."
+              onChange={(e) => {
+                if (e.target.value) {
+                  translateText(e.target.value, selectedLanguage);
+                }
+              }}
+            />
+            
+            {isTranslating && (
+              <Box display="flex" alignItems="center" gap={1} mt={2}>
+                <CircularProgress size={20} />
+                <Typography variant="body2">Translating...</Typography>
+              </Box>
+            )}
+            
+            {translatedText && (
+              <Box mt={2}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Translation:
+                </Typography>
+                <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                  <Typography variant="body1">{translatedText}</Typography>
+                </Paper>
+                <Button
+                  startIcon={<VolumeUp />}
+                  onClick={speakTranslatedText}
+                  sx={{ mt: 1 }}
+                  size="small"
+                >
+                  Speak Translation
+                </Button>
+              </Box>
+            )}
+          </Box>
+
+          {/* Voice Commands Help */}
+          <Box>
+            <Typography variant="subtitle1" gutterBottom>
+              Voice Commands
+            </Typography>
+            <List dense>
+              <ListItem>
+                <ListItemText 
+                  primary="Scroll down/up" 
+                  secondary="Navigate through content"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Next/Previous page" 
+                  secondary="Navigate pages"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Zoom in/out" 
+                  secondary="Adjust zoom level"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Read aloud" 
+                  secondary="Start text-to-speech"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Stop/Pause" 
+                  secondary="Stop current action"
+                />
+              </ListItem>
+            </List>
+          </Box>
+        </Box>
+      </Drawer>
+
+      <Container maxWidth="lg" sx={{ py: 4 }}>
 
       {/* Material Header */}
       <Card sx={{ 
@@ -1541,6 +2404,55 @@ const MaterialView: React.FC = () => {
         </Grid>
       </Grid>
 
+      {/* Floating AI Assistant */}
+      <Fab 
+        className="ai-assistant-fab"
+        color="secondary" 
+        sx={{ 
+          position: 'fixed', 
+          bottom: 16, 
+          left: 16,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+            transform: 'scale(1.1)'
+          },
+          transition: 'all 0.3s ease',
+          boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+          zIndex: 10000, // Higher z-index to appear above fullscreen content
+          // Ensure visibility in fullscreen
+          '@media (display-mode: fullscreen)': {
+            zIndex: 10000
+          }
+        }}
+        onClick={() => setShowAIAssistant(true)}
+      >
+        <SmartToy />
+      </Fab>
+
+      {/* AI Assistant Badge */}
+      <Chip
+        className="ai-assistant-badge"
+        label="AI Assistant"
+        color="secondary"
+        size="small"
+        sx={{
+          position: 'fixed',
+          bottom: 80,
+          left: 16,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          fontWeight: 'bold',
+          fontSize: '0.75rem',
+          zIndex: 10000, // Higher z-index to appear above fullscreen content
+          animation: 'pulse 2s infinite',
+          // Ensure visibility in fullscreen
+          '@media (display-mode: fullscreen)': {
+            zIndex: 10000
+          }
+        }}
+      />
+
       {/* Floating Action Button */}
       <Fab 
         color="primary" 
@@ -1549,7 +2461,290 @@ const MaterialView: React.FC = () => {
       >
         <School />
       </Fab>
+
+      {/* AI Assistant Dialog */}
+      <Dialog
+        open={showAIAssistant}
+        onClose={() => setShowAIAssistant(false)}
+        maxWidth="md"
+        fullWidth
+        sx={{
+          zIndex: 10001, // Higher z-index to appear above fullscreen content
+          '& .MuiBackdrop-root': {
+            zIndex: 10000
+          }
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            minHeight: '500px',
+            zIndex: 10001
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          textAlign: 'center',
+          py: 2
+        }}>
+          <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+            <SmartToy />
+            <Typography variant="h6" fontWeight="bold">
+              AI Learning Assistant
+            </Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ p: 3 }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body1" color="text.secondary" textAlign="center">
+              Hi! I'm your AI assistant. I can help you understand this material, answer questions, 
+              create quizzes, and provide study tips. What would you like to know?
+            </Typography>
+          </Box>
+
+          {/* Quick Actions */}
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={6}>
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Quiz />}
+                onClick={() => {
+                  setCurrentMessage('Can you create a quiz for me?');
+                  setTimeout(() => sendMessage(), 100);
+                }}
+                sx={{ 
+                  borderRadius: 2,
+                  py: 1.5,
+                  borderColor: '#667eea',
+                  color: '#667eea',
+                  '&:hover': {
+                    borderColor: '#5a6fd8',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                  }
+                }}
+              >
+                Generate Quiz
+              </Button>
+            </Grid>
+            <Grid item xs={6}>
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<VolumeUp />}
+                onClick={() => {
+                  // Read material aloud
+                  if (speechSynthesis) {
+                    const utterance = new SpeechSynthesisUtterance(material.title + '. ' + material.content);
+                    speechSynthesis.speak(utterance);
+                  }
+                }}
+                sx={{ 
+                  borderRadius: 2,
+                  py: 1.5,
+                  borderColor: '#667eea',
+                  color: '#667eea',
+                  '&:hover': {
+                    borderColor: '#5a6fd8',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                  }
+                }}
+              >
+                Read Aloud
+              </Button>
+            </Grid>
+            <Grid item xs={6}>
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Translate />}
+                onClick={() => {
+                  setCurrentMessage('Can you help me translate this material?');
+                  setTimeout(() => sendMessage(), 100);
+                }}
+                sx={{ 
+                  borderRadius: 2,
+                  py: 1.5,
+                  borderColor: '#667eea',
+                  color: '#667eea',
+                  '&:hover': {
+                    borderColor: '#5a6fd8',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                  }
+                }}
+              >
+                Translate
+              </Button>
+            </Grid>
+            <Grid item xs={6}>
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Lightbulb />}
+                onClick={() => {
+                  setCurrentMessage('Can you give me study tips for this material?');
+                  setTimeout(() => sendMessage(), 100);
+                }}
+                sx={{ 
+                  borderRadius: 2,
+                  py: 1.5,
+                  borderColor: '#667eea',
+                  color: '#667eea',
+                  '&:hover': {
+                    borderColor: '#5a6fd8',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                  }
+                }}
+              >
+                Study Tips
+              </Button>
+            </Grid>
+          </Grid>
+
+          {/* Chat Interface */}
+          <Box sx={{ 
+            border: '1px solid #e0e0e0', 
+            borderRadius: 2, 
+            p: 2, 
+            backgroundColor: 'white',
+            minHeight: '300px',
+            maxHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <Typography variant="subtitle2" gutterBottom color="text.secondary">
+              Chat with AI Assistant
+            </Typography>
+            
+            {/* Messages Display */}
+            <Box sx={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              mb: 2, 
+              maxHeight: '250px',
+              border: '1px solid #f0f0f0',
+              borderRadius: 1,
+              p: 1,
+              backgroundColor: '#fafafa'
+            }}>
+              {chatMessages.map((message) => (
+                <Box
+                  key={message.id}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: message.isUser ? 'flex-end' : 'flex-start',
+                    mb: 1
+                  }}
+                >
+                  <Box
+                    sx={{
+                      maxWidth: '80%',
+                      p: 1.5,
+                      borderRadius: 2,
+                      backgroundColor: message.isUser 
+                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                        : '#e3f2fd',
+                      color: message.isUser ? 'white' : 'black',
+                      fontSize: '0.9rem',
+                      wordWrap: 'break-word'
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {message.text}
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        opacity: 0.7, 
+                        fontSize: '0.7rem',
+                        display: 'block',
+                        mt: 0.5
+                      }}
+                    >
+                      {message.timestamp.toLocaleTimeString()}
+                    </Typography>
+                  </Box>
+                </Box>
+              ))}
+              
+              {/* Typing Indicator */}
+              {isTyping && (
+                <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      backgroundColor: '#e3f2fd',
+                      color: 'black',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={12} />
+                      AI is typing...
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+            
+            {/* Message Input */}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                placeholder="Ask me anything about this material..."
+                variant="outlined"
+                size="small"
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isTyping}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': { borderColor: '#667eea' },
+                    '&.Mui-focused fieldset': { borderColor: '#667eea' }
+                  }
+                }}
+              />
+              <Button
+                variant="contained"
+                startIcon={<Send />}
+                onClick={sendMessage}
+                disabled={!currentMessage.trim() || isTyping}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)'
+                  },
+                  '&:disabled': {
+                    background: '#ccc',
+                    color: '#666'
+                  },
+                  minWidth: '100px'
+                }}
+              >
+                {isTyping ? 'Sending...' : 'Send'}
+              </Button>
+            </Box>
+          </Box>
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 2, background: '#f8f9fa' }}>
+          <Button 
+            onClick={() => setShowAIAssistant(false)}
+            sx={{ color: '#667eea' }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
+    </Box>
   );
 };
 

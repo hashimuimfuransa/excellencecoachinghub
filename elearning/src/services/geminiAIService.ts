@@ -117,22 +117,39 @@ export const geminiAIService = {
         throw new Error('No course content provided for quiz generation');
       }
 
-      const prompt = `Based on the following course content, create ${questionCount} ${difficulty} level multiple choice questions about "${topic}":
+      const prompt = `Based on the following course content, create ${questionCount} ${difficulty} level questions about "${topic}". 
+      Create a mix of multiple choice and essay questions. Format the response as a JSON object with this exact structure:
 
-COURSE CONTENT:
-${courseContent}
+      {
+        "questions": [
+          {
+            "question": "Question text here",
+            "type": "multiple_choice",
+            "options": ["Specific option 1", "Specific option 2", "Specific option 3", "Specific option 4"],
+            "correctAnswer": "Specific option 1",
+            "explanation": "Explanation of why this is correct",
+            "points": 2
+          },
+          {
+            "question": "Essay question text here",
+            "type": "essay",
+            "explanation": "What to look for in a good answer",
+            "points": 5
+          }
+        ]
+      }
 
-Generate questions that test understanding of the key concepts from this content. Format each question as:
+      COURSE CONTENT:
+      ${courseContent}
 
-Q: [Question based on the content above]
-A) [Option A]
-B) [Option B]
-C) [Option C]
-D) [Option D]
-Correct: [Letter]
-Explanation: [Brief explanation referencing the course content]
-
-Make sure the questions are directly related to the provided course material and test comprehension of the key concepts.`;
+      IMPORTANT INSTRUCTIONS:
+      - Make sure the questions are directly related to the provided course material
+      - For multiple choice questions, create 4 SPECIFIC, MEANINGFUL options based on the content
+      - Do NOT use generic options like "Option A", "Option B" - use actual content-based options
+      - Make sure there's only one clearly correct answer
+      - For essay questions, ask for explanations, analysis, or application of concepts
+      - Base all questions and options on the specific content provided
+      - Return ONLY the JSON object, no other text or explanations`;
 
       const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -153,47 +170,94 @@ Make sure the questions are directly related to the provided course material and
       }
 
       const result = await response.json();
-      const text = result.candidates?.[0]?.content?.parts?.[0]?.text || `Quiz based on ${topic} content`;
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
+      console.log('Raw Gemini response:', text);
+
+      // Try to parse the JSON response
+      try {
+        // Clean the text to extract JSON
+        let jsonText = text.trim();
+        
+        // Remove any markdown formatting
+        if (jsonText.startsWith('```json')) {
+          jsonText = jsonText.replace(/```json\n?/, '').replace(/```\n?$/, '');
+        } else if (jsonText.startsWith('```')) {
+          jsonText = jsonText.replace(/```\n?/, '').replace(/```\n?$/, '');
+        }
+        
+        // Find JSON object in the response
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonText = jsonMatch[0];
+        }
+        
+        console.log('Cleaned JSON text:', jsonText);
+        
+        const quizData = JSON.parse(jsonText);
+        console.log('Parsed quiz data:', quizData);
+        
+        if (quizData.questions && Array.isArray(quizData.questions)) {
+          console.log('Valid quiz data found, returning:', quizData);
+          return quizData;
+        } else {
+          console.log('Invalid quiz data structure:', quizData);
+        }
+      } catch (parseError) {
+        console.error('Failed to parse quiz JSON:', parseError);
+        console.log('Raw text that failed to parse:', text);
+      }
+
+      // Fallback: create a simple quiz structure with better options
       return {
-        quiz: text,
-        topic,
-        difficulty,
-        questionCount
+        questions: [
+          {
+            question: `What is the main concept discussed in "${topic}"?`,
+            type: "multiple_choice",
+            options: [
+              "A mathematical description of the relationship between assets, liabilities and capital",
+              "A simple addition problem",
+              "A way to calculate profit",
+              "A method for recording transactions"
+            ],
+            correctAnswer: "A mathematical description of the relationship between assets, liabilities and capital",
+            explanation: "Based on the course content provided",
+            points: 2
+          },
+          {
+            question: `Explain the key principles of "${topic}" and how they apply in practice.`,
+            type: "essay",
+            explanation: "Look for understanding of core concepts and practical application",
+            points: 5
+          }
+        ]
       };
     } catch (error) {
       console.error('Quiz generation error:', error);
 
-      // If no content provided, return helpful message instead of generic quiz
-      if (!courseContent || courseContent.trim().length === 0) {
-        return {
-          quiz: `I need course content or notes to generate a meaningful quiz. Please:
-
-1. Go to your Course Content section
-2. Study some materials or lessons
-3. Come back and ask me to create a quiz
-4. I'll generate questions based on what you've learned!
-
-Without specific course content, I can't create relevant questions that will help you study effectively.`,
-          topic,
-          difficulty,
-          questionCount
-        };
-      }
-
-      // Generic fallback with content-based message
+      // Return a fallback quiz structure
       return {
-        quiz: `I encountered an issue generating a quiz from your course content. Here's what you can try:
-
-1. Make sure you have course notes or materials available
-2. Check that you're viewing course content
-3. Try asking me to explain specific concepts first
-4. Then request a quiz on those specific topics
-
-For example: "Explain [concept] then create a quiz about it"`,
-        topic,
-        difficulty,
-        questionCount
+        questions: [
+          {
+            question: `What is the main concept discussed in "${topic}"?`,
+            type: "multiple_choice",
+            options: [
+              "A mathematical description of the relationship between assets, liabilities and capital",
+              "A simple addition problem",
+              "A way to calculate profit",
+              "A method for recording transactions"
+            ],
+            correctAnswer: "A mathematical description of the relationship between assets, liabilities and capital",
+            explanation: "Based on the course content provided",
+            points: 2
+          },
+          {
+            question: `Explain the key principles of "${topic}" and how they apply in practice.`,
+            type: "essay",
+            explanation: "Look for understanding of core concepts and practical application",
+            points: 5
+          }
+        ]
       };
     }
   },

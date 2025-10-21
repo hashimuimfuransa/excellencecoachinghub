@@ -32,7 +32,31 @@ import {
   Grid,
   CardActionArea,
   Collapse,
-  CircularProgress
+  CircularProgress,
+  Drawer,
+  Slider,
+  FormControlLabel,
+  Switch,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Fade,
+  Zoom,
+  Grow,
+  Slide,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  AppBar,
+  Toolbar,
+  useTheme,
+  useMediaQuery,
+  alpha,
+  styled,
+  Radio,
+  RadioGroup
 } from '@mui/material';
 import {
   ExpandMore,
@@ -67,9 +91,32 @@ import {
   Highlight,
   NoteAdd,
   Assessment,
-  ArrowBack
+  ArrowBack,
+  Translate,
+  Mic,
+  MicOff,
+  VolumeUp,
+  VolumeOff,
+  RecordVoiceOver,
+  Hearing,
+  Accessibility,
+  PlayArrow,
+  Pause,
+  Stop,
+  SkipNext,
+  SkipPrevious,
+  Replay,
+  Speed,
+  Settings,
+  Close,
+  Language,
+  RecordVoiceOver as VoiceOver,
+  Hearing as HearingIcon,
+  Accessibility as AccessibilityIcon
 } from '@mui/icons-material';
 import { StructuredNotes } from '../../services/documentProcessorService';
+import { geminiAIService } from '../../services/geminiAIService';
+import { aiQuizService, QuizQuestion, GeneratedQuiz } from '../../services/aiQuizService';
 import './StructuredNotesViewer.css';
 
 interface IndependentStructuredNotesViewerProps {
@@ -114,7 +161,31 @@ const SectionAccordion = React.memo(({
   expandedContent,
   onToggleExpandedContent,
   searchQuery,
-  highlightSearchTerms
+  highlightSearchTerms,
+  // Voice and Quiz props
+  speechSynthesis,
+  voiceSettings,
+  readingSections,
+  startReadingSection,
+  stopReadingSection,
+  selectedLanguage,
+  translateText,
+  isTranslating,
+  translatedText,
+  speakTranslatedText,
+  generateQuizForSection,
+  quizLoading,
+  sectionQuizzes,
+  showQuiz,
+  setShowQuiz,
+  quizAnswers,
+  setQuizAnswers,
+  submitQuizAnswers,
+  quizResults,
+  showQuizResults,
+  setShowQuizResults,
+  resetQuiz,
+  hasAnsweredAllQuestions
 }: any) => (
   <Accordion 
     expanded={isExpanded}
@@ -153,7 +224,70 @@ const SectionAccordion = React.memo(({
         </Typography>
       </Box>
       
-      <Box display="flex" gap={0.5}>
+      <Box display="flex" gap={1} alignItems="center">
+        {/* Voice Reader Toggle */}
+        <Tooltip title={readingSections.has(originalIndex) ? "Stop reading" : "Read this section aloud"}>
+          <IconButton 
+            size="small" 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (readingSections.has(originalIndex)) {
+                stopReadingSection(originalIndex);
+              } else {
+                const sectionText = `Now reading Section ${originalIndex + 1}: ${section.title}. ${section.content}. End of section ${originalIndex + 1}.`;
+                startReadingSection(originalIndex, sectionText);
+              }
+            }}
+            sx={{
+              color: readingSections.has(originalIndex) ? 'error.main' : 'primary.main',
+              bgcolor: readingSections.has(originalIndex) ? 'rgba(244, 67, 54, 0.1)' : 'rgba(25, 118, 210, 0.1)',
+              '&:hover': { 
+                bgcolor: readingSections.has(originalIndex) ? 'rgba(244, 67, 54, 0.2)' : 'rgba(25, 118, 210, 0.2)' 
+              }
+            }}
+          >
+            {readingSections.has(originalIndex) ? <Stop /> : <VolumeUp />}
+          </IconButton>
+        </Tooltip>
+
+        {/* Quiz Generator - More Prominent */}
+        <Tooltip title={sectionQuizzes.has(originalIndex) ? "Take Quiz" : "Generate Quiz"}>
+          <IconButton 
+            size="medium" 
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('Quiz button clicked for section:', originalIndex);
+              if (sectionQuizzes.has(originalIndex)) {
+                setShowQuiz(prev => new Map(prev.set(originalIndex, !prev.get(originalIndex))));
+              } else {
+                generateQuizForSection(originalIndex, section);
+              }
+            }}
+            disabled={quizLoading.get(originalIndex)}
+            sx={{
+              color: sectionQuizzes.has(originalIndex) ? '#1976d2' : '#ff6b35',
+              bgcolor: sectionQuizzes.has(originalIndex) ? 'rgba(25, 118, 210, 0.15)' : 'rgba(255, 107, 53, 0.15)',
+              border: '2px solid rgba(255, 107, 53, 0.3)',
+              minWidth: '44px',
+              minHeight: '44px',
+              fontWeight: 'bold',
+              '&:hover': { 
+                bgcolor: sectionQuizzes.has(originalIndex) ? 'rgba(25, 118, 210, 0.25)' : 'rgba(255, 107, 53, 0.25)',
+                border: '2px solid rgba(255, 107, 53, 0.5)',
+                transform: 'scale(1.1)',
+                boxShadow: '0 4px 8px rgba(255, 107, 53, 0.3)'
+              },
+              '&:disabled': {
+                color: '#999',
+                bgcolor: 'rgba(0, 0, 0, 0.05)',
+                border: '2px solid rgba(0, 0, 0, 0.1)'
+              }
+            }}
+          >
+            {quizLoading.get(originalIndex) ? <CircularProgress size={20} /> : <Quiz fontSize="medium" />}
+          </IconButton>
+        </Tooltip>
+
         <Tooltip title={starredSections.has(originalIndex) ? "Remove from favorites" : "Add to favorites"}>
           <IconButton 
             size="small" 
@@ -181,6 +315,241 @@ const SectionAccordion = React.memo(({
     </AccordionSummary>
     
     <AccordionDetails sx={{ px: 3, py: 2 }}>
+      {/* Translation Display */}
+      {translatedText && (
+        <Card sx={{ mb: 3, backgroundColor: 'warning.light', color: 'warning.contrastText' }}>
+          <CardContent sx={{ p: 2 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+              <Typography variant="subtitle2">
+                Translation ({selectedLanguage.toUpperCase()}):
+              </Typography>
+              <IconButton size="small" onClick={speakTranslatedText}>
+                <VolumeUp />
+              </IconButton>
+            </Box>
+            <Typography variant="body2">
+              {translatedText}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quiz Display */}
+      <Collapse in={showQuiz.get(originalIndex) || false}>
+        <Card sx={{ 
+          mb: 3, 
+          backgroundColor: '#f8f9fa', 
+          border: '2px solid #ff6b35',
+          boxShadow: '0 4px 12px rgba(255, 107, 53, 0.2)'
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            {sectionQuizzes.has(originalIndex) ? (
+              <Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6" sx={{ color: '#ff6b35', fontWeight: 'bold' }}>
+                    📝 Quiz: {section.title}
+                  </Typography>
+                  <Chip 
+                    label={`${sectionQuizzes.get(originalIndex)?.questions.length} Questions`} 
+                    color="primary" 
+                    size="small" 
+                  />
+                </Box>
+                
+                <Typography variant="body2" sx={{ mb: 3, color: '#666' }}>
+                  Test your understanding with mixed question types (Multiple Choice & Essay)
+                </Typography>
+
+                {sectionQuizzes.get(originalIndex)?.questions.map((question: QuizQuestion, questionIndex: number) => (
+                  <Box key={questionIndex} mb={3} p={2} sx={{ 
+                    backgroundColor: 'white', 
+                    borderRadius: 2, 
+                    border: '1px solid #e0e0e0' 
+                  }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#333' }}>
+                        Question {questionIndex + 1}
+                      </Typography>
+                      <Chip 
+                        label={question.type === 'essay' ? 'Essay (5 pts)' : 'Multiple Choice (2 pts)'} 
+                        color={question.type === 'essay' ? 'secondary' : 'primary'} 
+                        size="small" 
+                      />
+                    </Box>
+                    
+                    <Typography variant="body1" mb={2} sx={{ fontWeight: 500 }}>
+                      {question.question}
+                    </Typography>
+                    
+                    {question.type === 'multiple_choice' && question.options ? (
+                      <Box>
+                        {question.options.map((option: string, optionIndex: number) => (
+                          <FormControlLabel
+                            key={optionIndex}
+                            control={
+                              <Radio
+                                checked={quizAnswers.get(`${originalIndex}-${questionIndex}`) === option}
+                                onChange={(e) => setQuizAnswers(prev => new Map(prev.set(`${originalIndex}-${questionIndex}`, e.target.value)))}
+                                value={option}
+                                sx={{ color: '#ff6b35' }}
+                              />
+                            }
+                            label={option}
+                            sx={{ 
+                              display: 'block', 
+                              mb: 1,
+                              '&:hover': { backgroundColor: '#f5f5f5', borderRadius: 1 }
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    ) : question.type === 'essay' ? (
+                      <TextField
+                        multiline
+                        rows={3}
+                        fullWidth
+                        placeholder="Type your answer here..."
+                        value={quizAnswers.get(`${originalIndex}-${questionIndex}`) || ''}
+                        onChange={(e) => setQuizAnswers(prev => new Map(prev.set(`${originalIndex}-${questionIndex}`, e.target.value)))}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '&:hover fieldset': { borderColor: '#ff6b35' },
+                            '&.Mui-focused fieldset': { borderColor: '#ff6b35' }
+                          }
+                        }}
+                      />
+                    ) : null}
+                  </Box>
+                ))}
+                
+                <Box display="flex" gap={2} mt={3} justifyContent="center">
+                  <Button
+                    variant="contained"
+                    onClick={() => submitQuizAnswers(originalIndex)}
+                    disabled={!hasAnsweredAllQuestions(originalIndex)}
+                    size="large"
+                    sx={{
+                      backgroundColor: '#ff6b35',
+                      '&:hover': { backgroundColor: '#e55a2b' },
+                      px: 4,
+                      py: 1.5
+                    }}
+                  >
+                    Submit Quiz
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setShowQuiz(prev => new Map(prev.set(originalIndex, false)))}
+                    size="large"
+                    sx={{
+                      borderColor: '#ff6b35',
+                      color: '#ff6b35',
+                      '&:hover': { 
+                        borderColor: '#e55a2b',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)'
+                      },
+                      px: 4,
+                      py: 1.5
+                    }}
+                  >
+                    Close Quiz
+                  </Button>
+                </Box>
+              </Box>
+            ) : (
+              <Box textAlign="center" py={4}>
+                <CircularProgress sx={{ color: '#ff6b35', mb: 2 }} />
+                <Typography variant="body1" sx={{ color: '#666' }}>
+                  Generating quiz with Gemini AI...
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      </Collapse>
+
+      {/* Quiz Results Display */}
+      <Collapse in={showQuizResults.get(originalIndex) || false}>
+        <Card sx={{ mb: 3, backgroundColor: 'success.light', color: 'success.contrastText' }}>
+          <CardContent sx={{ p: 2 }}>
+            {quizResults.has(originalIndex) && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Quiz Results: {section.title}
+                </Typography>
+                <Typography variant="h6" gutterBottom>
+                  Score: {quizResults.get(originalIndex).percentage}% ({quizResults.get(originalIndex).score}/{quizResults.get(originalIndex).totalQuestions})
+                </Typography>
+                
+                {/* Correct Answers */}
+                {quizResults.get(originalIndex).correctAnswers.length > 0 && (
+                  <Box mb={2}>
+                    <Typography variant="body2" fontWeight="bold" color="success.dark">
+                      Correct Answers:
+                    </Typography>
+                    {quizResults.get(originalIndex).correctAnswers.map((result: any, index: number) => (
+                      <Box key={index} mb={1}>
+                        <Typography variant="body2">
+                          <strong>Q:</strong> {result.question}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>A:</strong> {result.userAnswer}
+                        </Typography>
+                        <Typography variant="body2" color="success.dark">
+                          <strong>Explanation:</strong> {result.explanation}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+
+                {/* Wrong Answers */}
+                {quizResults.get(originalIndex).wrongAnswers.length > 0 && (
+                  <Box mb={2}>
+                    <Typography variant="body2" fontWeight="bold" color="error.dark">
+                      Incorrect Answers:
+                    </Typography>
+                    {quizResults.get(originalIndex).wrongAnswers.map((result: any, index: number) => (
+                      <Box key={index} mb={1}>
+                        <Typography variant="body2">
+                          <strong>Q:</strong> {result.question}
+                        </Typography>
+                        <Typography variant="body2" color="error.dark">
+                          <strong>Your Answer:</strong> {result.userAnswer}
+                        </Typography>
+                        <Typography variant="body2" color="success.dark">
+                          <strong>Correct Answer:</strong> {result.correctAnswer}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Explanation:</strong> {result.explanation}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+
+                <Box display="flex" gap={1} mt={2}>
+                  <Button
+                    variant="contained"
+                    onClick={() => resetQuiz(originalIndex)}
+                    size="small"
+                  >
+                    Retake Quiz
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setShowQuizResults(prev => new Map(prev.set(originalIndex, false)))}
+                    size="small"
+                  >
+                    Close Results
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      </Collapse>
+
       {/* User Notes */}
       <Collapse in={showUserNotes.get(originalIndex) || false}>
         <Card sx={{ mb: 3, backgroundColor: 'primary.light', color: 'primary.contrastText' }}>
@@ -362,6 +731,36 @@ const IndependentStructuredNotesViewer: React.FC<IndependentStructuredNotesViewe
   const [expandedContent, setExpandedContent] = useState<Set<number>>(new Set()); // Track which sections have full content expanded
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
+  // Voice and Translation State
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [translatedText, setTranslatedText] = useState('');
+  const [voiceRecognition, setVoiceRecognition] = useState<any>(null);
+  const [speechSynthesis, setSpeechSynthesis] = useState<any>(null);
+  const [voiceSettings, setVoiceSettings] = useState({
+    rate: 0.9, // Optimal for comprehension and engagement
+    pitch: 1.1, // Engaging but natural pitch
+    volume: 0.8, // Comfortable listening level
+    voice: null as any
+  });
+  const [showVoicePanel, setShowVoicePanel] = useState(false);
+  const [voiceCommands, setVoiceCommands] = useState<string[]>([]);
+  const [isVoiceAssistantActive, setIsVoiceAssistantActive] = useState(false);
+  const [isReading, setIsReading] = useState(false);
+  const [currentReadingSection, setCurrentReadingSection] = useState<number | null>(null);
+  const [readingSections, setReadingSections] = useState<Set<number>>(new Set());
+
+  // Quiz-related state
+  const [sectionQuizzes, setSectionQuizzes] = useState<Map<number, GeneratedQuiz>>(new Map());
+  const [quizLoading, setQuizLoading] = useState<Map<number, boolean>>(new Map());
+  const [quizAttempts, setQuizAttempts] = useState<Map<number, any>>(new Map());
+  const [showQuiz, setShowQuiz] = useState<Map<number, boolean>>(new Map());
+  const [quizAnswers, setQuizAnswers] = useState<Map<string, string>>(new Map());
+  const [quizResults, setQuizResults] = useState<Map<number, any>>(new Map());
+  const [showQuizResults, setShowQuizResults] = useState<Map<number, boolean>>(new Map());
+
   // Extract structured notes from various possible sources
   const notes = React.useMemo(() => {
     // Priority 1: Direct structuredNotes prop
@@ -471,6 +870,512 @@ const IndependentStructuredNotesViewer: React.FC<IndependentStructuredNotesViewe
       setExpandedSections(new Set([0]));
     }
   }, [notes?.sections]);
+
+  // Voice and Translation Functions
+  const initializeVoiceFeatures = () => {
+    // Initialize Speech Recognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = selectedLanguage;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        console.log('Voice recognition started');
+      };
+
+      recognition.onresult = (event: any) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setVoiceCommands(prev => [...prev, finalTranscript]);
+          handleVoiceCommand(finalTranscript);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      setVoiceRecognition(recognition);
+    }
+
+    // Initialize Speech Synthesis
+    if ('speechSynthesis' in window) {
+      const synth = window.speechSynthesis;
+      setSpeechSynthesis(synth);
+      
+      // Load voices and select the best one
+      const loadVoices = () => {
+        const voices = synth.getVoices();
+        if (voices.length > 0) {
+          // Prefer high-quality English voices
+          const preferredVoices = voices.filter(voice => 
+            voice.lang.startsWith('en') && 
+            (voice.name.includes('Google') || 
+             voice.name.includes('Microsoft') || 
+             voice.name.includes('Amazon') ||
+             voice.name.includes('Neural') ||
+             voice.name.includes('Enhanced'))
+          );
+          
+          // Sort by quality indicators
+          const sortedVoices = preferredVoices.sort((a, b) => {
+            const aScore = (a.name.includes('Neural') ? 4 : 0) + 
+                          (a.name.includes('Enhanced') ? 3 : 0) + 
+                          (a.name.includes('Google') ? 2 : 0) + 
+                          (a.name.includes('Microsoft') ? 1 : 0);
+            const bScore = (b.name.includes('Neural') ? 4 : 0) + 
+                          (b.name.includes('Enhanced') ? 3 : 0) + 
+                          (b.name.includes('Google') ? 2 : 0) + 
+                          (b.name.includes('Microsoft') ? 1 : 0);
+            return bScore - aScore;
+          });
+          
+          const selectedVoice = sortedVoices.length > 0 ? sortedVoices[0] : voices[0];
+          setVoiceSettings(prev => ({ 
+            ...prev, 
+            voice: selectedVoice,
+            rate: 0.9, // Optimal for comprehension
+            pitch: 1.1, // Engaging but not too high
+            volume: 0.8 // Comfortable listening level
+          }));
+        }
+      };
+      
+      loadVoices();
+      synth.onvoiceschanged = loadVoices;
+    }
+  };
+
+  const handleVoiceCommand = (command: string) => {
+    const lowerCommand = command.toLowerCase();
+    
+    if (lowerCommand.includes('scroll down') || lowerCommand.includes('scroll down')) {
+      window.scrollBy(0, 200);
+    } else if (lowerCommand.includes('scroll up') || lowerCommand.includes('scroll up')) {
+      window.scrollBy(0, -200);
+    } else if (lowerCommand.includes('next section') || lowerCommand.includes('next')) {
+      const nextSection = Math.min(currentReadingSection !== null ? currentReadingSection + 1 : 0, filteredSections.length - 1);
+      setCurrentReadingSection(nextSection);
+      readSection(nextSection);
+    } else if (lowerCommand.includes('previous section') || lowerCommand.includes('previous')) {
+      const prevSection = Math.max(currentReadingSection !== null ? currentReadingSection - 1 : 0, 0);
+      setCurrentReadingSection(prevSection);
+      readSection(prevSection);
+    } else if (lowerCommand.includes('read summary') || lowerCommand.includes('summary')) {
+      readSummary();
+    } else if (lowerCommand.includes('read key points') || lowerCommand.includes('key points')) {
+      readKeyPoints();
+    } else if (lowerCommand.includes('translate') || lowerCommand.includes('translation')) {
+      setShowVoicePanel(true);
+    } else if (lowerCommand.includes('read aloud') || lowerCommand.includes('read')) {
+      readCurrentContent();
+    } else if (lowerCommand.includes('stop') || lowerCommand.includes('pause')) {
+      stopReading();
+    } else if (lowerCommand.includes('expand all') || lowerCommand.includes('show all')) {
+      setExpandedSections(new Set(filteredSections.map((_, index) => index)));
+      setVisibleSections(new Set(filteredSections.map((_, index) => index)));
+    } else if (lowerCommand.includes('collapse all') || lowerCommand.includes('hide all')) {
+      setExpandedSections(new Set());
+    }
+  };
+
+  const startVoiceRecognition = () => {
+    if (voiceRecognition) {
+      voiceRecognition.start();
+    }
+  };
+
+  const stopVoiceRecognition = () => {
+    if (voiceRecognition) {
+      voiceRecognition.stop();
+    }
+  };
+
+  const readCurrentContent = () => {
+    if (speechSynthesis && notes) {
+      speechSynthesis.cancel();
+      setIsReading(true);
+      
+      let textToRead = '';
+      if (notes.summary) {
+        textToRead = notes.summary;
+      } else if (notes.title) {
+        textToRead = notes.title;
+      }
+
+      if (textToRead) {
+        const utterance = new SpeechSynthesisUtterance(textToRead);
+        utterance.rate = voiceSettings.rate;
+        utterance.pitch = voiceSettings.pitch;
+        utterance.volume = voiceSettings.volume;
+        utterance.voice = voiceSettings.voice;
+        
+        utterance.onstart = () => {
+          console.log('Reading started');
+        };
+        
+        utterance.onend = () => {
+          console.log('Reading completed');
+          setIsReading(false);
+        };
+        
+        speechSynthesis.speak(utterance);
+      }
+    }
+  };
+
+  const readSummary = () => {
+    if (speechSynthesis && notes?.summary) {
+      speechSynthesis.cancel();
+      setIsReading(true);
+      
+      const utterance = new SpeechSynthesisUtterance(notes.summary);
+      utterance.rate = voiceSettings.rate;
+      utterance.pitch = voiceSettings.pitch;
+      utterance.volume = voiceSettings.volume;
+      utterance.voice = voiceSettings.voice;
+      
+      utterance.onend = () => {
+        setIsReading(false);
+      };
+      
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  const readKeyPoints = () => {
+    if (speechSynthesis && notes?.keyPoints) {
+      speechSynthesis.cancel();
+      setIsReading(true);
+      
+      const keyPointsText = notes.keyPoints.map((point, index) => `Key point ${index + 1}: ${point}`).join('. ');
+      const utterance = new SpeechSynthesisUtterance(keyPointsText);
+      utterance.rate = voiceSettings.rate;
+      utterance.pitch = voiceSettings.pitch;
+      utterance.volume = voiceSettings.volume;
+      utterance.voice = voiceSettings.voice;
+      
+      utterance.onend = () => {
+        setIsReading(false);
+      };
+      
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  const readSection = (sectionIndex: number) => {
+    if (speechSynthesis && filteredSections[sectionIndex]) {
+      speechSynthesis.cancel();
+      setIsReading(true);
+      setCurrentReadingSection(sectionIndex);
+      
+      const section = filteredSections[sectionIndex];
+      const sectionText = `${section.title}. ${section.content}`;
+      
+      const utterance = new SpeechSynthesisUtterance(sectionText);
+      utterance.rate = voiceSettings.rate;
+      utterance.pitch = voiceSettings.pitch;
+      utterance.volume = voiceSettings.volume;
+      utterance.voice = voiceSettings.voice;
+      
+      utterance.onend = () => {
+        setIsReading(false);
+      };
+      
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  const stopReading = () => {
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
+      setIsReading(false);
+      setCurrentReadingSection(null);
+    }
+  };
+
+  const translateText = async (text: string, targetLang: string) => {
+    setIsTranslating(true);
+    try {
+      const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`);
+      const data = await response.json();
+      
+      if (data.responseStatus === 200) {
+        setTranslatedText(data.responseData.translatedText);
+      } else {
+        throw new Error('Translation failed');
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+      setTranslatedText('Translation not available');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const speakTranslatedText = () => {
+    if (speechSynthesis && translatedText) {
+      const utterance = new SpeechSynthesisUtterance(translatedText);
+      utterance.lang = selectedLanguage;
+      utterance.rate = voiceSettings.rate;
+      utterance.pitch = voiceSettings.pitch;
+      utterance.volume = voiceSettings.volume;
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Initialize voice features on component mount
+  useEffect(() => {
+    initializeVoiceFeatures();
+  }, [selectedLanguage]);
+
+  // Voice reading functions
+  const startReadingSection = (sectionIndex: number, sectionText: string) => {
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(sectionText);
+      utterance.rate = voiceSettings.rate;
+      utterance.pitch = voiceSettings.pitch;
+      utterance.volume = voiceSettings.volume;
+      utterance.voice = voiceSettings.voice;
+      
+      utterance.onstart = () => {
+        setReadingSections(prev => new Set(prev.add(sectionIndex)));
+        setIsReading(true);
+        setCurrentReadingSection(sectionIndex);
+      };
+      
+      utterance.onend = () => {
+        setReadingSections(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(sectionIndex);
+          return newSet;
+        });
+        setIsReading(false);
+        setCurrentReadingSection(null);
+      };
+      
+      utterance.onerror = () => {
+        setReadingSections(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(sectionIndex);
+          return newSet;
+        });
+        setIsReading(false);
+        setCurrentReadingSection(null);
+      };
+      
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  const stopReadingSection = (sectionIndex: number) => {
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
+    }
+    setReadingSections(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sectionIndex);
+      return newSet;
+    });
+    setIsReading(false);
+    setCurrentReadingSection(null);
+  };
+
+  // Quiz Generation Functions
+  const generateQuizForSection = async (sectionIndex: number, section: any) => {
+    try {
+      setQuizLoading(prev => new Map(prev.set(sectionIndex, true)));
+      
+      const sectionContent = `${section.title}\n\n${section.content}\n\nKey Points:\n${section.keyPoints?.join('\n') || ''}`;
+      
+      console.log('Generating quiz for section:', section.title);
+      console.log('Section content:', sectionContent);
+      
+      // Use Gemini AI to generate quiz questions with mixed types
+      const quizData = await geminiAIService.generateQuiz(
+        section.title,
+        'medium',
+        4, // Generate 4 questions per section (2 multiple choice, 2 essay)
+        sectionContent
+      );
+      
+      console.log('Quiz data received from Gemini:', quizData);
+      
+      // Ensure we have both multiple choice and essay questions
+      const enhancedQuestions = quizData.questions?.map((question: any, index: number) => {
+        // If it's an odd index, make it an essay question
+        if (index % 2 === 1 && question.type !== 'essay') {
+          return {
+            ...question,
+            type: 'essay',
+            options: undefined, // Remove options for essay questions
+            points: 5 // Higher points for essay questions
+          };
+        }
+        // Ensure multiple choice questions have options
+        if (question.type === 'multiple_choice' && (!question.options || question.options.length < 2)) {
+          return {
+            ...question,
+            type: 'multiple_choice',
+            options: question.options || ['Option A', 'Option B', 'Option C', 'Option D'],
+            points: 2
+          };
+        }
+        return {
+          ...question,
+          points: question.type === 'essay' ? 5 : 2
+        };
+      }) || [];
+      
+      console.log('Enhanced questions:', enhancedQuestions);
+      
+      // Create quiz object
+      const generatedQuiz: GeneratedQuiz = {
+        id: `section-${sectionIndex}-${Date.now()}`,
+        sectionId: `section-${sectionIndex}`,
+        title: `Quiz: ${section.title}`,
+        description: `Test your understanding of ${section.title} - Mixed Questions`,
+        questions: enhancedQuestions,
+        totalPoints: enhancedQuestions.reduce((sum, q) => sum + (q.points || 2), 0),
+        estimatedTime: 8, // 8 minutes estimated for mixed questions
+        difficulty: 'medium',
+        createdAt: new Date()
+      };
+      
+      console.log('Generated quiz object:', generatedQuiz);
+      
+      setSectionQuizzes(prev => new Map(prev.set(sectionIndex, generatedQuiz)));
+      setShowQuiz(prev => new Map(prev.set(sectionIndex, true))); // Auto-show quiz
+      showMessage(`Quiz generated for "${section.title}" with ${enhancedQuestions.length} questions`);
+      
+    } catch (error) {
+      console.error('Error generating quiz:', error);
+      showMessage('Failed to generate quiz. Please try again.');
+    } finally {
+      setQuizLoading(prev => new Map(prev.set(sectionIndex, false)));
+    }
+  };
+
+  // Helper function to check if all questions are answered
+  const hasAnsweredAllQuestions = (sectionIndex: number) => {
+    const quiz = sectionQuizzes.get(sectionIndex);
+    if (!quiz) return false;
+    
+    return quiz.questions.every((question: any, questionIndex: number) => {
+      const answerKey = `${sectionIndex}-${questionIndex}`;
+      const answer = quizAnswers.get(answerKey);
+      return answer && answer.trim().length > 0;
+    });
+  };
+
+  const submitQuizAnswers = (sectionIndex: number) => {
+    const quiz = sectionQuizzes.get(sectionIndex);
+    if (!quiz) return;
+
+    let score = 0;
+    let totalQuestions = quiz.questions.length;
+    const results: any = {
+      score: 0,
+      totalQuestions,
+      percentage: 0,
+      correctAnswers: [],
+      wrongAnswers: [],
+      explanations: []
+    };
+
+    quiz.questions.forEach((question, questionIndex) => {
+      const userAnswer = quizAnswers.get(`${sectionIndex}-${questionIndex}`);
+      const questionPoints = question.points || (question.type === 'essay' ? 5 : 2);
+      
+      let isCorrect = false;
+      let earnedPoints = 0;
+      
+      if (question.type === 'multiple_choice') {
+        // For multiple choice, check exact match
+        isCorrect = userAnswer === question.correctAnswer || 
+          (Array.isArray(question.correctAnswer) && question.correctAnswer.includes(userAnswer || ''));
+        earnedPoints = isCorrect ? questionPoints : 0;
+      } else if (question.type === 'essay') {
+        // For essay questions, give partial credit based on length and content
+        if (userAnswer && userAnswer.trim().length > 10) {
+          // Basic content check - give partial credit for substantial answers
+          earnedPoints = Math.min(questionPoints, Math.max(1, Math.floor(questionPoints * 0.7)));
+          isCorrect = true;
+        } else {
+          earnedPoints = 0;
+          isCorrect = false;
+        }
+      }
+      
+      score += earnedPoints;
+      
+      if (isCorrect) {
+        results.correctAnswers.push({
+          question: question.question,
+          userAnswer,
+          correctAnswer: question.type === 'essay' ? 'Essay question - graded on content' : question.correctAnswer,
+          explanation: question.explanation,
+          type: question.type,
+          points: earnedPoints,
+          maxPoints: questionPoints
+        });
+      } else {
+        results.wrongAnswers.push({
+          question: question.question,
+          userAnswer: userAnswer || 'No answer',
+          correctAnswer: question.type === 'essay' ? 'Essay question - graded on content' : question.correctAnswer,
+          explanation: question.explanation,
+          type: question.type,
+          points: earnedPoints,
+          maxPoints: questionPoints
+        });
+      }
+      
+      results.explanations.push({
+        question: question.question,
+        explanation: question.explanation,
+        type: question.type
+      });
+    });
+
+    results.score = score;
+    results.percentage = Math.round((score / quiz.totalPoints) * 100);
+    
+    setQuizResults(prev => new Map(prev.set(sectionIndex, results)));
+    setShowQuizResults(prev => new Map(prev.set(sectionIndex, true)));
+    setShowQuiz(prev => new Map(prev.set(sectionIndex, false)));
+    
+    showMessage(`Quiz completed! Score: ${results.percentage}%`);
+  };
+
+  const resetQuiz = (sectionIndex: number) => {
+    setQuizAnswers(prev => {
+      const newMap = new Map(prev);
+      // Remove answers for this section
+      for (const key of newMap.keys()) {
+        if (key.startsWith(`${sectionIndex}-`)) {
+          newMap.delete(key);
+        }
+      }
+      return newMap;
+    });
+    setShowQuizResults(prev => new Map(prev.set(sectionIndex, false)));
+    setShowQuiz(prev => new Map(prev.set(sectionIndex, true)));
+  };
 
   // Intersection Observer for lazy loading sections
   useEffect(() => {
@@ -1126,7 +2031,60 @@ ${'='.repeat(60)}
           )}
         </Box>
         {/* Second Row: Action Buttons */}
-        <Box display="flex" gap={1} mb={1}>
+        <Box display="flex" gap={1} mb={1} flexWrap="wrap">
+          {/* Voice Controls */}
+          <Tooltip title={isVoiceEnabled ? "Disable Voice Assistant" : "Enable Voice Assistant"}>
+            <IconButton
+              onClick={() => {
+                setIsVoiceEnabled(!isVoiceEnabled);
+                if (!isVoiceEnabled) {
+                  startVoiceRecognition();
+                } else {
+                  stopVoiceRecognition();
+                }
+              }}
+              color={isVoiceEnabled ? "success" : "default"}
+              size="small"
+              sx={{
+                bgcolor: isVoiceEnabled ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+                '&:hover': { bgcolor: isVoiceEnabled ? 'rgba(76, 175, 80, 0.2)' : 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              {isVoiceEnabled ? <Mic /> : <MicOff />}
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Voice Translation">
+            <IconButton
+              onClick={() => setShowVoicePanel(!showVoicePanel)}
+              color={showVoicePanel ? "warning" : "default"}
+              size="small"
+              sx={{
+                bgcolor: showVoicePanel ? 'rgba(255, 152, 0, 0.1)' : 'transparent',
+                '&:hover': { bgcolor: showVoicePanel ? 'rgba(255, 152, 0, 0.2)' : 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              <Translate />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title={isReading ? "Stop Reading" : "Read Aloud"}>
+            <IconButton
+              onClick={isReading ? stopReading : readCurrentContent}
+              color={isReading ? "error" : "default"}
+              size="small"
+              sx={{
+                bgcolor: isReading ? 'rgba(244, 67, 54, 0.1)' : 'transparent',
+                '&:hover': { bgcolor: isReading ? 'rgba(244, 67, 54, 0.2)' : 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              {isReading ? <Stop /> : <VolumeUp />}
+            </IconButton>
+          </Tooltip>
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
+          {/* Standard Controls */}
           <Tooltip title={isBookmarked ? "Remove bookmark" : "Bookmark"}>
             <IconButton onClick={toggleBookmark} color={isBookmarked ? "primary" : "default"} size="small">
               {isBookmarked ? <Bookmark /> : <BookmarkBorder />}
@@ -1501,6 +2459,30 @@ ${'='.repeat(60)}
               onToggleExpandedContent={toggleExpandedContent}
               searchQuery={activeSearchQuery}
               highlightSearchTerms={highlightSearchTerms}
+              // Voice and Quiz props
+              speechSynthesis={speechSynthesis}
+              voiceSettings={voiceSettings}
+              readingSections={readingSections}
+              startReadingSection={startReadingSection}
+              stopReadingSection={stopReadingSection}
+              selectedLanguage={selectedLanguage}
+              translateText={translateText}
+              isTranslating={isTranslating}
+              translatedText={translatedText}
+              speakTranslatedText={speakTranslatedText}
+              generateQuizForSection={generateQuizForSection}
+              quizLoading={quizLoading}
+              sectionQuizzes={sectionQuizzes}
+              showQuiz={showQuiz}
+              setShowQuiz={setShowQuiz}
+              quizAnswers={quizAnswers}
+              setQuizAnswers={setQuizAnswers}
+              submitQuizAnswers={submitQuizAnswers}
+              quizResults={quizResults}
+              showQuizResults={showQuizResults}
+              setShowQuizResults={setShowQuizResults}
+              resetQuiz={resetQuiz}
+              hasAnsweredAllQuestions={hasAnsweredAllQuestions}
             />
           );
         })}
@@ -1668,6 +2650,265 @@ ${'='.repeat(60)}
           onClick={printNotes}
         />
       </SpeedDial>
+
+      {/* Voice Panel Drawer */}
+      <Drawer
+        anchor="right"
+        open={showVoicePanel}
+        onClose={() => setShowVoicePanel(false)}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: 400,
+            bgcolor: 'background.paper',
+            p: 3
+          }
+        }}
+      >
+        <Box>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h6">Voice & Translation</Typography>
+            <IconButton onClick={() => setShowVoicePanel(false)}>
+              <Close />
+            </IconButton>
+          </Box>
+
+          {/* Language Selection */}
+          <Box mb={3}>
+            <Typography variant="subtitle1" gutterBottom>
+              Target Language
+            </Typography>
+            <FormControl fullWidth>
+              <InputLabel>Language</InputLabel>
+              <Select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                label="Language"
+              >
+                <MenuItem value="en">English</MenuItem>
+                <MenuItem value="es">Spanish</MenuItem>
+                <MenuItem value="fr">French</MenuItem>
+                <MenuItem value="de">German</MenuItem>
+                <MenuItem value="it">Italian</MenuItem>
+                <MenuItem value="pt">Portuguese</MenuItem>
+                <MenuItem value="ru">Russian</MenuItem>
+                <MenuItem value="ja">Japanese</MenuItem>
+                <MenuItem value="ko">Korean</MenuItem>
+                <MenuItem value="zh">Chinese</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Voice Settings */}
+          <Box mb={3}>
+            <Typography variant="subtitle1" gutterBottom>
+              Voice Settings
+            </Typography>
+            
+            <Box mb={2}>
+              <Typography variant="body2" gutterBottom>
+                Speed: {voiceSettings.rate}x
+              </Typography>
+              <Slider
+                value={voiceSettings.rate}
+                onChange={(_, value) => setVoiceSettings(prev => ({ ...prev, rate: value as number }))}
+                min={0.5}
+                max={2}
+                step={0.1}
+                marks
+                valueLabelDisplay="auto"
+              />
+            </Box>
+
+            <Box mb={2}>
+              <Typography variant="body2" gutterBottom>
+                Pitch: {voiceSettings.pitch}
+              </Typography>
+              <Slider
+                value={voiceSettings.pitch}
+                onChange={(_, value) => setVoiceSettings(prev => ({ ...prev, pitch: value as number }))}
+                min={0.5}
+                max={2}
+                step={0.1}
+                marks
+                valueLabelDisplay="auto"
+              />
+            </Box>
+
+            <Box mb={2}>
+              <Typography variant="body2" gutterBottom>
+                Volume: {Math.round(voiceSettings.volume * 100)}%
+              </Typography>
+              <Slider
+                value={voiceSettings.volume}
+                onChange={(_, value) => setVoiceSettings(prev => ({ ...prev, volume: value as number }))}
+                min={0}
+                max={1}
+                step={0.1}
+                marks
+                valueLabelDisplay="auto"
+              />
+            </Box>
+          </Box>
+
+          {/* Quick Actions */}
+          <Box mb={3}>
+            <Typography variant="subtitle1" gutterBottom>
+              Quick Actions
+            </Typography>
+            <Box display="flex" gap={1} flexWrap="wrap">
+              <Button
+                startIcon={<VolumeUp />}
+                onClick={readSummary}
+                variant="outlined"
+                size="small"
+                disabled={!notes?.summary}
+              >
+                Read Summary
+              </Button>
+              <Button
+                startIcon={<Lightbulb />}
+                onClick={readKeyPoints}
+                variant="outlined"
+                size="small"
+                disabled={!notes?.keyPoints?.length}
+              >
+                Read Key Points
+              </Button>
+              <Button
+                startIcon={<Stop />}
+                onClick={stopReading}
+                variant="outlined"
+                size="small"
+                disabled={!isReading}
+                color="error"
+              >
+                Stop Reading
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Translation Section */}
+          <Box mb={3}>
+            <Typography variant="subtitle1" gutterBottom>
+              Text Translation
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              placeholder="Enter text to translate..."
+              onChange={(e) => {
+                if (e.target.value) {
+                  translateText(e.target.value, selectedLanguage);
+                }
+              }}
+            />
+            
+            {isTranslating && (
+              <Box display="flex" alignItems="center" gap={1} mt={2}>
+                <CircularProgress size={20} />
+                <Typography variant="body2">Translating...</Typography>
+              </Box>
+            )}
+            
+            {translatedText && (
+              <Box mt={2}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Translation:
+                </Typography>
+                <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                  <Typography variant="body1">{translatedText}</Typography>
+                </Paper>
+                <Button
+                  startIcon={<VolumeUp />}
+                  onClick={speakTranslatedText}
+                  sx={{ mt: 1 }}
+                  size="small"
+                >
+                  Speak Translation
+                </Button>
+              </Box>
+            )}
+          </Box>
+
+          {/* Voice Commands Help */}
+          <Box>
+            <Typography variant="subtitle1" gutterBottom>
+              Voice Commands
+            </Typography>
+            <List dense>
+              <ListItem>
+                <ListItemText 
+                  primary="Scroll down/up" 
+                  secondary="Navigate through content"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Next/Previous section" 
+                  secondary="Navigate sections"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Read summary" 
+                  secondary="Read document summary"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Read key points" 
+                  secondary="Read key points only"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Expand all/Collapse all" 
+                  secondary="Show/hide all sections"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Stop/Pause" 
+                  secondary="Stop current action"
+                />
+              </ListItem>
+            </List>
+          </Box>
+        </Box>
+      </Drawer>
+
+      {/* Voice Commands Display */}
+      {isVoiceEnabled && voiceCommands.length > 0 && (
+        <Fade in={voiceCommands.length > 0}>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              position: 'fixed', 
+              top: 80, 
+              right: 16, 
+              zIndex: 1000,
+              p: 2,
+              maxWidth: 300,
+              bgcolor: 'rgba(0,0,0,0.8)',
+              color: 'white',
+              backdropFilter: 'blur(10px)'
+            }}
+          >
+            <Typography variant="subtitle2" gutterBottom>
+              Voice Commands:
+            </Typography>
+            {voiceCommands.slice(-3).map((command, index) => (
+              <Chip 
+                key={index}
+                label={command}
+                size="small"
+                sx={{ mr: 1, mb: 1, bgcolor: 'rgba(255,255,255,0.2)' }}
+              />
+            ))}
+          </Paper>
+        </Fade>
+      )}
 
       {/* Snackbar for notifications */}
       <Snackbar

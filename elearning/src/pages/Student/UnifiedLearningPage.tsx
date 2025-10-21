@@ -1280,81 +1280,125 @@ const UnifiedLearningPage: React.FC = () => {
       overflowX: 'hidden',
       backgroundColor: '#fafafa'
     }}>
-      {/* Minimalist background */}
+      {/* Modern gradient background */}
       <Box aria-hidden sx={{ 
         position: 'fixed', 
         inset: 0, 
         zIndex: 0,
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.02) 0%, rgba(168, 85, 247, 0.02) 100%)',
+        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(168, 85, 247, 0.03) 50%, rgba(76, 175, 80, 0.02) 100%)',
         pointerEvents: 'none' 
       }} />
       
-      {/* Minimalist scroll progress */}
-      <Box sx={{ position: 'sticky', top: 0, zIndex: 30, height: 2 }}>
+      {/* Modern scroll progress indicator */}
+      <Box sx={{ position: 'sticky', top: 0, zIndex: 30, height: 3 }}>
         <motion.div 
           style={{ 
             scaleX: progressSpring, 
-            height: 2, 
+            height: 3, 
             transformOrigin: '0 0', 
-            background: 'linear-gradient(90deg, #6366f1, #a855f7)',
-            borderRadius: 1
+            background: 'linear-gradient(90deg, #6366f1, #a855f7, #4caf50)',
+            borderRadius: 2,
+            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)'
           }} 
         />
       </Box>
-      {/* Minimalist Top App Bar */}
+      
+      {/* Modern Top App Bar with enhanced design */}
       <AppBar position="sticky" sx={{ 
-        backgroundColor: 'rgba(255, 255, 255, 0.98)', 
-        backdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+        backdropFilter: 'blur(30px)',
         color: 'text.primary', 
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)', 
+        boxShadow: '0 4px 20px rgba(0,0,0,0.08)', 
         zIndex: 5,
-        borderBottom: '1px solid rgba(0,0,0,0.03)'
+        borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '1px',
+          background: 'linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), transparent)'
+        }
       }}>
         <Toolbar sx={{ 
-          minHeight: { xs: 56, sm: 64 },
-          px: { xs: 1, sm: 3 },
-          flexWrap: { xs: 'wrap', sm: 'nowrap' }
+          minHeight: { xs: 64, sm: 72 },
+          px: { xs: 2, sm: 4 },
+          flexWrap: { xs: 'wrap', sm: 'nowrap' },
+          gap: { xs: 1, sm: 2 }
         }}>
+          {/* Back Button with modern styling */}
           <IconButton
             edge="start"
             color="inherit"
             onClick={handleBack}
             sx={{ 
               mr: { xs: 1, sm: 2 },
-              p: 1,
-              borderRadius: 2,
+              p: 1.5,
+              borderRadius: 3,
+              backgroundColor: 'rgba(99, 102, 241, 0.08)',
+              border: '1px solid rgba(99, 102, 241, 0.15)',
               '&:hover': {
-                backgroundColor: 'rgba(99, 102, 241, 0.08)'
-              }
+                backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
+              },
+              transition: 'all 0.3s ease'
             }}
           >
-            <ArrowBack />
+            <ArrowBack sx={{ fontSize: 20 }} />
           </IconButton>
           
-          <Box sx={{ flexGrow: 1, minWidth: 0, order: { xs: 3, sm: 1 }, width: { xs: '100%', sm: 'auto' } }}>
-            <Typography 
-              variant="h6" 
-              noWrap
-              sx={{ 
-                fontSize: { xs: '1rem', sm: '1.3rem' },
-                fontWeight: 600,
-                color: 'text.primary',
-                textAlign: { xs: 'center', sm: 'left' }
-              }}
-            >
-              {course?.title || 'Learning Hub'}
-            </Typography>
+          {/* Course Title with enhanced typography */}
+          <Box sx={{ 
+            flexGrow: 1, 
+            minWidth: 0, 
+            order: { xs: 3, sm: 1 }, 
+            width: { xs: '100%', sm: 'auto' },
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}>
+            <Box>
+              <Typography 
+                variant="h5" 
+                noWrap
+                sx={{ 
+                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textAlign: { xs: 'center', sm: 'left' },
+                  mb: 0.5
+                }}
+              >
+                {course?.title || 'Learning Hub'}
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  opacity: 0.8
+                }}
+              >
+                {course?.category || 'Interactive Learning Experience'}
+              </Typography>
+            </Box>
           </Box>
           
-          {/* Search Bar */}
+          {/* Enhanced Search Bar */}
           <Box sx={{ 
-            display: { xs: 'none', md: 'flex' },
+            display: { xs: 'none', lg: 'flex' },
             mr: 2,
-            minWidth: 200
+            minWidth: 280,
+            maxWidth: 400
           }}>
             <TextField
               size="small"
-              placeholder="Search materials..."
+              placeholder="Search materials, videos, assignments..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               InputProps={{
@@ -1365,45 +1409,70 @@ const UnifiedLearningPage: React.FC = () => {
                 ),
               }}
               sx={{
+                width: '100%',
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: 3,
-                  backgroundColor: 'rgba(0,0,0,0.02)',
+                  borderRadius: 4,
+                  backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                  border: '1px solid rgba(99, 102, 241, 0.15)',
                   '&:hover': {
-                    backgroundColor: 'rgba(0,0,0,0.04)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                    borderColor: 'rgba(99, 102, 241, 0.25)',
                   },
                   '&.Mui-focused': {
                     backgroundColor: 'white',
-                    boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.2)',
+                    boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)',
+                    borderColor: 'primary.main',
                   }
                 }
               }}
             />
           </Box>
           
+          {/* Enhanced Action Buttons */}
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: { xs: 0.5, sm: 1 },
+            gap: { xs: 1, sm: 1.5 },
             order: { xs: 2, sm: 2 },
             flexWrap: { xs: 'wrap', sm: 'nowrap' }
           }}>
-            {/* Gamification XP Display */}
+            {/* Gamification XP Display with modern design */}
             <Box sx={{ 
               display: { xs: 'none', sm: 'flex' },
               alignItems: 'center',
-              gap: 1,
-              px: 2,
-              py: 1,
-              backgroundColor: 'rgba(99, 102, 241, 0.08)',
-              borderRadius: 3,
-              border: '1px solid rgba(99, 102, 241, 0.15)'
+              gap: 1.5,
+              px: 3,
+              py: 1.5,
+              backgroundColor: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))',
+              borderRadius: 4,
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+              boxShadow: '0 2px 8px rgba(99, 102, 241, 0.1)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
+              }
             }}>
-              <EmojiEvents sx={{ fontSize: 20, color: '#ffd700' }} />
-              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                {userXP} XP
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 0.5,
+                backgroundColor: 'rgba(255, 193, 7, 0.15)',
+                borderRadius: 2,
+                px: 1.5,
+                py: 0.5
+              }}>
+                <EmojiEvents sx={{ fontSize: 18, color: '#ffd700' }} />
+                <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#b8860b' }}>
+                  {userXP}
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>
+                XP
               </Typography>
             </Box>
 
+            {/* Live Sessions Button with enhanced styling */}
             <Button
               variant="outlined"
               startIcon={<VideoCall sx={{ fontSize: { xs: 16, sm: 18 } }} />}
@@ -1411,22 +1480,25 @@ const UnifiedLearningPage: React.FC = () => {
               sx={{
                 borderColor: 'primary.main',
                 color: 'primary.main',
-                backgroundColor: 'rgba(99, 102, 241, 0.05)',
-                '&:hover': { 
-                  backgroundColor: 'primary.main',
-                  color: 'white',
-                  transform: { xs: 'none', sm: 'translateY(-1px)' },
-                  boxShadow: { xs: 'none', sm: '0 4px 12px rgba(99, 102, 241, 0.3)' }
-                },
-                fontSize: { xs: '0.7rem', sm: '0.875rem' },
-                px: { xs: 1, sm: 2 },
-                py: { xs: 0.5, sm: 1 },
-                borderRadius: { xs: 2, sm: 3 },
+                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                borderRadius: 3,
+                px: { xs: 2, sm: 3 },
+                py: { xs: 1, sm: 1.5 },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
                 textTransform: 'none',
                 fontWeight: 600,
                 minWidth: { xs: 'auto', sm: 'auto' },
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                '&:hover': { 
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 6px 20px rgba(99, 102, 241, 0.3)',
+                  borderColor: 'primary.main'
+                },
+                transition: 'all 0.3s ease',
                 '& .MuiButton-startIcon': {
-                  mr: { xs: 0.25, sm: 1 }
+                  mr: { xs: 0.5, sm: 1 }
                 }
               }}
             >
@@ -1440,55 +1512,73 @@ const UnifiedLearningPage: React.FC = () => {
               </Badge>
             </Button>
             
+            {/* Dashboard Button */}
             <IconButton
               color="inherit"
               onClick={handleGoToDashboard}
               sx={{ 
-                p: { xs: 0.75, sm: 1.5 },
+                p: { xs: 1, sm: 1.5 },
                 display: { xs: 'none', sm: 'flex' },
+                borderRadius: 3,
+                backgroundColor: 'rgba(0,0,0,0.05)',
                 '&:hover': {
                   backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  transform: { xs: 'none', sm: 'scale(1.05)' }
-                }
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
-              <Dashboard sx={{ fontSize: { xs: 20, sm: 24 } }} />
+              <Dashboard sx={{ fontSize: { xs: 20, sm: 22 } }} />
             </IconButton>
             
+            {/* Refresh Button */}
             <IconButton
               color="inherit"
               onClick={() => {
-                // Reload course data and refresh progress
                 if (courseId) {
                   loadCourseData();
                   refreshProgressData();
                 }
               }}
               sx={{ 
-                p: { xs: 0.75, sm: 1.5 },
+                p: { xs: 1, sm: 1.5 },
+                borderRadius: 3,
+                backgroundColor: 'rgba(0,0,0,0.05)',
                 '&:hover': {
-                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  transform: { xs: 'none', sm: 'scale(1.05)' }
-                }
+                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.2)'
+                },
+                transition: 'all 0.3s ease'
               }}
               title="Refresh Course Data & Progress"
             >
-              <Refresh sx={{ fontSize: { xs: 20, sm: 24 } }} />
+              <Refresh sx={{ fontSize: { xs: 20, sm: 22 } }} />
             </IconButton>
             
-            {/* Profile Menu */}
+            {/* Profile Menu with enhanced avatar */}
             <IconButton
               color="inherit"
               onClick={handleProfileMenuOpen}
               sx={{ 
-                p: { xs: 1, sm: 1.5 },
+                p: { xs: 0.5, sm: 1 },
+                borderRadius: 3,
                 '&:hover': {
                   backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  transform: 'scale(1.05)'
-                }
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
-              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+              <Avatar sx={{ 
+                width: { xs: 32, sm: 36 }, 
+                height: { xs: 32, sm: 36 }, 
+                background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                border: '2px solid rgba(255, 255, 255, 0.8)',
+                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)'
+              }}>
                 {user?.firstName?.charAt(0) || 'U'}
               </Avatar>
             </IconButton>
@@ -1499,34 +1589,48 @@ const UnifiedLearningPage: React.FC = () => {
               onClose={handleProfileMenuClose}
               transformOrigin={{ horizontal: 'right', vertical: 'top' }}
               anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+              PaperProps={{
+                sx: {
+                  borderRadius: 3,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                  border: '1px solid rgba(99, 102, 241, 0.1)',
+                  mt: 1
+                }
+              }}
             >
-              <MenuItem onClick={handleProfileMenuClose}>
-                <AccountCircle sx={{ mr: 1 }} />
+              <MenuItem onClick={handleProfileMenuClose} sx={{ borderRadius: 2, mx: 1, my: 0.5 }}>
+                <AccountCircle sx={{ mr: 2, color: 'primary.main' }} />
                 My Profile
               </MenuItem>
-              <MenuItem onClick={handleProfileMenuClose}>
-                <Settings sx={{ mr: 1 }} />
+              <MenuItem onClick={handleProfileMenuClose} sx={{ borderRadius: 2, mx: 1, my: 0.5 }}>
+                <Settings sx={{ mr: 2, color: 'primary.main' }} />
                 Settings
               </MenuItem>
-              <Divider />
-              <MenuItem onClick={handleProfileMenuClose}>
-                <ExitToApp sx={{ mr: 1 }} />
+              <Divider sx={{ my: 1 }} />
+              <MenuItem onClick={handleProfileMenuClose} sx={{ borderRadius: 2, mx: 1, my: 0.5 }}>
+                <ExitToApp sx={{ mr: 2, color: 'error.main' }} />
                 Sign Out
               </MenuItem>
             </MuiMenu>
             
+            {/* Sidebar Toggle Button */}
             <IconButton
               color="inherit"
               onClick={toggleSidebar}
               sx={{ 
                 p: { xs: 1, sm: 1.5 },
+                borderRadius: 3,
+                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                border: '1px solid rgba(99, 102, 241, 0.15)',
                 '&:hover': {
-                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  transform: 'scale(1.05)'
-                }
+                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
-              <Menu />
+              <Menu sx={{ fontSize: { xs: 20, sm: 22 } }} />
             </IconButton>
           </Box>
         </Toolbar>
@@ -1534,9 +1638,7 @@ const UnifiedLearningPage: React.FC = () => {
 
       {/* Live Session Status */}
       <Box sx={{
-        // Keep full width, but offset for persistent sidebar on desktop
-        ml: { xs: 0, sm: 0, md: sidebarOpen ? '320px' : 0 },
-        transition: 'margin-left 200ms ease',
+        width: '100%'
       }}>
         <Box component={motion.div} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <LiveSessionStatus courseId={courseId!} fullWidth />
@@ -1544,8 +1646,8 @@ const UnifiedLearningPage: React.FC = () => {
         
         {/* Enhanced Live Session Navigation Indicator */}
         <Box sx={{ 
-          mx: { xs: 1.5, sm: 2, md: 3 },
-          mb: { xs: 2, sm: 3 }
+          mx: { xs: 1, sm: 1.5, md: 2 },
+          mb: { xs: 1, sm: 1.5 }
         }}>
           <Card 
             component={motion.div}
@@ -1577,7 +1679,7 @@ const UnifiedLearningPage: React.FC = () => {
             }}
             onClick={handleGoToLiveSessions}
           >
-            <CardContent sx={{ p: { xs: 2, sm: 3 }, position: 'relative', zIndex: 1 }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, position: 'relative', zIndex: 1 }}>
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -1753,9 +1855,13 @@ const UnifiedLearningPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Main Content Area */}
-      <Box sx={{ display: 'flex', flex: 1 }}>
-        {/* Minimalist Sidebar */}
+        {/* Main Content Area */}
+        <Box sx={{ 
+          display: 'flex', 
+          flex: 1,
+          position: 'relative'
+        }}>
+        {/* Modern Sidebar with enhanced design */}
         <Drawer
           variant={isMobile ? "temporary" : "persistent"}
           open={sidebarOpen}
@@ -1766,10 +1872,20 @@ const UnifiedLearningPage: React.FC = () => {
             '& .MuiDrawer-paper': {
               width: { xs: 300, sm: 340 },
               boxSizing: 'border-box',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              borderRight: '1px solid rgba(0,0,0,0.05)',
-              boxShadow: '0 0 20px rgba(0,0,0,0.05)',
+              backgroundColor: 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(30px)',
+              borderRight: '1px solid rgba(99, 102, 241, 0.1)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: '1px',
+                height: '100%',
+                background: 'linear-gradient(180deg, transparent, rgba(99, 102, 241, 0.3), transparent)'
+              },
               // Mobile optimizations
               '@media (max-width: 600px)': {
                 width: '100vw',
@@ -1785,6 +1901,21 @@ const UnifiedLearningPage: React.FC = () => {
             // Mobile scroll optimizations
             '@media (max-width: 600px)': {
               padding: 1.5
+            },
+            // Custom scrollbar styling
+            '&::-webkit-scrollbar': {
+              width: '6px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: 'rgba(0,0,0,0.05)',
+              borderRadius: '3px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+              borderRadius: '3px',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)',
+              }
             }
           }}>
             {/* Enhanced Gamification Profile Card */}
@@ -2345,37 +2476,35 @@ const UnifiedLearningPage: React.FC = () => {
           </Box>
         </Drawer>
 
-        {/* Mobile-Responsive Main Content */}
+        {/* Main Content */}
         <Box
           component="main"
           sx={{
             flexGrow: 1,
             backgroundColor: 'transparent',
-            minHeight: 'calc(100vh - 64px)',
             position: 'relative',
             zIndex: 5,
             width: '100%',
-            maxWidth: '100%',
-            overflow: 'hidden'
+            maxWidth: '100%'
           }}
         >
           <Container 
             maxWidth="lg" 
             sx={{ 
-              p: { xs: 1.5, sm: 2, md: 3 },
+              p: { xs: 1, sm: 1.5, md: 2 },
               width: '100%',
               maxWidth: '100%',
               mx: 'auto'
             }}
           >
-          {/* Enhanced Mobile-Responsive Hero Section */}
+          {/* Hero Section */}
           <Box component={motion.div} 
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.5 }}
             sx={{ 
-              mb: { xs: 2, sm: 3, md: 4 },
-              p: { xs: 2, sm: 3, md: 4 },
+              mb: { xs: 1.5, sm: 2, md: 2.5 },
+              p: { xs: 2, sm: 2.5, md: 3 },
               backgroundColor: 'rgba(255, 255, 255, 0.8)',
               backdropFilter: 'blur(20px)',
               borderRadius: { xs: 2, sm: 3, md: 4 },
@@ -2388,26 +2517,26 @@ const UnifiedLearningPage: React.FC = () => {
                 <Typography variant="h4" sx={{ 
                   fontWeight: 700, 
                   lineHeight: 1.2, 
-                  mb: { xs: 1.5, sm: 2 },
+                  mb: { xs: 1, sm: 1.5 },
                   fontSize: { xs: '1.5rem', sm: '1.875rem', md: '2.125rem' },
                   color: 'text.primary'
                 }}>
                   {course?.title}
                 </Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ 
-                  mb: { xs: 2, sm: 3 },
+                  mb: { xs: 1.5, sm: 2 },
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' },
                   lineHeight: 1.6
                 }}>
                   Master your learning journey with interactive content, assessments, and live sessions.
                 </Typography>
                 
-                {/* Mobile-Optimized Quick Stats */}
+                {/* Quick Stats */}
                 <Box sx={{ 
                   display: 'flex', 
                   gap: { xs: 2, sm: 3 }, 
                   flexWrap: 'wrap', 
-                  mb: { xs: 2, sm: 3 },
+                  mb: { xs: 1.5, sm: 2 },
                   justifyContent: { xs: 'space-between', sm: 'flex-start' }
                 }}>
                   <Box sx={{ 
@@ -3021,9 +3150,9 @@ const UnifiedLearningPage: React.FC = () => {
             </Box>
           ) : (
             <>
-            {/* Mobile-Optimized Materials Filter */}
+            {/* Materials Filter */}
             <Box sx={{ 
-              mb: { xs: 2, sm: 3, md: 4 },
+              mb: { xs: 1.5, sm: 2, md: 2.5 },
               p: { xs: 1.5, sm: 2 },
               backgroundColor: 'rgba(255, 255, 255, 0.6)',
               backdropFilter: 'blur(20px)',
@@ -3091,7 +3220,7 @@ const UnifiedLearningPage: React.FC = () => {
                     whileInView={{ opacity: 1, y: 0 }} 
                     viewport={{ once: true, amount: 0.2 }}
                     sx={{
-                      p: { xs: 1.5, sm: 2.5, md: 3 },
+                      p: { xs: 2, sm: 2.5, md: 3 },
                       backgroundColor: 'rgba(255, 255, 255, 0.6)',
                       backdropFilter: 'blur(20px)',
                       borderRadius: { xs: 2, sm: 3, md: 4 },
@@ -3778,6 +3907,56 @@ const UnifiedLearningPage: React.FC = () => {
           {successMessage}
         </Alert>
       </Snackbar>
+
+      {/* Modern Floating Action Button for Mobile */}
+      {isMobile && (
+        <Fab
+          color="primary"
+          onClick={toggleSidebar}
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            zIndex: 1000,
+            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)',
+              transform: 'scale(1.1)',
+              boxShadow: '0 12px 40px rgba(99, 102, 241, 0.4)'
+            },
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            width: 56,
+            height: 56
+          }}
+        >
+          <Menu sx={{ color: 'white' }} />
+        </Fab>
+      )}
+
+      {/* AI Assistant Floating Button */}
+      <Fab
+        color="secondary"
+        onClick={() => setAiOpen(true)}
+        sx={{
+          position: 'fixed',
+          bottom: { xs: 100, sm: 24 },
+          right: 24,
+          zIndex: 1000,
+          background: 'linear-gradient(135deg, #4caf50, #8bc34a)',
+          boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #45a049, #7cb342)',
+            transform: 'scale(1.1)',
+            boxShadow: '0 12px 40px rgba(76, 175, 80, 0.4)'
+          },
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          width: 56,
+          height: 56
+        }}
+      >
+        <SmartToyIcon sx={{ color: 'white' }} />
+      </Fab>
     </Box>
   );
 };

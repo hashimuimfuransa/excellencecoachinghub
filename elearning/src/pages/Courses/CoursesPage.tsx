@@ -309,90 +309,6 @@ const CoursesPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Profile Completion Alert for Students */}
-      {user?.role === UserRole.STUDENT && !profileCompletion.isComplete && showProfileAlert && (
-        <Paper
-          elevation={2}
-          sx={{
-            mb: 4,
-            p: 3,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            borderRadius: 2
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Person sx={{ mr: 1 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Complete Your Profile
-              </Typography>
-            </Box>
-            <IconButton
-              size="small"
-              onClick={() => setShowProfileAlert(false)}
-              sx={{ color: 'white' }}
-            >
-              <Close />
-            </IconButton>
-          </Box>
-          
-          <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
-            Complete your profile to get personalized course recommendations and better learning experience.
-          </Typography>
-          
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                Profile Completion
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                {profileCompletion.percentage}%
-              </Typography>
-            </Box>
-            <LinearProgress
-              variant="determinate"
-              value={profileCompletion.percentage}
-              sx={{
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                '& .MuiLinearProgress-bar': {
-                  backgroundColor: 'white'
-                }
-              }}
-            />
-          </Box>
-          
-          {profileCompletion.missingFields.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                Missing fields: {profileCompletion.missingFields.slice(0, 3).join(', ')}
-                {profileCompletion.missingFields.length > 3 && ` and ${profileCompletion.missingFields.length - 3} more`}
-              </Typography>
-            </Box>
-          )}
-          
-                 <Button
-                   variant="contained"
-                   onClick={() => {
-                     // Open profile modal directly
-                     window.dispatchEvent(new CustomEvent('openProfileModal'));
-                   }}
-                   sx={{
-                     backgroundColor: 'white',
-                     color: '#667eea',
-                     fontWeight: 600,
-                     '&:hover': {
-                       backgroundColor: 'rgba(255,255,255,0.9)'
-                     }
-                   }}
-                 >
-                   Complete Profile
-                 </Button>
-        </Paper>
-      )}
-
       {/* Modern Header with Gradient Background */}
       <Box 
         sx={{ 
@@ -677,10 +593,8 @@ const CoursesPage: React.FC = () => {
                         opacity: 1,
                         transform: 'scale(1.1)'
                       }
-                    },
-                    cursor: 'pointer'
+                    }
                   }}
-                  onClick={() => navigate(`/courses/${course._id}`)}
                 >
                   {/* Bookmark Button */}
                   <IconButton
@@ -865,7 +779,8 @@ const CoursesPage: React.FC = () => {
                       alignItems: 'center', 
                       justifyContent: 'space-between',
                       pt: 2,
-                      borderTop: '1px solid rgba(0,0,0,0.05)'
+                      borderTop: '1px solid rgba(0,0,0,0.05)',
+                      mb: 3
                     }}>
                       <Box>
                         {course.price > 0 ? (
@@ -898,6 +813,59 @@ const CoursesPage: React.FC = () => {
                         </Typography>
                       </Box>
                     </Box>
+
+                    {/* Action Buttons */}
+                    <Stack direction="row" spacing={2}>
+                      <Button
+                        variant="outlined"
+                        size="large"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/courses/${course._id}`);
+                        }}
+                        sx={{
+                          borderRadius: 2,
+                          py: 1.5,
+                          fontWeight: 600,
+                          borderColor: 'primary.main',
+                          color: 'primary.main',
+                          flex: 1,
+                          '&:hover': {
+                            borderColor: 'primary.dark',
+                            backgroundColor: 'primary.main',
+                            color: 'white',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
+                          },
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        👁️ View Details
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="large"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/courses/${course._id}`);
+                        }}
+                        sx={{
+                          borderRadius: 2,
+                          py: 1.5,
+                          fontWeight: 600,
+                          background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                          flex: 1,
+                          '&:hover': {
+                            background: 'linear-gradient(45deg, #5a67d8, #6b46c1)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                          },
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        🚀 Explore
+                      </Button>
+                    </Stack>
                   </CardContent>
                 </Card>
               </Fade>

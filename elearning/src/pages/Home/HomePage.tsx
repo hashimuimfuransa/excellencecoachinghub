@@ -1625,7 +1625,6 @@ const FeaturedCoursesSection: React.FC = () => {
                         }
                       }
                     }}
-                    onClick={() => navigate(`/courses/${course._id}`)}
                   >
                     {/* Course Image/Thumbnail */}
                     <Box
@@ -1803,7 +1802,7 @@ const FeaturedCoursesSection: React.FC = () => {
 
                       <Divider sx={{ mb: 3 }} />
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                         <Box>
                           {course.price > 0 ? (
                             <Typography
@@ -1840,6 +1839,59 @@ const FeaturedCoursesSection: React.FC = () => {
                           </Typography>
                         </Box>
                       </Box>
+
+                      {/* Action Buttons */}
+                      <Stack direction="row" spacing={2}>
+                        <Button
+                          variant="outlined"
+                          size="large"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/courses/${course._id}`);
+                          }}
+                          sx={{
+                            borderRadius: 2,
+                            py: 1.5,
+                            fontWeight: 600,
+                            borderColor: '#667eea',
+                            color: '#667eea',
+                            flex: 1,
+                            '&:hover': {
+                              borderColor: '#5a67d8',
+                              backgroundColor: '#667eea',
+                              color: 'white',
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                            },
+                            transition: 'all 0.3s ease'
+                          }}
+                        >
+                          👁️ View Details
+                        </Button>
+                        <Button
+                          variant="contained"
+                          size="large"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/courses/${course._id}`);
+                          }}
+                          sx={{
+                            borderRadius: 2,
+                            py: 1.5,
+                            fontWeight: 600,
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            flex: 1,
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                            },
+                            transition: 'all 0.3s ease'
+                          }}
+                        >
+                          🚀 Explore
+                        </Button>
+                      </Stack>
                     </CardContent>
                   </Paper>
                 </Grid>

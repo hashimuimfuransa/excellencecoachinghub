@@ -129,6 +129,15 @@ const LoginPage: React.FC = () => {
       const loginResult = await login(formData.email, formData.password);
       toast.success('Login successful!');
       
+      // Check for pending enrollment
+      const pendingCourseId = localStorage.getItem('pendingEnrollment');
+      if (pendingCourseId && loginResult?.user?.role === UserRole.STUDENT) {
+        // Clear the pending enrollment and redirect to course detail page
+        localStorage.removeItem('pendingEnrollment');
+        navigate(`/courses/${pendingCourseId}`, { replace: true });
+        return;
+      }
+      
       // Use the user data from the login result directly
       try {
         console.log('Login result:', loginResult);
@@ -172,6 +181,15 @@ const LoginPage: React.FC = () => {
     } else if (result.user && result.token) {
       // Existing user - direct login success
       toast.success(`Welcome back, ${result.user.firstName}!`);
+      
+      // Check for pending enrollment
+      const pendingCourseId = localStorage.getItem('pendingEnrollment');
+      if (pendingCourseId && result.user?.role === UserRole.STUDENT) {
+        // Clear the pending enrollment and redirect to course detail page
+        localStorage.removeItem('pendingEnrollment');
+        navigate(`/courses/${pendingCourseId}`, { replace: true });
+        return;
+      }
       
       // Use the user data from the result directly
       try {
@@ -239,6 +257,15 @@ const LoginPage: React.FC = () => {
       if (result.user && result.token) {
         toast.success(`Welcome to Excellence Coaching Hub, ${result.user.firstName}!`);
         setShowRoleSelection(false);
+        
+        // Check for pending enrollment
+        const pendingCourseId = localStorage.getItem('pendingEnrollment');
+        if (pendingCourseId && role === UserRole.STUDENT) {
+          // Clear the pending enrollment and redirect to course detail page
+          localStorage.removeItem('pendingEnrollment');
+          navigate(`/courses/${pendingCourseId}`, { replace: true });
+          return;
+        }
         
         // If interests were provided, redirect to courses with interests
         if (interests) {

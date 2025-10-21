@@ -167,6 +167,15 @@ const RegisterPage: React.FC = () => {
       const registerResult = await register(formData);
       toast.success('Registration successful! Please check your email to verify your account.');
       
+      // Check for pending enrollment
+      const pendingCourseId = localStorage.getItem('pendingEnrollment');
+      if (pendingCourseId && formData.role === UserRole.STUDENT) {
+        // Clear the pending enrollment and redirect to course detail page
+        localStorage.removeItem('pendingEnrollment');
+        navigate(`/courses/${pendingCourseId}`, { replace: true });
+        return;
+      }
+      
       // Use the user data from the register result directly
       try {
         // Get the appropriate redirect path based on user role and enrollments
@@ -267,6 +276,15 @@ const RegisterPage: React.FC = () => {
       if (result.user && result.token) {
         toast.success(`Welcome to Excellence Coaching Hub, ${result.user.firstName}!`);
         setShowRoleSelection(false);
+        
+        // Check for pending enrollment
+        const pendingCourseId = localStorage.getItem('pendingEnrollment');
+        if (pendingCourseId && role === UserRole.STUDENT) {
+          // Clear the pending enrollment and redirect to course detail page
+          localStorage.removeItem('pendingEnrollment');
+          navigate(`/courses/${pendingCourseId}`, { replace: true });
+          return;
+        }
         
         // Use the user data from the result directly
         try {

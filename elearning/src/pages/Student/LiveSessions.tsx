@@ -336,7 +336,7 @@ const StudentLiveSessions: React.FC = () => {
                 🎥 Live Learning Sessions
               </Typography>
               <Typography variant="h6" sx={{ opacity: 0.9, mb: 2, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
-                Join interactive sessions with your instructors and fellow students!
+                Join interactive sessions with your instructors and fellow students! You can also access study materials and learn at your own pace.
               </Typography>
               <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ gap: 1 }}>
                 <ActionButton 
@@ -364,6 +364,19 @@ const StudentLiveSessions: React.FC = () => {
                   onClick={() => setTabValue(0)}
                 >
                   📅 View Schedule
+                </ActionButton>
+                <ActionButton 
+                  variant="outlined" 
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{ 
+                    borderColor: 'white', 
+                    color: 'white',
+                    '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.1) }
+                  }}
+                  startIcon={<MenuBook />}
+                  onClick={() => navigate('/dashboard/student/courses')}
+                >
+                  📚 Study Materials
                 </ActionButton>
                 {recordedSessions > 0 && (
                   <ActionButton 
@@ -395,7 +408,7 @@ const StudentLiveSessions: React.FC = () => {
 
       {/* Quick Stats */}
       <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: { xs: 3, sm: 4 } }}>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={6} sm={3}>
           <Card 
             sx={{ 
               textAlign: 'center', 
@@ -411,16 +424,16 @@ const StudentLiveSessions: React.FC = () => {
             }}
             onClick={() => liveSessions > 0 && setTabValue(1)}
           >
-            <LiveTv sx={{ fontSize: { xs: 32, sm: 40 }, color: 'error.main', mb: 1 }} />
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'error.main', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+            <LiveTv sx={{ fontSize: { xs: 28, sm: 32 }, color: 'error.main', mb: 1 }} />
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'error.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
               {liveSessions}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
               🔴 Live Now
             </Typography>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={6} sm={3}>
           <Card 
             sx={{ 
               textAlign: 'center', 
@@ -436,16 +449,16 @@ const StudentLiveSessions: React.FC = () => {
             }}
             onClick={() => upcomingSessions > 0 && setTabValue(0)}
           >
-            <Schedule sx={{ fontSize: { xs: 32, sm: 40 }, color: 'primary.main', mb: 1 }} />
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+            <Schedule sx={{ fontSize: { xs: 28, sm: 32 }, color: 'primary.main', mb: 1 }} />
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
               {upcomingSessions}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
               📅 Upcoming
             </Typography>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={6} sm={3}>
           <Card 
             sx={{ 
               textAlign: 'center', 
@@ -461,18 +474,46 @@ const StudentLiveSessions: React.FC = () => {
             }}
             onClick={() => recordedSessions > 0 && setTabValue(2)}
           >
-            <OndemandVideo sx={{ fontSize: { xs: 32, sm: 40 }, color: 'success.main', mb: 1 }} />
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+            <OndemandVideo sx={{ fontSize: { xs: 28, sm: 32 }, color: 'success.main', mb: 1 }} />
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
               {recordedSessions}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
               📹 Recordings
             </Typography>
             {recordedSessions > 0 && (
-              <Typography variant="caption" color="success.main" sx={{ display: 'block', mt: 0.5, fontWeight: 600 }}>
+              <Typography variant="caption" color="success.main" sx={{ display: 'block', mt: 0.5, fontWeight: 600, fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                 Click to view →
               </Typography>
             )}
+          </Card>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Card 
+            sx={{ 
+              textAlign: 'center', 
+              p: { xs: 1.5, sm: 2 }, 
+              bgcolor: alpha(theme.palette.info.main, 0.05), 
+              border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.2)}`
+              }
+            }}
+            onClick={() => navigate('/dashboard/student/courses')}
+          >
+            <MenuBook sx={{ fontSize: { xs: 28, sm: 32 }, color: 'info.main', mb: 1 }} />
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'info.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+              📚
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+              Study Materials
+            </Typography>
+            <Typography variant="caption" color="info.main" sx={{ display: 'block', mt: 0.5, fontWeight: 600, fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
+              Learn at your pace →
+            </Typography>
           </Card>
         </Grid>
       </Grid>

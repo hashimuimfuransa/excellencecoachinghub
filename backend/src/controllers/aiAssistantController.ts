@@ -44,7 +44,7 @@ export const chatWithAI = async (req: Request, res: Response, next: NextFunction
     }
 
     // Get AI response
-    const response = await aiService.getAIAssistance(question, enhancedContext);
+    const response = await aiService.generateContent(`${question}\n\nContext: ${enhancedContext}`);
 
     res.status(200).json({
       success: true,
@@ -115,9 +115,8 @@ export const getStudySuggestions = async (req: Request, res: Response, next: Nex
       Provide personalized study suggestions to help improve performance and progress.
     `;
 
-    const suggestions = await aiService.getAIAssistance(
-      'Based on my progress, what study suggestions do you have for me?',
-      context
+    const suggestions = await aiService.generateContent(
+      `Based on my progress, what study suggestions do you have for me?\n\nContext: ${context}`
     );
 
     res.status(200).json({
@@ -165,9 +164,8 @@ export const explainConcept = async (req: Request, res: Response, next: NextFunc
       }
     }
 
-    const explanation = await aiService.getAIAssistance(
-      `Please explain the concept: ${concept}`,
-      context
+    const explanation = await aiService.generateContent(
+      `Please explain the concept: ${concept}\n\nContext: ${context}`
     );
 
     res.status(200).json({
@@ -211,7 +209,7 @@ export const getHomeworkHelp = async (req: Request, res: Response, next: NextFun
       context += `\nQuestion Type: ${questionType}`;
     }
 
-    const help = await aiService.getAIAssistance(question, context);
+    const help = await aiService.generateContent(`${question}\n\nContext: ${context}`);
 
     res.status(200).json({
       success: true,
@@ -255,10 +253,8 @@ export const generatePracticeQuestions = async (req: Request, res: Response, nex
       }
     }
 
-    const practiceQuestions = await aiService.generateQuizFromNotes(
-      `Topic: ${topic}\n${context}`,
-      difficulty,
-      count
+    const practiceQuestions = await aiService.generateContent(
+      `Generate ${count} practice questions about: ${topic}\n\nContext: ${context}\n\nDifficulty: ${difficulty}\n\nPlease provide the questions in a structured format with question text, multiple choice options, and correct answers.`
     );
 
     res.status(200).json({

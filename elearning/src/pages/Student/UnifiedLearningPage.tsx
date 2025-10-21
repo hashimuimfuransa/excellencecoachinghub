@@ -38,7 +38,11 @@ import {
   InputAdornment,
   Rating,
   Skeleton,
-  Snackbar
+  Snackbar,
+  Fade,
+  Zoom,
+  Slide,
+  Collapse
 } from '@mui/material';
 import {
   ArrowBack,
@@ -87,7 +91,69 @@ import {
   Chat,
   HelpOutline,
   Article,
-  Description as DescriptionIcon
+  Description as DescriptionIcon,
+  MilitaryTech,
+  WorkspacePremium,
+  Diamond,
+  Rocket,
+  Speed,
+  FlashOn,
+  Whatshot,
+  Bolt,
+  ThumbUp,
+  Favorite,
+  Share,
+  BookmarkAdd,
+  Visibility,
+  VisibilityOff,
+  ExpandMore,
+  ExpandLess,
+  KeyboardArrowUp,
+  KeyboardArrowDown,
+  TrendingFlat,
+  Timeline,
+  BarChart,
+  PieChart,
+  Assessment,
+  Analytics,
+  Insights,
+  Psychology as PsychologyIcon,
+  School as SchoolIcon,
+  Science,
+  Code,
+  Build,
+  Palette,
+  MusicNote,
+  SportsEsports,
+  FitnessCenter,
+  Spa,
+  Restaurant,
+  LocalLibrary,
+  AutoStories,
+  MenuBook,
+  ImportContacts,
+  ContactSupport,
+  SupportAgent,
+  QuestionAnswer,
+  Quiz as QuizIcon,
+  AssignmentTurnedIn,
+  AssignmentLate,
+  AssignmentReturned,
+  AssignmentReturn,
+  AssignmentInd,
+  Assignment,
+  Assignment as AssignmentIconAlt,
+  CheckCircleOutline,
+  RadioButtonUnchecked,
+  CheckBox,
+  CheckBoxOutlineBlank,
+  IndeterminateCheckBox,
+  CheckBoxOutlined,
+  CheckBoxTwoTone,
+  CheckBoxSharp,
+  CheckBoxRounded,
+  Close,
+  Edit
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { motion, useScroll, useSpring } from 'framer-motion';
@@ -111,6 +177,7 @@ import {
   OrganizedAssessment, 
   AssessmentOrganizationRequest 
 } from '../../services/aiAssessmentOrganizerService';
+import { gamificationService } from '../../services/gamificationService';
 
 // Interface for the actual backend response
 interface CourseProgressResponse {
@@ -238,8 +305,6 @@ const UnifiedLearningPage: React.FC = () => {
   const [enrolledStudents, setEnrolledStudents] = useState(120);
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [recommendedNext, setRecommendedNext] = useState<any[]>([]);
-  const [userStreak, setUserStreak] = useState(7);
-  const [userXP, setUserXP] = useState(1250);
   const [markingComplete, setMarkingComplete] = useState<Set<string>>(new Set());
   const [completedMaterials, setCompletedMaterials] = useState<Set<string>>(new Set());
   const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
@@ -247,6 +312,15 @@ const UnifiedLearningPage: React.FC = () => {
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [completedWeek, setCompletedWeek] = useState<Week | null>(null);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<Set<string>>(new Set());
+  
+  // Gamification state
+  const [userLevel, setUserLevel] = useState(1);
+  const [userXP, setUserXP] = useState(0);
+  const [userStreak, setUserStreak] = useState(0);
+  const [userBadges, setUserBadges] = useState<any[]>([]);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [gamificationLoading, setGamificationLoading] = useState(true);
 
   // Local helper types and utilities for organizing assessment questions in fallback
   type SimpleSection = {
@@ -277,6 +351,90 @@ const UnifiedLearningPage: React.FC = () => {
       questions: qs,
       instructions: instructionsByKey[key] || 'Answer all questions in this section.'
     }));
+  };
+
+  const loadGamificationData = async (courseId: string) => {
+    try {
+      setGamificationLoading(true);
+      
+      // Load gamification data in parallel
+      const [
+        levelInfo,
+        studyStats,
+        earnedBadges,
+        achievementsData,
+        leaderboardData
+      ] = await Promise.allSettled([
+        gamificationService.getLevelInfo(courseId),
+        gamificationService.getStudyStats(courseId),
+        gamificationService.getEarnedBadges(courseId),
+        gamificationService.getAchievements(courseId),
+        gamificationService.getLeaderboard(courseId, 10)
+      ]);
+
+      // Set level and XP data
+      if (levelInfo.status === 'fulfilled' && levelInfo.value) {
+        setUserLevel(levelInfo.value.currentLevel || 1);
+        setUserXP(levelInfo.value.currentXP || 0);
+      }
+
+      // Set streak data
+      if (studyStats.status === 'fulfilled' && studyStats.value) {
+        setUserStreak(studyStats.value.currentStreak || 0);
+      }
+
+      // Set badges data
+      if (earnedBadges.status === 'fulfilled' && earnedBadges.value) {
+        const formattedBadges = earnedBadges.value.map((badge: any) => ({
+          id: badge._id,
+          name: badge.name,
+          icon: badge.icon || '🏆',
+          earned: true,
+          description: badge.description,
+          points: badge.points || 0
+        }));
+        setUserBadges(formattedBadges);
+      }
+
+      // Set achievements data
+      if (achievementsData.status === 'fulfilled' && achievementsData.value) {
+        const formattedAchievements = achievementsData.value.map((achievement: any) => ({
+          id: achievement._id,
+          title: achievement.title,
+          description: achievement.description,
+          icon: achievement.icon || '🎯',
+          progress: achievement.progress || 0,
+          total: achievement.requirements?.value || 1,
+          isUnlocked: achievement.isUnlocked || false
+        }));
+        setAchievements(formattedAchievements);
+      }
+
+      // Set leaderboard data
+      if (leaderboardData.status === 'fulfilled' && leaderboardData.value) {
+        const formattedLeaderboard = leaderboardData.value.map((entry: any, index: number) => ({
+          rank: index + 1,
+          name: `${entry.user?.firstName || ''} ${entry.user?.lastName || ''}`.trim() || 'Anonymous',
+          xp: entry.points || 0,
+          avatar: entry.user?.firstName?.charAt(0) || 'A',
+          streak: Math.floor(Math.random() * 30) + 1, // Mock streak for now
+          isCurrentUser: entry.user?._id === user?._id
+        }));
+        setLeaderboard(formattedLeaderboard);
+      }
+
+    } catch (error) {
+      console.error('Error loading gamification data:', error);
+      // Set fallback data
+      setUserLevel(1);
+      setUserXP(0);
+      setUserStreak(0);
+      setUserBadges([]);
+      setAchievements([]);
+      setLeaderboard([]);
+    } finally {
+      setGamificationLoading(false);
+    }
   };
 
   const loadCourseData = async () => {
@@ -326,6 +484,9 @@ const UnifiedLearningPage: React.FC = () => {
       
       setAssessments(Array.isArray(assessmentsResponse) ? assessmentsResponse : []);
       setAssignments(Array.isArray(assignmentsResponse) ? assignmentsResponse : []);
+      
+      // Load gamification data
+      await loadGamificationData(courseId);
       
       console.log('📊 Loaded assessments:', assessmentsResponse);
       console.log('📊 Loaded assignments:', assignmentsResponse);
@@ -978,48 +1139,132 @@ const UnifiedLearningPage: React.FC = () => {
     );
   }
 
+  // Gamification Components
+  const GamificationCard = ({ children, title, icon, gradient = 'primary', sx = {} }: any) => (
+    <Card 
+      component={motion.div}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      sx={{
+        background: gradient === 'primary' 
+          ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%)'
+          : gradient === 'success'
+          ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(139, 195, 74, 0.05) 100%)'
+          : 'linear-gradient(135deg, rgba(255, 193, 7, 0.05) 0%, rgba(255, 152, 0, 0.05) 100%)',
+        border: '1px solid rgba(0,0,0,0.05)',
+        borderRadius: 3,
+        backdropFilter: 'blur(10px)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: '0 8px 25px rgba(0,0,0,0.1)',
+          borderColor: gradient === 'primary' ? 'primary.main' : gradient === 'success' ? 'success.main' : 'warning.main'
+        },
+        ...sx
+      }}
+    >
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          {icon}
+          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+            {title}
+          </Typography>
+        </Box>
+        {children}
+      </CardContent>
+    </Card>
+  );
+
+  const ProgressRing = ({ progress, size = 60, strokeWidth = 4, color = 'primary' }: any) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const strokeDasharray = circumference;
+    const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+    return (
+      <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+        <svg width={size} height={size}>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="rgba(0,0,0,0.1)"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color === 'primary' ? '#6366f1' : color === 'success' ? '#4caf50' : '#ff9800'}
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            strokeDasharray={strokeDasharray}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          />
+        </svg>
+        <Box sx={{ 
+          position: 'absolute', 
+          top: '50%', 
+          left: '50%', 
+          transform: 'translate(-50%, -50%)',
+          textAlign: 'center'
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+            {Math.round(progress)}%
+          </Typography>
+        </Box>
+      </Box>
+    );
+  };
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}>
-      {/* Enhanced Animated background gradient */}
-      <motion.div
-        aria-hidden
-        initial={{ backgroundPosition: '0% 50%' }}
-        animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-        transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 0,
-          backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%)',
-          backgroundSize: '300% 300%',
-          opacity: 0.03
-        }}
-      />
-      {/* Enhanced grid overlay */}
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      minHeight: '100vh', 
+      position: 'relative', 
+      overflowX: 'hidden',
+      backgroundColor: '#fafafa'
+    }}>
+      {/* Minimalist background */}
       <Box aria-hidden sx={{ 
         position: 'fixed', 
         inset: 0, 
-        zIndex: 1, 
-        backgroundImage: 'radial-gradient(rgba(99,102,241,0.05) 1px, transparent 1px)', 
-        backgroundSize: '24px 24px', 
+        zIndex: 0,
+        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.02) 0%, rgba(168, 85, 247, 0.02) 100%)',
         pointerEvents: 'none' 
       }} />
-      {/* Scroll progress bar */}
-      <Box sx={{ position: 'sticky', top: 0, zIndex: 30, pt: 0.25, px: 0.5 }}>
-        <Box sx={{ height: 3, borderRadius: 2, bgcolor: 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-          <motion.div style={{ scaleX: progressSpring, height: 3, transformOrigin: '0 0', backgroundImage: 'linear-gradient(90deg,#6366f1,#a855f7,#06b6d4)', backgroundSize: '200% 100%' }} />
-        </Box>
+      
+      {/* Minimalist scroll progress */}
+      <Box sx={{ position: 'sticky', top: 0, zIndex: 30, height: 2 }}>
+        <motion.div 
+          style={{ 
+            scaleX: progressSpring, 
+            height: 2, 
+            transformOrigin: '0 0', 
+            background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+            borderRadius: 1
+          }} 
+        />
       </Box>
-      {/* Enhanced Top App Bar */}
+      {/* Minimalist Top App Bar */}
       <AppBar position="sticky" sx={{ 
-        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-        backdropFilter: 'blur(10px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.98)', 
+        backdropFilter: 'blur(20px)',
         color: 'text.primary', 
-        boxShadow: '0 2px 20px rgba(0,0,0,0.08)', 
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)', 
         zIndex: 5,
-        borderBottom: '1px solid rgba(0,0,0,0.05)'
+        borderBottom: '1px solid rgba(0,0,0,0.03)'
       }}>
         <Toolbar sx={{ 
           minHeight: { xs: 56, sm: 64 },
-          px: { xs: 1, sm: 2 }
+          px: { xs: 1, sm: 3 },
+          flexWrap: { xs: 'wrap', sm: 'nowrap' }
         }}>
           <IconButton
             edge="start"
@@ -1027,25 +1272,28 @@ const UnifiedLearningPage: React.FC = () => {
             onClick={handleBack}
             sx={{ 
               mr: { xs: 1, sm: 2 },
-              p: { xs: 1, sm: 1.5 }
+              p: 1,
+              borderRadius: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(99, 102, 241, 0.08)'
+              }
             }}
           >
             <ArrowBack />
           </IconButton>
           
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Box sx={{ flexGrow: 1, minWidth: 0, order: { xs: 3, sm: 1 }, width: { xs: '100%', sm: 'auto' } }}>
             <Typography 
               variant="h6" 
               noWrap
               sx={{ 
-                fontSize: { xs: '1rem', sm: '1.25rem' },
-                fontWeight: 'bold',
-                background: 'linear-gradient(90deg, #6366f1, #a855f7)',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent'
+                fontSize: { xs: '1rem', sm: '1.3rem' },
+                fontWeight: 600,
+                color: 'text.primary',
+                textAlign: { xs: 'center', sm: 'left' }
               }}
             >
-              {course?.title || 'Learning'}
+              {course?.title || 'Learning Hub'}
             </Typography>
           </Box>
           
@@ -1086,28 +1334,50 @@ const UnifiedLearningPage: React.FC = () => {
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: { xs: 0.5, sm: 1 }
+            gap: { xs: 0.5, sm: 1 },
+            order: { xs: 2, sm: 2 },
+            flexWrap: { xs: 'wrap', sm: 'nowrap' }
           }}>
+            {/* Gamification XP Display */}
+            <Box sx={{ 
+              display: { xs: 'none', sm: 'flex' },
+              alignItems: 'center',
+              gap: 1,
+              px: 2,
+              py: 1,
+              backgroundColor: 'rgba(99, 102, 241, 0.08)',
+              borderRadius: 3,
+              border: '1px solid rgba(99, 102, 241, 0.15)'
+            }}>
+              <EmojiEvents sx={{ fontSize: 20, color: '#ffd700' }} />
+              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                {userXP} XP
+              </Typography>
+            </Box>
+
             <Button
-              variant="contained"
-              startIcon={<VideoCall />}
+              variant="outlined"
+              startIcon={<VideoCall sx={{ fontSize: { xs: 16, sm: 18 } }} />}
               onClick={handleGoToLiveSessions}
               sx={{
-                background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
+                borderColor: 'primary.main',
+                color: 'primary.main',
+                backgroundColor: 'rgba(99, 102, 241, 0.05)',
                 '&:hover': { 
-                  background: 'linear-gradient(45deg, #5b5bd6, #7c3aed)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  transform: { xs: 'none', sm: 'translateY(-1px)' },
+                  boxShadow: { xs: 'none', sm: '0 4px 12px rgba(99, 102, 241, 0.3)' }
                 },
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                fontSize: { xs: '0.7rem', sm: '0.875rem' },
                 px: { xs: 1, sm: 2 },
                 py: { xs: 0.5, sm: 1 },
-                minWidth: { xs: 'auto', sm: 'auto' },
-                borderRadius: 2,
+                borderRadius: { xs: 2, sm: 3 },
                 textTransform: 'none',
                 fontWeight: 600,
+                minWidth: { xs: 'auto', sm: 'auto' },
                 '& .MuiButton-startIcon': {
-                  mr: { xs: 0.5, sm: 1 }
+                  mr: { xs: 0.25, sm: 1 }
                 }
               }}
             >
@@ -1125,15 +1395,15 @@ const UnifiedLearningPage: React.FC = () => {
               color="inherit"
               onClick={handleGoToDashboard}
               sx={{ 
-                p: { xs: 1, sm: 1.5 },
+                p: { xs: 0.75, sm: 1.5 },
                 display: { xs: 'none', sm: 'flex' },
                 '&:hover': {
                   backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  transform: 'scale(1.05)'
+                  transform: { xs: 'none', sm: 'scale(1.05)' }
                 }
               }}
             >
-              <Dashboard />
+              <Dashboard sx={{ fontSize: { xs: 20, sm: 24 } }} />
             </IconButton>
             
             <IconButton
@@ -1146,15 +1416,15 @@ const UnifiedLearningPage: React.FC = () => {
                 }
               }}
               sx={{ 
-                p: { xs: 1, sm: 1.5 },
+                p: { xs: 0.75, sm: 1.5 },
                 '&:hover': {
                   backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  transform: 'scale(1.05)'
+                  transform: { xs: 'none', sm: 'scale(1.05)' }
                 }
               }}
               title="Refresh Course Data & Progress"
             >
-              <Refresh />
+              <Refresh sx={{ fontSize: { xs: 20, sm: 24 } }} />
             </IconButton>
             
             {/* Profile Menu */}
@@ -1436,1324 +1706,1521 @@ const UnifiedLearningPage: React.FC = () => {
 
       {/* Main Content Area */}
       <Box sx={{ display: 'flex', flex: 1 }}>
-        {/* Sidebar */}
+        {/* Minimalist Sidebar */}
         <Drawer
           variant={isMobile ? "temporary" : "persistent"}
           open={sidebarOpen}
           onClose={toggleSidebar}
           sx={{
-            width: { xs: 280, sm: 320 },
+            width: { xs: 300, sm: 340 },
             flexShrink: 0,
             '& .MuiDrawer-paper': {
-              width: { xs: 280, sm: 320 },
+              width: { xs: 300, sm: 340 },
               boxSizing: 'border-box',
-              backgroundColor: 'grey.50',
-              borderRight: '1px solid',
-              borderColor: 'divider',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+              borderRight: '1px solid rgba(0,0,0,0.05)',
+              boxShadow: '0 0 20px rgba(0,0,0,0.05)',
               // Mobile optimizations
               '@media (max-width: 600px)': {
                 width: '100vw',
-                maxWidth: '320px'
+                maxWidth: '340px'
               }
             },
           }}
         >
           <Box sx={{ 
-            p: { xs: 1.5, sm: 2 }, 
+            p: { xs: 2, sm: 3 }, 
             height: '100%', 
             overflow: 'auto',
             // Mobile scroll optimizations
             '@media (max-width: 600px)': {
-              padding: 1
+              padding: 1.5
             }
           }}>
-            {/* Enhanced Course Info */}
-            <Card component={motion.div} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} sx={{ 
-              mb: { xs: 1.5, sm: 2 }, 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-              color: 'white',
-              overflow: 'hidden',
-              position: 'relative',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
-                pointerEvents: 'none'
-              }
-            }}>
-              {/* Course Thumbnail Placeholder */}
-              <Box sx={{ 
-                height: 120, 
-                background: 'linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative'
-              }}>
-                <School sx={{ fontSize: 48, opacity: 0.3 }} />
-                <Box sx={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5
-                }}>
-                  <Star sx={{ fontSize: 16, color: '#ffd700' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-                    {courseRating}
-                  </Typography>
-                </Box>
-              </Box>
-              
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, position: 'relative', zIndex: 1 }}>
-                <Typography 
-                  variant="h6" 
-                  gutterBottom
-                  sx={{ 
-                    fontSize: { xs: '1rem', sm: '1.25rem' },
-                    fontWeight: 'bold',
-                    mb: 1
-                  }}
-                >
-                  {course?.title}
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    opacity: 0.9, 
-                    mb: 2,
-                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                    lineHeight: 1.4,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {course?.description || 'Master the fundamentals with interactive modules, assessments, and live coaching.'}
-                </Typography>
-                
-                {/* Enhanced Stats */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  gap: { xs: 0.5, sm: 1 }, 
-                  flexWrap: 'wrap',
-                  mb: 2
-                }}>
-                  <Chip
-                    icon={<CalendarToday sx={{ fontSize: 14 }} />}
-                    label={`${weeks.length} Week${weeks.length !== 1 ? 's' : ''}`}
-                    size="small"
-                    sx={{ 
-                      backgroundColor: 'rgba(255,255,255,0.2)', 
-                      color: 'white',
-                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                      height: { xs: 24, sm: 28 },
-                      backdropFilter: 'blur(10px)'
-                    }}
-                  />
-                  <Chip
-                    icon={<Timer sx={{ fontSize: 14 }} />}
-                    label={`${weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0), 0)} min`}
-                    size="small"
-                    sx={{ 
-                      backgroundColor: 'rgba(255,255,255,0.2)', 
-                      color: 'white',
-                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                      height: { xs: 24, sm: 28 },
-                      backdropFilter: 'blur(10px)'
-                    }}
-                  />
-                  <Chip
-                    icon={<People sx={{ fontSize: 14 }} />}
-                    label={`${enrolledStudents} enrolled`}
-                    size="small"
-                    sx={{ 
-                      backgroundColor: 'rgba(255,255,255,0.2)', 
-                      color: 'white',
-                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                      height: { xs: 24, sm: 28 },
-                      backdropFilter: 'blur(10px)'
-                    }}
-                  />
-                </Box>
-                
-                {/* Gamification Stats */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  p: 1,
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  borderRadius: 1,
-                  backdropFilter: 'blur(10px)'
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <LocalFireDepartment sx={{ fontSize: 16, color: '#ff6b35' }} />
-                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-                      {userStreak} day streak
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <EmojiEvents sx={{ fontSize: 16, color: '#ffd700' }} />
-                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-                      {userXP} XP
-                    </Typography>
+            {/* Enhanced Gamification Profile Card */}
+            <GamificationCard 
+              title="Your Progress" 
+              icon={<TrendingUp sx={{ color: 'primary.main' }} />}
+              gradient="primary"
+              sx={{ mb: 3 }}
+            >
+              {gamificationLoading ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Skeleton variant="circular" width={60} height={60} />
+                  <Box sx={{ flex: 1 }}>
+                    <Skeleton variant="text" width="60%" height={24} />
+                    <Skeleton variant="text" width="80%" height={20} sx={{ mb: 1 }} />
+                    <Skeleton variant="rectangular" width="100%" height={6} sx={{ borderRadius: 3 }} />
                   </Box>
                 </Box>
-              </CardContent>
-            </Card>
-
-            {/* Enhanced Course Progress Overview */}
-            {progress && (
-              <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} sx={{ mb: { xs: 1.5, sm: 2 } }}>
-                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                  <Typography 
-                    variant="h6" 
-                    gutterBottom 
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 1,
-                      fontSize: { xs: '0.9rem', sm: '1.25rem' },
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    <TrendingUp />
-                    Your Progress
-                  </Typography>
-                  
-                  {/* Large Progress Bar */}
-                  <Box sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                        {Math.round(progress.materialProgresses?.length > 0 ?
-                          (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
-                            weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0)}%
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Complete
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Box sx={{ position: 'relative' }}>
+                    <Avatar sx={{ 
+                      width: 60, 
+                      height: 60, 
+                      background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                      fontSize: '1.5rem',
+                      fontWeight: 'bold',
+                      boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                    }}>
+                      {user?.firstName?.charAt(0) || 'U'}
+                    </Avatar>
+                    <Box sx={{
+                      position: 'absolute',
+                      bottom: -2,
+                      right: -2,
+                      backgroundColor: 'success.main',
+                      borderRadius: '50%',
+                      width: 24,
+                      height: 24,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
+                    }}>
+                      <Typography variant="caption" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem' }}>
+                        {userLevel}
                       </Typography>
                     </Box>
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: 'text.primary' }}>
+                      Level {userLevel}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.875rem' }}>
+                      {userXP.toLocaleString()} XP • {userStreak} day streak
+                    </Typography>
                     <LinearProgress
                       variant="determinate"
-                      value={progress.materialProgresses?.length > 0 ?
-                        (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
-                          weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0}
+                      value={Math.min((userXP % 1000) / 10, 100)}
                       sx={{ 
-                        height: { xs: 8, sm: 12 }, 
-                        borderRadius: 6, 
+                        height: 8, 
+                        borderRadius: 4,
                         backgroundColor: 'rgba(0,0,0,0.1)',
                         '& .MuiLinearProgress-bar': {
                           background: 'linear-gradient(90deg, #6366f1, #a855f7)',
-                          borderRadius: 6
+                          borderRadius: 4,
+                          boxShadow: '0 2px 4px rgba(99, 102, 241, 0.3)'
                         }
                       }}
                     />
-                  </Box>
-                  
-                  {/* Milestones */}
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                      Recent Achievements
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', textAlign: 'right' }}>
+                      {Math.round((userXP % 1000) / 10)}% to next level
                     </Typography>
-                    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                      <Chip 
-                        icon={<CheckCircle sx={{ fontSize: 16 }} />}
-                        label="First Module Completed 🎉" 
-                        size="small" 
-                        color="success" 
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem' }}
-                      />
-                      <Chip 
-                        icon={<EmojiEvents sx={{ fontSize: 16 }} />}
-                        label="7 Day Streak!" 
-                        size="small" 
-                        color="warning" 
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem' }}
-                      />
-                    </Stack>
                   </Box>
-                  
-                  {/* Next Task */}
-                  {getNextRecommendedMaterial() && (
-                    <Box sx={{ 
-                      p: 1.5, 
-                      backgroundColor: 'rgba(99, 102, 241, 0.05)', 
-                      borderRadius: 2,
-                      border: '1px solid rgba(99, 102, 241, 0.1)'
-                    }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'primary.main' }}>
-                        Next: {getNextRecommendedMaterial()?.material?.title || 'No materials available'}
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<PlayArrow />}
-                        onClick={() => {
-                          const nextMaterial = getNextRecommendedMaterial();
-                          if (nextMaterial?.material) {
-                            handleMaterialClick(nextMaterial.material);
-                          }
-                        }}
-                        sx={{
-                          background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
-                          '&:hover': { 
-                            background: 'linear-gradient(45deg, #5b5bd6, #7c3aed)',
-                            transform: 'translateY(-1px)'
-                          },
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          borderRadius: 2
-                        }}
-                      >
-                        Continue Learning
-                      </Button>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                </Box>
+              )}
+            </GamificationCard>
 
-            {/* Enhanced Announcements */}
-            <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} sx={{ mb: { xs: 1.5, sm: 2 } }}>
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                <Typography 
-                  variant="h6" 
-                  gutterBottom 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1,
-                    fontSize: { xs: '0.9rem', sm: '1.25rem' },
-                    fontWeight: 'bold'
-                  }}
-                >
-                  <Announcement />
-                  📢 Announcements
-                </Typography>
-                {announcements.length === 0 ? (
-                  <Box sx={{ 
-                    textAlign: 'center', 
-                    py: 2,
-                    backgroundColor: 'rgba(0,0,0,0.02)',
-                    borderRadius: 2
-                  }}>
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary" 
-                      sx={{ 
-                        fontStyle: 'italic',
-                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                      }}
-                    >
-                      No announcements yet
-                    </Typography>
-                  </Box>
-                ) : (
-                  <List dense>
-                    {announcements.slice(0, 3).map((announcement, index) => (
-                      <ListItem 
-                        key={announcement._id || index} 
-                        sx={{ 
-                          px: 0, 
-                          py: { xs: 0.5, sm: 1 },
-                          borderRadius: 2,
-                          mb: 0.5,
-                          backgroundColor: 'rgba(0,0,0,0.02)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(99, 102, 241, 0.05)',
-                            transform: 'translateX(4px)',
-                            transition: 'all 0.2s ease'
-                          }
-                        }}
-                      >
-                        <ListItemIcon sx={{ minWidth: { xs: 32, sm: 40 } }}>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 0.5 
+            {/* Enhanced Badges Section */}
+            <GamificationCard 
+              title="Badges" 
+              icon={<MilitaryTech sx={{ color: 'warning.main' }} />}
+              gradient="warning"
+              sx={{ mb: 3 }}
+            >
+              {gamificationLoading ? (
+                <Grid container spacing={1}>
+                  {[1, 2, 3, 4].map((i) => (
+                    <Grid item xs={6} key={i}>
+                      <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 2 }} />
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : userBadges.length > 0 ? (
+                <Grid container spacing={1}>
+                  {userBadges.slice(0, 4).map((badge) => (
+                    <Grid item xs={6} key={badge.id}>
+                      <Box sx={{
+                        p: 2,
+                        backgroundColor: badge.earned ? 'rgba(255, 193, 7, 0.1)' : 'rgba(0,0,0,0.05)',
+                        borderRadius: 3,
+                        border: badge.earned ? '2px solid rgba(255, 193, 7, 0.3)' : '1px solid rgba(0,0,0,0.1)',
+                        textAlign: 'center',
+                        opacity: badge.earned ? 1 : 0.6,
+                        transition: 'all 0.3s ease',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: badge.earned ? '0 4px 15px rgba(255, 193, 7, 0.2)' : '0 2px 8px rgba(0,0,0,0.1)'
+                        }
+                      }}>
+                        <Typography sx={{ fontSize: '2rem', mb: 1, display: 'block' }}>
+                          {badge.icon}
+                        </Typography>
+                        <Typography variant="caption" sx={{ 
+                          fontWeight: 700, 
+                          fontSize: '0.75rem',
+                          display: 'block',
+                          lineHeight: 1.2,
+                          color: badge.earned ? 'warning.main' : 'text.secondary'
+                        }}>
+                          {badge.name}
+                        </Typography>
+                        {badge.points > 0 && (
+                          <Typography variant="caption" sx={{ 
+                            fontSize: '0.65rem',
+                            color: 'text.secondary',
+                            display: 'block',
+                            mt: 0.5
                           }}>
-                            <Typography sx={{ fontSize: 16 }}>
-                              {getPriorityIcon(announcement.priority || 'low')}
-                            </Typography>
-                            <Announcement 
-                              color={getPriorityColor(announcement.priority || 'low')}
-                              sx={{ fontSize: { xs: 18, sm: 24 } }} 
-                            />
-                          </Box>
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box>
-                              <Typography 
-                                variant="body2" 
-                                fontWeight="bold"
-                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                              >
-                                {announcement.title}
-                              </Typography>
-                              {announcement.priority && (
-                                <Chip
-                                  label={announcement.priority.toUpperCase()}
-                                  size="small"
-                                  sx={{
-                                    fontSize: { xs: '0.6rem', sm: '0.7rem' },
-                                    height: { xs: 16, sm: 18 },
-                                    mt: 0.5,
-                                    color: 'white',
-                                    backgroundColor: getPriorityColor(announcement.priority) + '.main',
-                                    fontWeight: 'bold'
-                                  }}
-                                />
-                              )}
-                            </Box>
-                          }
-                          secondary={
-                            <Box>
-                              <Typography 
-                                variant="caption"
-                                sx={{ 
-                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                  display: 'block',
-                                  mb: 0.5,
-                                  lineHeight: 1.3
-                                }}
-                              >
-                                {announcement.content}
-                              </Typography>
-                              {announcement.createdAt && (
-                                <Typography 
-                                  variant="caption" 
-                                  color="text.secondary"
-                                  sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
-                                >
-                                  {new Date(announcement.createdAt).toLocaleDateString()}
-                                </Typography>
-                              )}
-                            </Box>
-                          }
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-              </CardContent>
-            </Card>
+                            +{badge.points} XP
+                          </Typography>
+                        )}
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 3,
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                  borderRadius: 2,
+                  border: '1px dashed rgba(0,0,0,0.1)'
+                }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    No badges earned yet. Keep learning to unlock achievements!
+                  </Typography>
+                </Box>
+              )}
+            </GamificationCard>
 
-            {/* Enhanced Upcoming Events */}
-            <Card ref={liveSectionRef} sx={{ mb: { xs: 1.5, sm: 2 } }}>
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                <Typography 
-                  variant="h6" 
-                  gutterBottom 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1,
-                    fontSize: { xs: '0.9rem', sm: '1.25rem' },
-                    fontWeight: 'bold'
-                  }}
-                >
-                  <Event />
-                  📅 Upcoming Events
-                  <Badge badgeContent={unseenRecordings} color="error" sx={{ ml: 1 }} invisible={unseenRecordings === 0}>
-                    <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>
-                      {unseenRecordings > 0 ? 'New recordings' : ''}
-                    </Typography>
-                  </Badge>
-                </Typography>
-                {upcomingEvents.length === 0 ? (
-                  <Box sx={{ 
-                    textAlign: 'center', 
-                    py: 2,
-                    backgroundColor: 'rgba(0,0,0,0.02)',
-                    borderRadius: 2
-                  }}>
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary" 
-                      sx={{ 
-                        fontStyle: 'italic',
-                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                      }}
-                    >
-                      No upcoming events
-                    </Typography>
-                  </Box>
-                ) : (
-                  <List dense>
-                    {upcomingEvents.map((event, index) => (
-                      <ListItem 
-                        key={event._id || index} 
-                        sx={{ 
-                          px: 0, 
-                          py: { xs: 0.5, sm: 1 },
-                          borderRadius: 2,
-                          mb: 0.5,
-                          backgroundColor: 'rgba(0,0,0,0.02)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(99, 102, 241, 0.05)',
-                            transform: 'translateX(4px)',
-                            transition: 'all 0.2s ease'
-                          }
-                        }}
-                      >
-                        <ListItemIcon sx={{ minWidth: { xs: 32, sm: 40 } }}>
-                          <VideoCall color="secondary" sx={{ fontSize: { xs: 18, sm: 24 } }} />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box>
-                              <Typography 
-                                variant="body2" 
-                                fontWeight="bold"
-                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                              >
-                                {event.title}
-                              </Typography>
-                              {event.description && (
-                                <Typography 
-                                  variant="caption"
-                                  sx={{ 
-                                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                    display: 'block',
-                                    opacity: 0.8,
-                                    mb: 0.5
-                                  }}
-                                >
-                                  {event.description}
-                                </Typography>
-                              )}
-                              <Typography 
-                                variant="caption" 
-                                color="text.secondary"
-                                sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
-                              >
-                                {new Date(event.scheduledTime).toLocaleString()}
-                              </Typography>
-                            </Box>
-                          }
+            {/* Enhanced Achievements Section */}
+            <GamificationCard 
+              title="Achievements" 
+              icon={<EmojiEvents sx={{ color: 'success.main' }} />}
+              gradient="success"
+              sx={{ mb: 3 }}
+            >
+              {gamificationLoading ? (
+                <Stack spacing={1.5}>
+                  {[1, 2, 3].map((i) => (
+                    <Box key={i} sx={{ p: 1.5, backgroundColor: 'rgba(76, 175, 80, 0.05)', borderRadius: 2 }}>
+                      <Skeleton variant="text" width="80%" height={20} sx={{ mb: 1 }} />
+                      <Skeleton variant="text" width="60%" height={16} sx={{ mb: 1 }} />
+                      <Skeleton variant="rectangular" width="100%" height={4} sx={{ borderRadius: 2 }} />
+                    </Box>
+                  ))}
+                </Stack>
+              ) : achievements.length > 0 ? (
+                <Stack spacing={1.5}>
+                  {achievements.slice(0, 3).map((achievement) => (
+                    <Box key={achievement.id} sx={{
+                      p: 2,
+                      backgroundColor: achievement.isUnlocked ? 'rgba(76, 175, 80, 0.08)' : 'rgba(0,0,0,0.03)',
+                      borderRadius: 3,
+                      border: achievement.isUnlocked ? '2px solid rgba(76, 175, 80, 0.2)' : '1px solid rgba(0,0,0,0.1)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: achievement.isUnlocked ? '0 4px 12px rgba(76, 175, 80, 0.15)' : '0 2px 8px rgba(0,0,0,0.1)'
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                        <Typography sx={{ fontSize: '1.5rem' }}>
+                          {achievement.icon}
+                        </Typography>
+                        <Typography variant="body2" sx={{ 
+                          fontWeight: 700, 
+                          flex: 1,
+                          color: achievement.isUnlocked ? 'success.main' : 'text.secondary'
+                        }}>
+                          {achievement.title}
+                        </Typography>
+                        {achievement.isUnlocked && (
+                          <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+                        )}
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block', lineHeight: 1.4 }}>
+                        {achievement.description}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={Math.min((achievement.progress / achievement.total) * 100, 100)}
+                          sx={{ 
+                            flex: 1, 
+                            height: 6, 
+                            borderRadius: 3,
+                            backgroundColor: 'rgba(0,0,0,0.1)',
+                            '& .MuiLinearProgress-bar': {
+                              background: achievement.isUnlocked 
+                                ? 'linear-gradient(90deg, #4caf50, #8bc34a)'
+                                : 'linear-gradient(90deg, #ff9800, #ffc107)',
+                              borderRadius: 3
+                            }
+                          }}
                         />
-                        <Box sx={{ ml: 1 }}>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<PlayCircleOutline />}
-                            onClick={handleGoToLiveSessions}
-                            sx={{
-                              fontSize: '0.7rem',
-                              py: 0.5,
-                              px: 1,
-                              borderRadius: 2,
-                              textTransform: 'none',
-                              '&:hover': {
-                                backgroundColor: 'primary.main',
-                                color: 'white'
-                              }
-                            }}
-                          >
-                            Join
-                          </Button>
+                        <Typography variant="caption" sx={{ 
+                          fontWeight: 700, 
+                          fontSize: '0.7rem',
+                          color: achievement.isUnlocked ? 'success.main' : 'warning.main'
+                        }}>
+                          {achievement.progress}/{achievement.total}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 3,
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                  borderRadius: 2,
+                  border: '1px dashed rgba(0,0,0,0.1)'
+                }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    Complete course activities to unlock achievements!
+                  </Typography>
+                </Box>
+              )}
+            </GamificationCard>
+
+            {/* Enhanced Leaderboard Section */}
+            <GamificationCard 
+              title="Leaderboard" 
+              icon={<BarChart sx={{ color: 'primary.main' }} />}
+              gradient="primary"
+              sx={{ mb: 3 }}
+            >
+              {gamificationLoading ? (
+                <Stack spacing={1}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Box key={i} sx={{ p: 1.5, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Skeleton variant="circular" width={24} height={24} />
+                      <Skeleton variant="circular" width={32} height={32} />
+                      <Box sx={{ flex: 1 }}>
+                        <Skeleton variant="text" width="70%" height={16} />
+                        <Skeleton variant="text" width="50%" height={12} />
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : leaderboard.length > 0 ? (
+                <Stack spacing={1}>
+                  {leaderboard.slice(0, 5).map((player, index) => (
+                    <Box key={player.name} sx={{
+                      p: 2,
+                      backgroundColor: player.isCurrentUser ? 'rgba(99, 102, 241, 0.12)' : 'rgba(0,0,0,0.03)',
+                      borderRadius: 3,
+                      border: player.isCurrentUser ? '2px solid rgba(99, 102, 241, 0.3)' : '1px solid rgba(0,0,0,0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: player.isCurrentUser 
+                          ? '0 4px 12px rgba(99, 102, 241, 0.2)' 
+                          : '0 2px 8px rgba(0,0,0,0.1)'
+                      }
+                    }}>
+                      <Box sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        backgroundColor: index < 3 ? '#ffd700' : 'rgba(0,0,0,0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold',
+                        color: index < 3 ? 'white' : 'text.secondary',
+                        boxShadow: index < 3 ? '0 2px 8px rgba(255, 215, 0, 0.3)' : 'none'
+                      }}>
+                        {player.rank}
+                      </Box>
+                      <Avatar sx={{ 
+                        width: 36, 
+                        height: 36, 
+                        fontSize: '0.9rem',
+                        fontWeight: 'bold',
+                        background: player.isCurrentUser 
+                          ? 'linear-gradient(135deg, #6366f1, #a855f7)' 
+                          : 'rgba(0,0,0,0.1)',
+                        color: player.isCurrentUser ? 'white' : 'text.secondary'
+                      }}>
+                        {player.avatar}
+                      </Avatar>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ 
+                          fontWeight: player.isCurrentUser ? 700 : 600,
+                          fontSize: '0.85rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          color: player.isCurrentUser ? 'primary.main' : 'text.primary'
+                        }}>
+                          {player.name}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', fontWeight: 600 }}>
+                            {player.xp.toLocaleString()} XP
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                            •
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                            {player.streak}🔥
+                          </Typography>
                         </Box>
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-                {unseenRecordings > 0 && (
-                  <Box sx={{ 
-                    mt: 2, 
-                    p: { xs: 1, sm: 1.5 }, 
-                    bgcolor: 'rgba(255, 99, 71, 0.06)', 
-                    borderRadius: 2, 
-                    border: '1px solid', 
-                    borderColor: 'error.light' 
-                  }}>
-                    <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <Badge badgeContent={unseenRecordings} color="error">
-                        <VideoCall color="error" sx={{ mr: 0.5 }} />
-                      </Badge>
-                      New recorded session{unseenRecordings > 1 ? 's' : ''} available
-                    </Typography>
-                    <Button 
-                      size="small" 
-                      variant="contained" 
-                      color="error" 
-                      onClick={handleGoToLiveSessions}
+                      </Box>
+                      {index < 3 && (
+                        <Box sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 20,
+                          height: 20,
+                          borderRadius: '50%',
+                          backgroundColor: '#ffd700',
+                          color: 'white',
+                          fontSize: '0.6rem'
+                        }}>
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 3,
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                  borderRadius: 2,
+                  border: '1px dashed rgba(0,0,0,0.1)'
+                }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    No leaderboard data available yet. Start learning to climb the ranks!
+                  </Typography>
+                </Box>
+              )}
+            </GamificationCard>
+
+            {/* Enhanced Events Section */}
+            <GamificationCard 
+              title="Upcoming Events" 
+              icon={<Event sx={{ color: 'info.main' }} />}
+              gradient="primary"
+              sx={{ mb: 3 }}
+            >
+              {upcomingEvents.length > 0 ? (
+                <Stack spacing={1.5}>
+                  {upcomingEvents.slice(0, 3).map((event, index) => (
+                    <Box key={event._id || index} sx={{
+                      p: 2,
+                      backgroundColor: 'rgba(33, 150, 243, 0.08)',
+                      borderRadius: 3,
+                      border: '1px solid rgba(33, 150, 243, 0.2)',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(33, 150, 243, 0.15)'
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                        <CalendarToday sx={{ fontSize: 16, color: 'info.main' }} />
+                        <Typography variant="body2" sx={{ 
+                          fontWeight: 700, 
+                          flex: 1,
+                          color: 'info.main',
+                          fontSize: '0.85rem'
+                        }}>
+                          {event.title || 'Live Session'}
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', lineHeight: 1.4 }}>
+                        {event.description || 'Join this live session to learn more'}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AccessTime sx={{ fontSize: 14, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                          {event.scheduledTime ? new Date(event.scheduledTime).toLocaleDateString() : 'TBA'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                  {upcomingEvents.length > 3 && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate(`/dashboard/student/course/${courseId}/events`)}
                       sx={{
+                        borderColor: 'info.main',
+                        color: 'info.main',
                         borderRadius: 2,
                         textTransform: 'none',
-                        fontWeight: 600
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        py: 1
                       }}
                     >
-                      View recordings
+                      View All Events ({upcomingEvents.length})
                     </Button>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}>
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                <Typography 
-                  variant="h6" 
-                  gutterBottom 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1,
-                    fontSize: { xs: '0.9rem', sm: '1.25rem' },
-                    fontWeight: 'bold'
-                  }}
-                >
-                  <Schedule />
-                  Quick Actions
-                </Typography>
-                <Stack spacing={{ xs: 0.5, sm: 1 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<VideoCall />}
-                    onClick={handleGoToLiveSessions}
-                    fullWidth
-                    size="small"
-                    sx={{
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                      py: { xs: 0.5, sm: 1 },
-                      '& .MuiButton-startIcon': {
-                        mr: { xs: 0.5, sm: 1 }
-                      }
-                    }}
-                  >
-                    Join Live Session
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Dashboard />}
-                    onClick={handleGoToDashboard}
-                    fullWidth
-                    size="small"
-                    sx={{
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                      py: { xs: 0.5, sm: 1 },
-                      '& .MuiButton-startIcon': {
-                        mr: { xs: 0.5, sm: 1 }
-                      }
-                    }}
-                  >
-                    Go to Dashboard
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Article />}
-                    onClick={handleGoToPastPapers}
-                    fullWidth
-                    size="small"
-                    sx={{
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                      py: { xs: 0.5, sm: 1 },
-                      '& .MuiButton-startIcon': {
-                        mr: { xs: 0.5, sm: 1 }
-                      }
-                    }}
-                  >
-                    Past Papers
-                  </Button>
+                  )}
                 </Stack>
-              </CardContent>
-            </Card>
+              ) : (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 3,
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                  borderRadius: 2,
+                  border: '1px dashed rgba(0,0,0,0.1)'
+                }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    No upcoming events scheduled yet.
+                  </Typography>
+                </Box>
+              )}
+            </GamificationCard>
+
+            {/* Enhanced Announcements Section */}
+            <GamificationCard 
+              title="Announcements" 
+              icon={<Announcement sx={{ color: 'warning.main' }} />}
+              gradient="warning"
+              sx={{ mb: 3 }}
+            >
+              {announcements.length > 0 ? (
+                <Stack spacing={1.5}>
+                  {announcements.slice(0, 3).map((announcement, index) => (
+                    <Box key={announcement._id || index} sx={{
+                      p: 2,
+                      backgroundColor: announcement.priority === 'urgent' 
+                        ? 'rgba(244, 67, 54, 0.08)' 
+                        : announcement.priority === 'high'
+                        ? 'rgba(255, 152, 0, 0.08)'
+                        : 'rgba(0,0,0,0.03)',
+                      borderRadius: 3,
+                      border: announcement.priority === 'urgent' 
+                        ? '2px solid rgba(244, 67, 54, 0.3)' 
+                        : announcement.priority === 'high'
+                        ? '2px solid rgba(255, 152, 0, 0.3)'
+                        : '1px solid rgba(0,0,0,0.05)',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: announcement.priority === 'urgent' 
+                          ? '0 4px 12px rgba(244, 67, 54, 0.15)' 
+                          : announcement.priority === 'high'
+                          ? '0 4px 12px rgba(255, 152, 0, 0.15)'
+                          : '0 2px 8px rgba(0,0,0,0.1)'
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                        <Announcement sx={{ 
+                          fontSize: 16, 
+                          color: announcement.priority === 'urgent' ? 'error.main' : announcement.priority === 'high' ? 'warning.main' : 'text.secondary' 
+                        }} />
+                        <Typography variant="body2" sx={{ 
+                          fontWeight: 700, 
+                          flex: 1,
+                          color: announcement.priority === 'urgent' ? 'error.main' : announcement.priority === 'high' ? 'warning.main' : 'text.primary',
+                          fontSize: '0.85rem'
+                        }}>
+                          {announcement.title}
+                        </Typography>
+                        {announcement.priority === 'urgent' && (
+                          <Box sx={{
+                            width: 8,
+                            height: 8,
+                            backgroundColor: 'error.main',
+                            borderRadius: '50%',
+                            animation: 'pulse 2s infinite'
+                          }} />
+                        )}
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', lineHeight: 1.4 }}>
+                        {announcement.content?.substring(0, 80)}...
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AccessTime sx={{ fontSize: 14, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                          {announcement.createdAt ? new Date(announcement.createdAt).toLocaleDateString() : 'Recently'}
+                        </Typography>
+                        {announcement.type && (
+                          <>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                              •
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', textTransform: 'capitalize' }}>
+                              {announcement.type}
+                            </Typography>
+                          </>
+                        )}
+                      </Box>
+                    </Box>
+                  ))}
+                  {announcements.length > 3 && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate(`/dashboard/student/course/${courseId}/announcements`)}
+                      sx={{
+                        borderColor: 'warning.main',
+                        color: 'warning.main',
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        py: 1
+                      }}
+                    >
+                      View All Announcements ({announcements.length})
+                    </Button>
+                  )}
+                </Stack>
+              ) : (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 3,
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                  borderRadius: 2,
+                  border: '1px dashed rgba(0,0,0,0.1)'
+                }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    No announcements yet.
+                  </Typography>
+                </Box>
+              )}
+            </GamificationCard>
+
           </Box>
         </Drawer>
 
-        {/* Main Content */}
+        {/* Mobile-Responsive Main Content */}
         <Box
           component="main"
           sx={{
             flexGrow: 1,
-            p: { xs: 1.5, sm: 3 },
-            backgroundColor: 'grey.50',
+            backgroundColor: 'transparent',
             minHeight: 'calc(100vh - 64px)',
             position: 'relative',
             zIndex: 5,
-            // Mobile optimizations
-            '@media (max-width: 600px)': {
-              p: 1
-            }
+            width: '100%',
+            maxWidth: '100%',
+            overflow: 'hidden'
           }}
         >
-          <Container maxWidth="lg" sx={{ p: 0 }}>
-          {/* Hero header with key actions */}
-          <Card component={motion.div} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} sx={{ mb: { xs: 2, sm: 3 }, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} md={8}>
-                  <Typography variant="h5" sx={{ fontWeight: 900, lineHeight: 1.2, backgroundImage: 'linear-gradient(90deg,#6366f1,#a855f7)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
-                    {course?.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    Jump back in or explore assessments and assignments curated for you.
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
-                    <Button 
-                      variant="contained" 
-                      onClick={() => navigate(`/dashboard/student/course/${courseId}/weeks`)} 
-                      sx={{ 
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderRadius: 2,
-                        px: 3,
-                        py: 1.5,
-                        background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
-                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                        '&:hover': {
-                          background: 'linear-gradient(45deg, #5b5bd6, #7c3aed)',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 6px 20px rgba(99, 102, 241, 0.4)'
-                        },
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      Open Course Plan
-                    </Button>
-                    <Button 
-                      variant="outlined" 
-                      onClick={() => liveSectionRef.current?.scrollIntoView({ behavior: 'smooth' })} 
-                      sx={{ 
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderRadius: 2,
-                        px: 3,
-                        py: 1.5,
-                        borderColor: 'primary.main',
-                        color: 'primary.main',
-                        backgroundColor: 'rgba(99, 102, 241, 0.05)',
-                        backdropFilter: 'blur(10px)',
-                        '&:hover': {
-                          backgroundColor: 'primary.main',
-                          color: 'white',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 6px 20px rgba(99, 102, 241, 0.3)'
-                        },
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      Upcoming Events
-                    </Button>
-                    <Button 
-                      variant="outlined" 
-                      startIcon={<Article sx={{ fontSize: 18 }} />} 
-                      onClick={handleGoToPastPapers} 
-                      sx={{ 
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderRadius: 2,
-                        px: 3,
-                        py: 1.5,
-                        borderColor: 'secondary.main',
-                        color: 'secondary.main',
-                        backgroundColor: 'rgba(156, 39, 176, 0.05)',
-                        backdropFilter: 'blur(10px)',
-                        '&:hover': {
-                          backgroundColor: 'secondary.main',
-                          color: 'white',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 6px 20px rgba(156, 39, 176, 0.3)'
-                        },
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      Past Papers
-                    </Button>
-                  </Stack>
-                </Grid>
+          <Container 
+            maxWidth="lg" 
+            sx={{ 
+              p: { xs: 1.5, sm: 2, md: 3 },
+              width: '100%',
+              maxWidth: '100%',
+              mx: 'auto'
+            }}
+          >
+          {/* Enhanced Mobile-Responsive Hero Section */}
+          <Box component={motion.div} 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5 }}
+            sx={{ 
+              mb: { xs: 2, sm: 3, md: 4 },
+              p: { xs: 2, sm: 3, md: 4 },
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: { xs: 2, sm: 3, md: 4 },
+              border: '1px solid rgba(0,0,0,0.05)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.08)'
+            }}
+          >
+            <Grid container spacing={{ xs: 2, sm: 3 }} alignItems="center">
+              <Grid item xs={12} md={8}>
+                <Typography variant="h4" sx={{ 
+                  fontWeight: 700, 
+                  lineHeight: 1.2, 
+                  mb: { xs: 1.5, sm: 2 },
+                  fontSize: { xs: '1.5rem', sm: '1.875rem', md: '2.125rem' },
+                  color: 'text.primary'
+                }}>
+                  {course?.title}
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ 
+                  mb: { xs: 2, sm: 3 },
+                  fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' },
+                  lineHeight: 1.6
+                }}>
+                  Master your learning journey with interactive content, assessments, and live sessions.
+                </Typography>
+                
+                {/* Mobile-Optimized Quick Stats */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: { xs: 2, sm: 3 }, 
+                  flexWrap: 'wrap', 
+                  mb: { xs: 2, sm: 3 },
+                  justifyContent: { xs: 'space-between', sm: 'flex-start' }
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    minWidth: { xs: '30%', sm: 'auto' }
+                  }}>
+                    <Box sx={{ 
+                      width: 8, 
+                      height: 8, 
+                      borderRadius: '50%', 
+                      backgroundColor: 'success.main' 
+                    }} />
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                      {weeks.length} Weeks
+                    </Typography>
+                  </Box>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    minWidth: { xs: '30%', sm: 'auto' }
+                  }}>
+                    <Box sx={{ 
+                      width: 8, 
+                      height: 8, 
+                      borderRadius: '50%', 
+                      backgroundColor: 'primary.main' 
+                    }} />
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                      {weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)} Materials
+                    </Typography>
+                  </Box>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    minWidth: { xs: '30%', sm: 'auto' }
+                  }}>
+                    <Box sx={{ 
+                      width: 8, 
+                      height: 8, 
+                      borderRadius: '50%', 
+                      backgroundColor: 'warning.main' 
+                    }} />
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                      {assessments.length} Assessments
+                    </Typography>
+                  </Box>
+                </Box>
               </Grid>
-            </CardContent>
-          </Card>
-          {/* Modern Content Tabs */}
-          <Card sx={{ mb: { xs: 2, sm: 3 }, overflow: 'hidden' }}>
+              <Grid item xs={12} md={4}>
+                <Stack spacing={{ xs: 1.5, sm: 2 }} sx={{ width: '100%' }}>
+                  <Button 
+                    variant="contained" 
+                    size="large"
+                    onClick={() => document.getElementById('weeks-section')?.scrollIntoView({ behavior: 'smooth' })} 
+                    sx={{ 
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      borderRadius: { xs: 2, sm: 3 },
+                      py: { xs: 1.5, sm: 2 },
+                      px: { xs: 2, sm: 3 },
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                      boxShadow: '0 4px 20px rgba(99, 102, 241, 0.3)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)'
+                      },
+                      transition: 'all 0.3s ease',
+                      width: '100%'
+                    }}
+                  >
+                    Start Learning
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    size="large"
+                    onClick={() => liveSectionRef.current?.scrollIntoView({ behavior: 'smooth' })} 
+                    sx={{ 
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      borderRadius: { xs: 2, sm: 3 },
+                      py: { xs: 1.5, sm: 2 },
+                      px: { xs: 2, sm: 3 },
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                      backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                      '&:hover': {
+                        backgroundColor: 'primary.main',
+                        color: 'white',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+                      },
+                      transition: 'all 0.3s ease',
+                      width: '100%'
+                    }}
+                  >
+                    View Live Sessions
+                  </Button>
+                </Stack>
+              </Grid>
+            </Grid>
+          </Box>
+          {/* Mobile-Optimized Content Navigation */}
+          <Box sx={{ 
+            mb: { xs: 2, sm: 3, md: 4 },
+            p: { xs: 1.5, sm: 2, md: 2.5 },
+            backgroundColor: 'rgba(255, 255, 255, 0.6)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: { xs: 2, sm: 3 },
+            border: '1px solid rgba(0,0,0,0.05)',
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
+          }}>
             <Tabs 
               value={activeTab} 
               onChange={handleTabChange}
-              variant="fullWidth"
+              variant="scrollable"
+              scrollButtons="auto"
               sx={{
                 '& .MuiTab-root': {
                   textTransform: 'none',
                   fontWeight: 600,
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
-                  py: 2,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
+                  py: { xs: 1, sm: 1.5 },
+                  px: { xs: 1, sm: 2 },
+                  borderRadius: { xs: 1.5, sm: 2 },
+                  mx: { xs: 0.25, sm: 0.5 },
+                  minHeight: 'auto',
+                  minWidth: { xs: 'auto', sm: '120px' },
                   '&.Mui-selected': {
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
                     color: 'primary.main'
                   }
                 },
                 '& .MuiTabs-indicator': {
-                  height: 3,
-                  borderRadius: '3px 3px 0 0',
-                  background: 'linear-gradient(90deg, #6366f1, #a855f7)'
+                  display: 'none'
+                },
+                '& .MuiTabs-scrollButtons': {
+                  width: { xs: 32, sm: 40 },
+                  '&.Mui-disabled': {
+                    opacity: 0.3
+                  }
                 }
               }}
             >
               <Tab 
-                icon={<Quiz sx={{ fontSize: 20 }} />} 
+                icon={<Quiz sx={{ fontSize: { xs: 16, sm: 18 } }} />} 
                 iconPosition="start"
-                label="🧩 Assessments" 
+                label="Assessments" 
                 onClick={() => document.getElementById('assessments-section')?.scrollIntoView({ behavior: 'smooth' })}
               />
               <Tab 
-                icon={<AssignmentIcon sx={{ fontSize: 20 }} />} 
+                icon={<AssignmentIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />} 
                 iconPosition="start"
-                label="📝 Assignments" 
+                label="Assignments" 
                 onClick={() => document.getElementById('assignments-section')?.scrollIntoView({ behavior: 'smooth' })}
               />
               <Tab 
-                icon={<CalendarToday sx={{ fontSize: 20 }} />} 
+                icon={<CalendarToday sx={{ fontSize: { xs: 16, sm: 18 } }} />} 
                 iconPosition="start"
-                label="📅 Weeks" 
+                label="Course Content" 
                 onClick={() => document.getElementById('weeks-section')?.scrollIntoView({ behavior: 'smooth' })}
               />
               <Tab 
-                icon={<Article sx={{ fontSize: 20 }} />} 
+                icon={<Article sx={{ fontSize: { xs: 16, sm: 18 } }} />} 
                 iconPosition="start"
-                label="📄 Past Papers" 
+                label="Past Papers" 
                 onClick={handleGoToPastPapers}
               />
+              <Tab 
+                icon={<Event sx={{ fontSize: { xs: 16, sm: 18 } }} />} 
+                iconPosition="start"
+                label="Events & Announcements" 
+                onClick={() => navigate(`/dashboard/student/course/${courseId}/events`)}
+              />
             </Tabs>
-          </Card>
-          {/* Enhanced Course Progress Overview */}
+          </Box>
+          {/* Mobile-Optimized Progress Overview */}
           {progress && (
-            <Card sx={{ mb: { xs: 2, sm: 3 } }}>
-              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                <Typography 
-                  variant="h6" 
-                  gutterBottom 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1,
-                    fontSize: { xs: '1rem', sm: '1.25rem' },
-                    fontWeight: 'bold'
-                  }}
-                >
-                  <TrendingUp />
+            <Box sx={{ 
+              mb: { xs: 2, sm: 3, md: 4 },
+              p: { xs: 1.5, sm: 2, md: 2.5 },
+              backgroundColor: 'rgba(255, 255, 255, 0.6)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: { xs: 2, sm: 3 },
+              border: '1px solid rgba(0,0,0,0.05)',
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
+            }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                mb: { xs: 1.5, sm: 2 },
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1, sm: 0 }
+              }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 700, 
+                  fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' }
+                }}>
                   Course Progress
                 </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={progress.materialProgresses?.length > 0 ?
+                <Typography variant="h4" sx={{ 
+                  fontWeight: 700, 
+                  color: 'primary.main',
+                  fontSize: { xs: '1.75rem', sm: '2rem', md: '2.125rem' }
+                }}>
+                  {Math.round(progress?.materialProgresses?.length > 0 ?
                     (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
-                      weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0}
-                  sx={{ 
-                    height: { xs: 6, sm: 8 }, 
-                    borderRadius: 4, 
-                    mb: 1 
-                  }}
-                />
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary"
-                  sx={{ 
-                    fontSize: { xs: '0.875rem', sm: '0.875rem' }
-                  }}
-                >
-                  {Math.round(progress.materialProgresses?.length > 0 ?
-                    (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
-                      weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0)}% Complete
+                      weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0)}%
                 </Typography>
-              </CardContent>
-            </Card>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={progress?.materialProgresses?.length > 0 ?
+                  (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
+                    weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0}
+                sx={{ 
+                  height: { xs: 6, sm: 8 }, 
+                  borderRadius: { xs: 3, sm: 4 },
+                  backgroundColor: 'rgba(0,0,0,0.1)',
+                  '& .MuiLinearProgress-bar': {
+                    background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                    borderRadius: { xs: 3, sm: 4 }
+                  }
+                }}
+              />
+            </Box>
           )}
 
 
 
-          {/* Assessments Section */}
+          {/* Mobile-Responsive Assessments Section */}
           {assessments.length > 0 && (
-            <Card id="assessments-section" component={motion.div} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
-              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                <Typography 
-                  variant="h6" 
-                  gutterBottom 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1,
-                    fontSize: { xs: '1rem', sm: '1.25rem' },
-                    fontWeight: 'bold'
-                  }}
-                >
-                  <Quiz />
-                  Assessments
-                </Typography>
-                <Grid container spacing={{ xs: 1, sm: 2 }}>
-                  {assessments.map((assessment) => (
-                    <Grid item xs={12} sm={6} md={4} key={assessment._id}>
-                      <Card 
-                        sx={{ 
-                          cursor: organizingAssessment.has(assessment._id) ? 'wait' : 'pointer',
-                          transition: 'all 0.3s ease',
-                          opacity: organizingAssessment.has(assessment._id) ? 0.8 : 1,
-                          '&:hover': {
-                            transform: organizingAssessment.has(assessment._id) ? 'none' : 'translateY(-2px)',
-                            boxShadow: organizingAssessment.has(assessment._id) ? 1 : 4
-                          },
-                          position: 'relative'
-                        }}
-                        onClick={() => !organizingAssessment.has(assessment._id) && handleTakeAssessment(assessment._id)}
-                      >
-                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <Quiz color="primary" sx={{ fontSize: { xs: 20, sm: 24 } }} />
-                            <Typography 
-                              variant="subtitle1" 
-                              fontWeight="bold"
-                              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
-                            >
-                              {assessment.title}
-                            </Typography>
-                          </Box>
-                          
-                          {/* AI Organization Status */}
-                          {organizingAssessment.has(assessment._id) && (
-                            <Box sx={{ 
-                              display: 'flex', 
-                              flexDirection: 'column',
-                              gap: 1, 
-                              mb: 1, 
-                              p: 1.5, 
-                              backgroundColor: 'rgba(25, 118, 210, 0.1)', 
-                              borderRadius: 1,
-                              border: '1px solid rgba(25, 118, 210, 0.2)'
-                            }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CircularProgress size={16} />
-                                <Typography 
-                                  variant="caption" 
-                                  color="primary"
-                                  fontWeight="medium"
-                                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                                >
-                                  AI is enhancing your assessment...
-                                </Typography>
-                              </Box>
-                              <Typography 
-                                variant="caption" 
-                                color="text.secondary"
-                                sx={{ 
-                                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                                  fontStyle: 'italic'
-                                }}
-                              >
-                                • Analyzing questions and organizing sections<br/>
-                                • Creating personalized study tips<br/>
-                                • Optimizing difficulty progression<br/>
-                                <strong>This may take up to 45 seconds...</strong>
-                              </Typography>
-                            </Box>
-                          )}
-                          
-                          {/* AI Enhancement Indicator */}
-                          {!organizingAssessment.has(assessment._id) && (
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: 0.5, 
-                              mb: 1 
-                            }}>
-                              <AutoAwesome sx={{ fontSize: 14, color: 'primary.main' }} />
-                              <Typography 
-                                variant="caption" 
-                                color="primary"
-                                sx={{ 
-                                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                                  fontWeight: 'medium'
-                                }}
-                              >
-                                AI-Enhanced Assessment
-                              </Typography>
-                            </Box>
-                          )}
-                          
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary"
-                            sx={{ 
-                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                              mb: 1,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden'
-                            }}
-                          >
-                            {assessment.description || 'No description available'}
-                          </Typography>
-                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <Chip
-                              label={`${assessment.totalQuestions} Questions`}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                            />
-                            <Chip
-                              label={`${assessment.totalPoints} Points`}
-                              size="small"
-                              color="secondary"
-                              variant="outlined"
-                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                            />
-                            {assessment.timeLimit && (
-                              <Chip
-                                label={`${assessment.timeLimit} min`}
-                                size="small"
-                                color="warning"
-                                variant="outlined"
-                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                              />
-                            )}
-                          </Box>
-                          {assessment.dueDate && (
-                            <Box sx={{ mt: 1 }}>
-                              <CountdownTimer 
-                                dueDate={assessment.dueDate}
-                                onTimeReached={() => handleAssessmentTimeReached(assessment._id)}
-                              />
-                              <Typography 
-                                variant="caption" 
-                                color="text.secondary"
-                                sx={{ 
-                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                  display: 'block',
-                                  mt: 0.5
-                                }}
-                              >
-                                Due: {new Date(assessment.dueDate).toLocaleDateString()}
-                              </Typography>
-                            </Box>
-                          )}
-                          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              size="small"
-                              startIcon={isAssessmentAvailable(assessment) ? <Quiz /> : <Lock />}
-                              disabled={!isAssessmentAvailable(assessment)}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleTakeAssessment(assessment._id);
-                              }}
-                              sx={{ 
-                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                px: 2
-                              }}
-                            >
-                              {isAssessmentAvailable(assessment) ? 'Take Assessment' : 'Assessment Locked'}
-                            </Button>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Assignments Section */}
-          {assignments.length > 0 && (
-            <Card id="assignments-section" component={motion.div} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
-              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                <Typography 
-                  variant="h6" 
-                  gutterBottom 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1,
-                    fontSize: { xs: '1rem', sm: '1.25rem' },
-                    fontWeight: 'bold'
-                  }}
-                >
-                  <AssignmentIcon />
-                  Assignments
-                </Typography>
-                <Grid container spacing={{ xs: 1, sm: 2 }}>
-                  {assignments.map((assignment) => (
-                    <Grid item xs={12} sm={6} md={4} key={assignment._id}>
-                      <Card 
-                        sx={{ 
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: 4
-                          }
-                        }}
-                        onClick={() => handleTakeAssignment(assignment._id)}
-                      >
-                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <AssignmentIcon color="warning" sx={{ fontSize: { xs: 20, sm: 24 } }} />
-                            <Typography 
-                              variant="subtitle1" 
-                              fontWeight="bold"
-                              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
-                            >
-                              {assignment.title}
-                            </Typography>
-                          </Box>
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary"
-                            sx={{ 
-                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                              mb: 1,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden'
-                            }}
-                          >
-                            {assignment.description || 'No description available'}
-                          </Typography>
-                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <Chip
-                              label={`${assignment.maxPoints} Points`}
-                              size="small"
-                              color="warning"
-                              variant="outlined"
-                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                            />
-                            <Chip
-                              label={assignment.submissionType}
-                              size="small"
-                              color="info"
-                              variant="outlined"
-                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                            />
-                            <Chip
-                              label={assignment.status}
-                              size="small"
-                              color={assignment.status === 'published' ? 'success' : 'default'}
-                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                            />
-                          </Box>
-                          {assignment.dueDate && (
-                            <Typography 
-                              variant="caption" 
-                              color="text.secondary"
-                              sx={{ 
-                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                display: 'block',
-                                mt: 1
-                              }}
-                            >
-                              Due: {new Date(assignment.dueDate).toLocaleDateString()}
-                            </Typography>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Weeks and Materials */}
-          {weeks.length === 0 ? (
-            <Card>
-              <CardContent sx={{ 
-                textAlign: 'center', 
-                py: { xs: 3, sm: 4 },
-                px: { xs: 2, sm: 3 }
+            <Box id="assessments-section" component={motion.div} 
+              initial={{ opacity: 0, y: 20 }} 
+              whileInView={{ opacity: 1, y: 0 }} 
+              viewport={{ once: true, amount: 0.2 }} 
+              sx={{ 
+                mb: { xs: 2, sm: 3, md: 4 },
+                width: '100%',
+                maxWidth: '100%'
+              }}
+            >
+              <Typography variant="h5" sx={{ 
+                fontWeight: 700, 
+                mb: { xs: 2, sm: 3 },
+                fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+                color: 'text.primary'
               }}>
-                <Typography 
-                  variant="h6" 
-                  color="text.secondary" 
-                  gutterBottom
-                  sx={{ 
-                    fontSize: { xs: '1rem', sm: '1.25rem' }
-                  }}
-                >
-                  No course content available yet
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary"
-                  sx={{ 
-                    fontSize: { xs: '0.875rem', sm: '0.875rem' }
-                  }}
-                >
-                  The instructor hasn't added any materials to this course.
-                </Typography>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-            {/* Materials filter chips */}
-            <Stack direction="row" spacing={1} sx={{ mb: { xs: 1.5, sm: 2 }, flexWrap: 'wrap' }}>
-              <Chip clickable color={materialFilter === 'all' ? 'primary' : 'default'} label="All" onClick={() => setMaterialFilter('all')} />
-              <Chip clickable color={materialFilter === 'required' ? 'primary' : 'default'} label="Required" onClick={() => setMaterialFilter('required')} />
-              <Chip clickable color={materialFilter === 'completed' ? 'primary' : 'default'} label="Completed" onClick={() => setMaterialFilter('completed')} />
-              <Chip clickable color={materialFilter === 'video' ? 'primary' : 'default'} label="Videos" onClick={() => setMaterialFilter('video')} />
-              <Chip clickable color={materialFilter === 'document' ? 'primary' : 'default'} label="Documents" onClick={() => setMaterialFilter('document')} />
-            </Stack>
-            <Grid id="weeks-section" container spacing={{ xs: 2, sm: 3 }}>
-              {weeks.map((week, index) => (
-                <Grid item xs={12} key={week._id}>
-                  <Card component={motion.div} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} sx={{
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: { xs: 'none', sm: 'translateY(-2px)' },
-                      boxShadow: { xs: 2, sm: 4 }
-                    }
-                  }}>
-                    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'flex-start', 
-                        mb: 2,
-                        flexDirection: { xs: 'column', sm: 'row' },
-                        gap: { xs: 2, sm: 0 }
-                      }}>
-                        <Box sx={{ flex: 1 }}>
+                Assessments
+              </Typography>
+              <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ width: '100%' }}>
+                {assessments.map((assessment) => (
+                  <Grid item xs={12} sm={6} md={4} key={assessment._id}>
+                    <Box 
+                      sx={{ 
+                        cursor: organizingAssessment.has(assessment._id) ? 'wait' : 'pointer',
+                        transition: 'all 0.3s ease',
+                        opacity: organizingAssessment.has(assessment._id) ? 0.8 : 1,
+                        p: { xs: 2, sm: 2.5, md: 3 },
+                        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                        backdropFilter: 'blur(20px)',
+                        borderRadius: { xs: 2, sm: 2.5, md: 3 },
+                        border: '1px solid rgba(0,0,0,0.05)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                        position: 'relative',
+                        width: '100%',
+                        maxWidth: '100%',
+                        boxSizing: 'border-box',
+                        '&:hover': {
+                          transform: organizingAssessment.has(assessment._id) ? 'none' : { xs: 'none', sm: 'translateY(-4px)' },
+                          boxShadow: organizingAssessment.has(assessment._id) ? '0 4px 20px rgba(0,0,0,0.08)' : { xs: '0 4px 20px rgba(0,0,0,0.08)', sm: '0 8px 30px rgba(0,0,0,0.15)' },
+                          borderColor: 'primary.main'
+                        }
+                      }}
+                      onClick={() => !organizingAssessment.has(assessment._id) && handleTakeAssessment(assessment._id)}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                          <Box sx={{
+                            p: 1,
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            borderRadius: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <Quiz sx={{ fontSize: 24, color: 'primary.main' }} />
+                          </Box>
                           <Typography 
                             variant="h6" 
-                            gutterBottom
                             sx={{ 
-                              fontSize: { xs: '1rem', sm: '1.25rem' },
-                              fontWeight: 'bold'
+                              fontWeight: 700,
+                              fontSize: { xs: '1rem', sm: '1.125rem' },
+                              color: 'text.primary'
                             }}
                           >
-                            {week.title}
+                            {assessment.title}
                           </Typography>
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary" 
-                            paragraph
-                            sx={{ 
-                              fontSize: { xs: '0.875rem', sm: '0.875rem' },
-                              mb: { xs: 1.5, sm: 2 }
-                            }}
-                          >
-                            {week.description}
-                          </Typography>
+                        </Box>
+                        
+                        {/* AI Organization Status */}
+                        {organizingAssessment.has(assessment._id) && (
+                          <Box sx={{ 
+                            p: 2, 
+                            backgroundColor: 'rgba(25, 118, 210, 0.1)', 
+                            borderRadius: 2,
+                            border: '1px solid rgba(25, 118, 210, 0.2)',
+                            mb: 2
+                          }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <CircularProgress size={16} />
+                              <Typography variant="body2" color="primary" fontWeight="600">
+                                AI is enhancing your assessment...
+                              </Typography>
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">
+                              Analyzing questions and creating personalized study tips
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {/* AI Enhancement Indicator */}
+                        {!organizingAssessment.has(assessment._id) && (
                           <Box sx={{ 
                             display: 'flex', 
-                            gap: { xs: 0.5, sm: 1 }, 
-                            flexWrap: 'wrap', 
+                            alignItems: 'center', 
+                            gap: 0.5, 
                             mb: 2 
                           }}>
-                            <Chip
-                              label={`${week.materials.filter(mat => mat.isPublished).length} Materials`}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                              sx={{ 
-                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                height: { xs: 24, sm: 28 }
-                              }}
-                            />
-                            <Chip
-                              label={`${week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0)} min`}
-                              size="small"
-                              color="secondary"
-                              variant="outlined"
-                              sx={{ 
-                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                height: { xs: 24, sm: 28 }
-                              }}
-                            />
-                            {week.isPublished ? (
-                              <Chip 
-                                label="Published" 
-                                size="small" 
-                                color="success"
-                                sx={{ 
-                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                  height: { xs: 24, sm: 28 }
-                                }}
-                              />
-                            ) : (
-                              <Chip 
-                                label="Draft" 
-                                size="small" 
-                                color="warning"
-                                sx={{ 
-                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                  height: { xs: 24, sm: 28 }
-                                }}
-                              />
-                            )}
+                            <AutoAwesome sx={{ fontSize: 16, color: 'primary.main' }} />
+                            <Typography variant="caption" color="primary" fontWeight="600">
+                              AI-Enhanced Assessment
+                            </Typography>
                           </Box>
+                        )}
+                        
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ 
+                            mb: 2,
+                            lineHeight: 1.5
+                          }}
+                        >
+                          {assessment.description || 'No description available'}
+                        </Typography>
+                        
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                          <Chip
+                            label={`${assessment.totalQuestions} Questions`}
+                            size="small"
+                            sx={{ 
+                              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                              color: 'primary.main',
+                              fontWeight: 600
+                            }}
+                          />
+                          <Chip
+                            label={`${assessment.totalPoints} Points`}
+                            size="small"
+                            sx={{ 
+                              backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                              color: 'secondary.main',
+                              fontWeight: 600
+                            }}
+                          />
+                          {assessment.timeLimit && (
+                            <Chip
+                              label={`${assessment.timeLimit} min`}
+                              size="small"
+                              sx={{ 
+                                backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                                color: 'warning.main',
+                                fontWeight: 600
+                              }}
+                            />
+                          )}
                         </Box>
+                        
+                        {assessment.dueDate && (
+                          <Box sx={{ mb: 2 }}>
+                            <CountdownTimer 
+                              dueDate={assessment.dueDate}
+                              onTimeReached={() => handleAssessmentTimeReached(assessment._id)}
+                            />
+                          </Box>
+                        )}
+                        
+                        <Button
+                          variant="contained"
+                          size="large"
+                          startIcon={isAssessmentAvailable(assessment) ? <Quiz /> : <Lock />}
+                          disabled={!isAssessmentAvailable(assessment)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTakeAssessment(assessment._id);
+                          }}
+                          sx={{ 
+                            width: '100%',
+                            py: 1.5,
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            background: isAssessmentAvailable(assessment) 
+                              ? 'linear-gradient(135deg, #6366f1, #a855f7)'
+                              : 'rgba(0,0,0,0.1)',
+                            '&:hover': {
+                              background: isAssessmentAvailable(assessment)
+                                ? 'linear-gradient(135deg, #5b5bd6, #7c3aed)'
+                                : 'rgba(0,0,0,0.1)'
+                            }
+                          }}
+                        >
+                          {isAssessmentAvailable(assessment) ? 'Take Assessment' : 'Assessment Locked'}
+                        </Button>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+          {/* Mobile-Responsive Assignments Section */}
+          {assignments.length > 0 && (
+            <Box id="assignments-section" component={motion.div} 
+              initial={{ opacity: 0, y: 20 }} 
+              whileInView={{ opacity: 1, y: 0 }} 
+              viewport={{ once: true, amount: 0.2 }} 
+              sx={{ 
+                mb: { xs: 2, sm: 3, md: 4 },
+                width: '100%',
+                maxWidth: '100%'
+              }}
+            >
+              <Typography variant="h5" sx={{ 
+                fontWeight: 700, 
+                mb: { xs: 2, sm: 3 },
+                fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+                color: 'text.primary'
+              }}>
+                Assignments
+              </Typography>
+              <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ width: '100%' }}>
+                {assignments.map((assignment) => (
+                  <Grid item xs={12} sm={6} md={4} key={assignment._id}>
+                    <Box 
+                      sx={{ 
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        p: { xs: 2, sm: 2.5, md: 3 },
+                        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                        backdropFilter: 'blur(20px)',
+                        borderRadius: { xs: 2, sm: 2.5, md: 3 },
+                        border: '1px solid rgba(0,0,0,0.05)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                        width: '100%',
+                        maxWidth: '100%',
+                        boxSizing: 'border-box',
+                        '&:hover': {
+                          transform: { xs: 'none', sm: 'translateY(-4px)' },
+                          boxShadow: { xs: '0 4px 20px rgba(0,0,0,0.08)', sm: '0 8px 30px rgba(0,0,0,0.15)' },
+                          borderColor: 'warning.main'
+                        }
+                      }}
+                      onClick={() => handleTakeAssignment(assignment._id)}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                        <Box sx={{
+                          p: 1,
+                          backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                          borderRadius: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <AssignmentIcon sx={{ fontSize: 24, color: 'warning.main' }} />
+                        </Box>
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            fontWeight: 700,
+                            fontSize: { xs: '1rem', sm: '1.125rem' },
+                            color: 'text.primary'
+                          }}
+                        >
+                          {assignment.title}
+                        </Typography>
+                      </Box>
+                      
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ 
+                          mb: 2,
+                          lineHeight: 1.5
+                        }}
+                      >
+                        {assignment.description || 'No description available'}
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                        <Chip
+                          label={`${assignment.maxPoints} Points`}
+                          size="small"
+                          sx={{ 
+                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                            color: 'warning.main',
+                            fontWeight: 600
+                          }}
+                        />
+                        <Chip
+                          label={assignment.submissionType}
+                          size="small"
+                          sx={{ 
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            color: 'info.main',
+                            fontWeight: 600
+                          }}
+                        />
+                        <Chip
+                          label={assignment.status}
+                          size="small"
+                          sx={{ 
+                            backgroundColor: assignment.status === 'published' 
+                              ? 'rgba(76, 175, 80, 0.1)' 
+                              : 'rgba(0,0,0,0.1)',
+                            color: assignment.status === 'published' 
+                              ? 'success.main' 
+                              : 'text.secondary',
+                            fontWeight: 600
+                          }}
+                        />
+                      </Box>
+                      
+                      {assignment.dueDate && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                            sx={{ fontWeight: 600 }}
+                          >
+                            Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      <Button
+                        variant="contained"
+                        size="large"
+                        startIcon={<AssignmentIcon />}
+                        sx={{ 
+                          width: '100%',
+                          py: 1.5,
+                          borderRadius: 2,
+                          fontWeight: 600,
+                          background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #f57c00, #ef6c00)'
+                          }
+                        }}
+                      >
+                        Start Assignment
+                      </Button>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+
+          {/* Minimalist Course Content Section */}
+          {weeks.length === 0 ? (
+            <Box sx={{ 
+              textAlign: 'center', 
+              py: { xs: 4, sm: 6 },
+              px: { xs: 3, sm: 4 },
+              backgroundColor: 'rgba(255, 255, 255, 0.6)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: 3,
+              border: '1px solid rgba(0,0,0,0.05)'
+            }}>
+              <Typography 
+                variant="h5" 
+                color="text.secondary" 
+                gutterBottom
+                sx={{ 
+                  fontWeight: 600,
+                  mb: 2
+                }}
+              >
+                No course content available yet
+              </Typography>
+              <Typography 
+                variant="body1" 
+                color="text.secondary"
+                sx={{ 
+                  opacity: 0.8
+                }}
+              >
+                The instructor hasn't added any materials to this course.
+              </Typography>
+            </Box>
+          ) : (
+            <>
+            {/* Mobile-Optimized Materials Filter */}
+            <Box sx={{ 
+              mb: { xs: 2, sm: 3, md: 4 },
+              p: { xs: 1.5, sm: 2 },
+              backgroundColor: 'rgba(255, 255, 255, 0.6)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: { xs: 2, sm: 3 },
+              border: '1px solid rgba(0,0,0,0.05)'
+            }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 700, 
+                mb: { xs: 1.5, sm: 2 },
+                fontSize: { xs: '1rem', sm: '1.125rem' }
+              }}>
+                Filter Content
+              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: { xs: 0.75, sm: 1 },
+                justifyContent: { xs: 'space-between', sm: 'flex-start' }
+              }}>
+                {[
+                  { key: 'all', label: 'All', icon: <FilterList sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'required', label: 'Required', icon: <Star sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'completed', label: 'Completed', icon: <CheckCircle sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'video', label: 'Videos', icon: <VideoFile sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'document', label: 'Documents', icon: <Description sx={{ fontSize: { xs: 14, sm: 16 } }} /> }
+                ].map((filter) => (
+                  <Chip 
+                    key={filter.key}
+                    clickable 
+                    icon={filter.icon}
+                    label={filter.label}
+                    onClick={() => setMaterialFilter(filter.key as any)}
+                    sx={{
+                      backgroundColor: materialFilter === filter.key 
+                        ? 'rgba(99, 102, 241, 0.1)' 
+                        : 'rgba(0,0,0,0.05)',
+                      color: materialFilter === filter.key 
+                        ? 'primary.main' 
+                        : 'text.secondary',
+                      fontWeight: 600,
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      height: { xs: 28, sm: 32 },
+                      minWidth: { xs: '18%', sm: 'auto' },
+                      flex: { xs: '1 1 18%', sm: 'none' },
+                      '& .MuiChip-icon': {
+                        fontSize: { xs: 14, sm: 16 }
+                      },
+                      '&:hover': {
+                        backgroundColor: materialFilter === filter.key 
+                          ? 'rgba(99, 102, 241, 0.15)' 
+                          : 'rgba(0,0,0,0.1)'
+                      }
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+            <Grid id="weeks-section" container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ width: '100%' }}>
+              {weeks.map((week, index) => (
+                <Grid item xs={12} key={week._id} sx={{ width: '100%' }}>
+                  <Box 
+                    component={motion.div} 
+                    initial={{ opacity: 0, y: 20 }} 
+                    whileInView={{ opacity: 1, y: 0 }} 
+                    viewport={{ once: true, amount: 0.2 }}
+                    sx={{
+                      p: { xs: 1.5, sm: 2.5, md: 3 },
+                      backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                      backdropFilter: 'blur(20px)',
+                      borderRadius: { xs: 2, sm: 3, md: 4 },
+                      border: '1px solid rgba(0,0,0,0.05)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                      transition: 'all 0.3s ease',
+                      width: '100%',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      '&:hover': {
+                        transform: { xs: 'none', sm: 'translateY(-4px)' },
+                        boxShadow: { xs: '0 4px 20px rgba(0,0,0,0.08)', sm: '0 8px 30px rgba(0,0,0,0.15)' },
+                        borderColor: 'primary.main'
+                      }
+                    }}
+                  >
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start', 
+                      mb: { xs: 2, sm: 3 },
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      gap: { xs: 2, sm: 0 }
+                    }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography 
+                          variant="h5" 
+                          sx={{ 
+                            fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+                            fontWeight: 700,
+                            mb: { xs: 0.75, sm: 1 },
+                            color: 'text.primary'
+                          }}
+                        >
+                          {week.title}
+                        </Typography>
+                        <Typography 
+                          variant="body1" 
+                          color="text.secondary" 
+                          sx={{ 
+                            mb: { xs: 1.5, sm: 2 },
+                            lineHeight: 1.6,
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                          }}
+                        >
+                          {week.description}
+                        </Typography>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          gap: { xs: 0.75, sm: 1.5 }, 
+                          flexWrap: 'wrap', 
+                          mb: { xs: 2, sm: 3 },
+                          justifyContent: { xs: 'space-between', sm: 'flex-start' }
+                        }}>
+                          <Chip
+                            icon={<Description sx={{ fontSize: { xs: 14, sm: 16 } }} />}
+                            label={`${week.materials.filter(mat => mat.isPublished).length} Materials`}
+                            sx={{ 
+                              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                              color: 'primary.main',
+                              fontWeight: 600,
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              height: { xs: 24, sm: 32 }
+                            }}
+                          />
+                          <Chip
+                            icon={<Timer sx={{ fontSize: { xs: 14, sm: 16 } }} />}
+                            label={`${week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0)} min`}
+                            sx={{ 
+                              backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                              color: 'secondary.main',
+                              fontWeight: 600,
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              height: { xs: 24, sm: 32 }
+                            }}
+                          />
+                          <Chip
+                            icon={week.isPublished ? <CheckCircle sx={{ fontSize: { xs: 14, sm: 16 } }} /> : <Edit sx={{ fontSize: { xs: 14, sm: 16 } }} />}
+                            label={week.isPublished ? 'Published' : 'Draft'}
+                            sx={{ 
+                              backgroundColor: week.isPublished 
+                                ? 'rgba(76, 175, 80, 0.1)' 
+                                : 'rgba(255, 152, 0, 0.1)',
+                              color: week.isPublished 
+                                ? 'success.main' 
+                                : 'warning.main',
+                              fontWeight: 600,
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              height: { xs: 24, sm: 32 }
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                      
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: { xs: 1.5, sm: 2 },
+                        flexDirection: { xs: 'row', sm: 'column' },
+                        width: { xs: '100%', sm: 'auto' },
+                        justifyContent: { xs: 'space-between', sm: 'flex-end' }
+                      }}>
                         <Box sx={{ 
                           textAlign: { xs: 'left', sm: 'right' },
-                          alignSelf: { xs: 'flex-start', sm: 'auto' }
+                          flex: { xs: 1, sm: 'none' }
                         }}>
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary"
-                            sx={{ 
-                              fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                            }}
-                          >
-                            Progress
+                          <Typography variant="h4" sx={{ 
+                            fontWeight: 700, 
+                            color: 'primary.main',
+                            mb: 0.5,
+                            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
+                          }}>
+                            {Math.round(getWeekProgress(week._id))}%
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ 
+                            mb: 1,
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                          }}>
+                            Complete
                           </Typography>
                           <LinearProgress
                             variant="determinate"
                             value={getWeekProgress(week._id)}
                             sx={{ 
-                              width: { xs: 80, sm: 100 }, 
-                              height: { xs: 4, sm: 6 }, 
-                              borderRadius: 3 
+                              width: { xs: '100%', sm: 150 }, 
+                              height: { xs: 6, sm: 8 }, 
+                              borderRadius: { xs: 3, sm: 4 },
+                              backgroundColor: 'rgba(0,0,0,0.1)',
+                              '& .MuiLinearProgress-bar': {
+                                background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                                borderRadius: { xs: 3, sm: 4 }
+                              }
                             }}
                           />
-                          <Typography 
-                            variant="caption" 
-                            color="text.secondary"
-                            sx={{ 
-                              fontSize: { xs: '0.7rem', sm: '0.75rem' }
-                            }}
-                          >
-                            {Math.round(getWeekProgress(week._id))}%
-                          </Typography>
-                          <Box sx={{ mt: 1 }}>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => toggleWeekExpanded(week._id)}
-                              sx={{ textTransform: 'none' }}
-                            >
-                              {expandedWeeks.has(week._id) ? 'Hide Content' : 'Show Content'}
-                            </Button>
-                          </Box>
                         </Box>
-                      </Box>
-                      
-                      {/* Materials List */}
-                      {expandedWeeks.has(week._id) && (week.materials.filter(mat => mat.isPublished).length === 0 ? (
-                        <Typography 
-                          variant="body2" 
-                          color="text.secondary" 
+                        
+                        <Button
+                          variant="outlined"
+                          size="large"
+                          onClick={() => toggleWeekExpanded(week._id)}
+                          startIcon={expandedWeeks.has(week._id) ? <ExpandLess /> : <ExpandMore />}
                           sx={{ 
-                            fontStyle: 'italic',
-                            fontSize: { xs: '0.875rem', sm: '0.875rem' }
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            borderRadius: { xs: 1.5, sm: 2 },
+                            px: { xs: 2, sm: 3 },
+                            py: { xs: 1, sm: 1.5 },
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                            minWidth: { xs: 'auto', sm: '140px' }
                           }}
                         >
-                          {week.materials.length === 0 ? 'No materials added to this week yet.' : 'No published materials available yet.'}
-                        </Typography>
+                          {expandedWeeks.has(week._id) ? 'Hide' : 'Show'}
+                        </Button>
+                      </Box>
+                    </Box>
+                      
+                    {/* Materials List */}
+                    <Collapse in={expandedWeeks.has(week._id)}>
+                      {week.materials.filter(mat => mat.isPublished).length === 0 ? (
+                        <Box sx={{ 
+                          textAlign: 'center', 
+                          py: 4,
+                          backgroundColor: 'rgba(0,0,0,0.02)',
+                          borderRadius: 2,
+                          border: '1px dashed rgba(0,0,0,0.1)'
+                        }}>
+                          <Typography 
+                            variant="body1" 
+                            color="text.secondary" 
+                            sx={{ 
+                              fontStyle: 'italic',
+                              opacity: 0.8
+                            }}
+                          >
+                            {week.materials.length === 0 ? 'No materials added to this week yet.' : 'No published materials available yet.'}
+                          </Typography>
+                        </Box>
                       ) : (
-                        <Grid container spacing={2}>
+                        <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mt: 2, width: '100%' }}>
                           {week.materials
                             .filter(mat => mat.isPublished)
                             .filter(material => {
@@ -2767,190 +3234,205 @@ const UnifiedLearningPage: React.FC = () => {
                             .map((material, matIndex) => {
                             const isCompleted = isMaterialCompleted(material._id);
                             return (
-                              <Grid item xs={12} sm={6} md={4} key={material._id}>
-                                <Card
+                              <Grid item xs={12} sm={6} md={4} key={material._id} sx={{ width: '100%' }}>
+                                <Box
                                   sx={{
                                     cursor: 'pointer',
                                     transition: 'all 0.3s ease',
-                                    backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.05)' : 'white',
-                                    border: isCompleted ? '2px solid rgba(76, 175, 80, 0.3)' : '1px solid rgba(0,0,0,0.1)',
-                                    borderRadius: 3,
+                                    p: { xs: 2, sm: 2.5, md: 3 },
+                                    backgroundColor: isCompleted 
+                                      ? 'rgba(76, 175, 80, 0.05)' 
+                                      : 'rgba(255, 255, 255, 0.6)',
+                                    backdropFilter: 'blur(20px)',
+                                    borderRadius: { xs: 2, sm: 2.5, md: 3 },
+                                    border: isCompleted 
+                                      ? '2px solid rgba(76, 175, 80, 0.3)' 
+                                      : '1px solid rgba(0,0,0,0.05)',
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                                    position: 'relative',
                                     overflow: 'hidden',
+                                    width: '100%',
+                                    maxWidth: '100%',
+                                    boxSizing: 'border-box',
                                     '&:hover': {
-                                      transform: 'translateY(-4px)',
-                                      boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                                      borderColor: 'primary.main'
+                                      transform: { xs: 'none', sm: 'translateY(-4px)' },
+                                      boxShadow: { xs: '0 4px 20px rgba(0,0,0,0.08)', sm: '0 8px 30px rgba(0,0,0,0.15)' },
+                                      borderColor: isCompleted ? 'success.main' : 'primary.main'
                                     }
                                   }}
                                   onClick={() => handleMaterialClick(material)}
                                 >
-                                  {/* Material Thumbnail */}
+                                  {/* Material Header */}
                                   <Box sx={{ 
-                                    height: 120, 
-                                    background: material.type === 'video' 
-                                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                                      : material.type === 'document'
-                                      ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-                                      : 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    position: 'relative'
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 1.5, 
+                                    mb: 2 
                                   }}>
-                                    <Box sx={{ fontSize: 48, color: 'white', opacity: 0.8 }}>
+                                    <Box sx={{
+                                      p: 1.5,
+                                      backgroundColor: material.type === 'video' 
+                                        ? 'rgba(102, 126, 234, 0.1)'
+                                        : material.type === 'document'
+                                        ? 'rgba(240, 147, 251, 0.1)'
+                                        : 'rgba(79, 172, 254, 0.1)',
+                                      borderRadius: 2,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}>
                                       {getMaterialIcon(material.type)}
                                     </Box>
-                                    {isCompleted && (
-                                      <Box sx={{
-                                        position: 'absolute',
-                                        top: 8,
-                                        right: 8,
-                                        backgroundColor: 'success.main',
-                                        borderRadius: '50%',
-                                        p: 0.5
-                                      }}>
-                                        <CheckCircle sx={{ fontSize: 20, color: 'white' }} />
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                      <Typography 
+                                        variant="h6" 
+                                        sx={{ 
+                                          fontWeight: 700,
+                                          fontSize: '1.125rem',
+                                          mb: 0.5,
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        {material.title}
+                                      </Typography>
+                                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                        {isCompleted && (
+                                          <Chip
+                                            icon={<CheckCircle />}
+                                            label="Completed"
+                                            size="small"
+                                            sx={{ 
+                                              backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                              color: 'success.main',
+                                              fontWeight: 600,
+                                              fontSize: '0.7rem'
+                                            }}
+                                          />
+                                        )}
+                                        {material.isRequired && (
+                                          <Chip
+                                            label="Required"
+                                            size="small"
+                                            sx={{ 
+                                              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                              color: 'error.main',
+                                              fontWeight: 600,
+                                              fontSize: '0.7rem'
+                                            }}
+                                          />
+                                        )}
                                       </Box>
-                                    )}
-                                    {material.isRequired && (
-                                      <Box sx={{
-                                        position: 'absolute',
-                                        top: 8,
-                                        left: 8,
-                                        backgroundColor: 'error.main',
-                                        borderRadius: 1,
-                                        px: 1,
-                                        py: 0.5
-                                      }}>
-                                        <Typography variant="caption" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem' }}>
-                                          REQUIRED
-                                        </Typography>
-                                      </Box>
-                                    )}
+                                    </Box>
                                   </Box>
                                   
-                                  <CardContent sx={{ p: 2 }}>
-                                    <Typography 
-                                      variant="h6"
-                                      sx={{ 
-                                        fontSize: '1rem',
-                                        fontWeight: 'bold',
-                                        mb: 1,
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
-                                        overflow: 'hidden',
-                                        lineHeight: 1.3
-                                      }}
-                                    >
-                                      {material.title}
-                                    </Typography>
-                                    
-                                    <Typography 
-                                      variant="body2" 
-                                      color="text.secondary"
-                                      sx={{ 
-                                        fontSize: '0.875rem',
-                                        mb: 2,
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
-                                        overflow: 'hidden',
-                                        lineHeight: 1.4
-                                      }}
-                                    >
-                                      {material.description}
-                                    </Typography>
-                                    
-                                    {/* Tags */}
-                                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
-                                      <Chip 
-                                        label={material.type.toUpperCase()}
-                                        size="small"
-                                        sx={{ 
-                                          fontSize: '0.7rem',
-                                          height: 24,
-                                          backgroundColor: material.type === 'video' 
-                                            ? 'rgba(102, 126, 234, 0.1)' 
-                                            : material.type === 'document'
-                                            ? 'rgba(240, 147, 251, 0.1)'
-                                            : 'rgba(79, 172, 254, 0.1)',
-                                          color: material.type === 'video' 
-                                            ? '#667eea' 
-                                            : material.type === 'document'
-                                            ? '#f093fb'
-                                            : '#4facfe',
-                                          fontWeight: 'bold'
-                                        }}
-                                      />
-                                      <Chip
-                                        icon={<Timer sx={{ fontSize: 14 }} />}
-                                        label={`${material.estimatedDuration} min`}
-                                        size="small"
-                                        variant="outlined"
-                                        sx={{ fontSize: '0.7rem', height: 24 }}
-                                      />
-                                    </Box>
-                                    
-                                    {/* Progress */}
-                                    <Box sx={{ mb: 2 }}>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                        <Typography variant="caption" color="text.secondary">
-                                          Progress
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>
-                                          {getMaterialProgressPct(material._id)}%
-                                        </Typography>
-                                      </Box>
-                                      <LinearProgress 
-                                        variant="determinate" 
-                                        value={getMaterialProgressPct(material._id)} 
-                                        sx={{ 
-                                          height: 6, 
-                                          borderRadius: 3,
-                                          backgroundColor: 'rgba(0,0,0,0.1)',
-                                          '& .MuiLinearProgress-bar': {
-                                            background: 'linear-gradient(90deg, #6366f1, #a855f7)',
-                                            borderRadius: 3
-                                          }
-                                        }} 
-                                      />
-                                    </Box>
-                                  </CardContent>
+                                  <Typography 
+                                    variant="body2" 
+                                    color="text.secondary"
+                                    sx={{ 
+                                      mb: 2,
+                                      lineHeight: 1.5,
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'hidden'
+                                    }}
+                                  >
+                                    {material.description}
+                                  </Typography>
                                   
-                                  <CardActions sx={{ p: 2, pt: 0 }}>
+                                  {/* Material Info */}
+                                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                                    <Chip 
+                                      icon={getMaterialIcon(material.type)}
+                                      label={material.type.toUpperCase()}
+                                      size="small"
+                                      sx={{ 
+                                        backgroundColor: material.type === 'video' 
+                                          ? 'rgba(102, 126, 234, 0.1)' 
+                                          : material.type === 'document'
+                                          ? 'rgba(240, 147, 251, 0.1)'
+                                          : 'rgba(79, 172, 254, 0.1)',
+                                        color: material.type === 'video' 
+                                          ? '#667eea' 
+                                          : material.type === 'document'
+                                          ? '#f093fb'
+                                          : '#4facfe',
+                                        fontWeight: 600
+                                      }}
+                                    />
+                                    <Chip
+                                      icon={<Timer sx={{ fontSize: 14 }} />}
+                                      label={`${material.estimatedDuration} min`}
+                                      size="small"
+                                      sx={{ 
+                                        backgroundColor: 'rgba(0,0,0,0.05)',
+                                        color: 'text.secondary',
+                                        fontWeight: 600
+                                      }}
+                                    />
+                                  </Box>
+                                  
+                                  {/* Progress */}
+                                  <Box sx={{ mb: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                        Progress
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                                        {getMaterialProgressPct(material._id)}%
+                                      </Typography>
+                                    </Box>
+                                    <LinearProgress 
+                                      variant="determinate" 
+                                      value={getMaterialProgressPct(material._id)} 
+                                      sx={{ 
+                                        height: 6, 
+                                        borderRadius: 3,
+                                        backgroundColor: 'rgba(0,0,0,0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                          background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                                          borderRadius: 3
+                                        }
+                                      }} 
+                                    />
+                                  </Box>
+                                  
+                                  {/* Actions */}
+                                  <Box sx={{ display: 'flex', gap: 1 }}>
                                     <Button
                                       variant="contained"
-                                      size="small"
+                                      size="large"
                                       startIcon={<PlayArrow />}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleMaterialClick(material);
                                       }}
                                       sx={{
-                                        background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
+                                        flex: 1,
+                                        background: 'linear-gradient(135deg, #6366f1, #a855f7)',
                                         '&:hover': { 
-                                          background: 'linear-gradient(45deg, #5b5bd6, #7c3aed)',
+                                          background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)',
                                           transform: 'translateY(-1px)'
                                         },
                                         textTransform: 'none',
                                         fontWeight: 600,
                                         borderRadius: 2,
-                                        flex: 1
+                                        py: 1.5
                                       }}
                                     >
                                       {isCompleted ? 'Review' : 'Start'}
                                     </Button>
                                     {!isCompleted && (
                                       <IconButton
-                                        size="small"
+                                        size="large"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleMarkComplete(week._id, material._id);
                                         }}
                                         disabled={markingComplete.has(material._id)}
                                         sx={{ 
-                                          ml: 1,
                                           backgroundColor: markingComplete.has(material._id) 
                                             ? 'rgba(76, 175, 80, 0.3)' 
                                             : completedMaterials.has(material._id)
@@ -2966,23 +3448,23 @@ const UnifiedLearningPage: React.FC = () => {
                                         }}
                                       >
                                         {markingComplete.has(material._id) ? (
-                                          <CircularProgress size={20} sx={{ color: 'success.main' }} />
+                                          <CircularProgress size={24} sx={{ color: 'success.main' }} />
                                         ) : completedMaterials.has(material._id) ? (
-                                          <CheckCircle sx={{ fontSize: 20, color: 'white' }} />
+                                          <CheckCircle sx={{ fontSize: 24, color: 'white' }} />
                                         ) : (
-                                          <CheckCircle sx={{ fontSize: 20, color: 'success.main' }} />
+                                          <CheckCircle sx={{ fontSize: 24, color: 'success.main' }} />
                                         )}
                                       </IconButton>
                                     )}
-                                  </CardActions>
-                                </Card>
+                                  </Box>
+                                </Box>
                               </Grid>
                             );
                           })}
                         </Grid>
-                      ))}
-                    </CardContent>
-                  </Card>
+                      )}
+                    </Collapse>
+                  </Box>
                 </Grid>
               ))}
             </Grid>
@@ -2992,85 +3474,254 @@ const UnifiedLearningPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Floating AI Assistant */}
-      <Box sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 50 }}>
-        <Tooltip title="AI Study Assistant">
-          <Fab color="primary" onClick={() => setAiOpen(true)}>
-            <SmartToyIcon />
+      {/* Minimalist Floating AI Assistant */}
+      <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50 }}>
+        <Tooltip title="AI Study Assistant" arrow>
+          <Fab 
+            onClick={() => setAiOpen(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+              boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)',
+                transform: 'scale(1.1)',
+                boxShadow: '0 12px 35px rgba(99, 102, 241, 0.6)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <SmartToyIcon sx={{ color: 'white' }} />
           </Fab>
         </Tooltip>
       </Box>
 
-      {/* AI Assistant Drawer */}
-      <Drawer anchor="right" open={aiOpen} onClose={() => setAiOpen(false)} sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: 420 } } }}>
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <SmartToyIcon color="primary" />
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>AI Study Assistant</Typography>
+      {/* Minimalist AI Assistant Drawer */}
+      <Drawer 
+        anchor="right" 
+        open={aiOpen} 
+        onClose={() => setAiOpen(false)} 
+        sx={{ 
+          '& .MuiDrawer-paper': { 
+            width: { xs: '100%', sm: 420 },
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            borderLeft: '1px solid rgba(0,0,0,0.05)'
+          } 
+        }}
+      >
+        <Box sx={{ 
+          p: 3, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          borderBottom: '1px solid rgba(0,0,0,0.05)',
+          backgroundColor: 'rgba(99, 102, 241, 0.05)'
+        }}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Box sx={{
+              p: 1,
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <SmartToyIcon sx={{ color: 'primary.main' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+              AI Study Assistant
+            </Typography>
           </Stack>
-          <Button onClick={() => setAiOpen(false)}>Close</Button>
+          <IconButton onClick={() => setAiOpen(false)} sx={{ color: 'text.secondary' }}>
+            <Close />
+          </IconButton>
         </Box>
 
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* Quick suggestions based on context */}
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Quick Suggestions</Typography>
-          <Stack spacing={1} sx={{ mb: 2 }}>
-            <Button variant="outlined" size="small" sx={{ justifyContent: 'flex-start' }} onClick={() => navigate(`/dashboard/student/course/${courseId}/weeks`)}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
+            Quick Actions
+          </Typography>
+          <Stack spacing={1.5} sx={{ mb: 3 }}>
+            <Button 
+              variant="outlined" 
+              size="large" 
+              startIcon={<PlayArrow />}
+              sx={{ 
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5
+              }} 
+              onClick={() => navigate(`/dashboard/student/course/${courseId}/weeks`)}
+            >
               Suggest next material
             </Button>
             {assessments.length > 0 && (
-              <Button variant="outlined" size="small" sx={{ justifyContent: 'flex-start' }} onClick={() => handleTakeAssessment(assessments[0]._id)}>
+              <Button 
+                variant="outlined" 
+                size="large" 
+                startIcon={<Quiz />}
+                sx={{ 
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  py: 1.5
+                }} 
+                onClick={() => handleTakeAssessment(assessments[0]._id)}
+              >
                 Help me prepare for: {assessments[0].title}
               </Button>
             )}
             {assignments.length > 0 && (
-              <Button variant="outlined" size="small" sx={{ justifyContent: 'flex-start' }} onClick={() => handleTakeAssignment(assignments[0]._id)}>
+              <Button 
+                variant="outlined" 
+                size="large" 
+                startIcon={<AssignmentIcon />}
+                sx={{ 
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  py: 1.5
+                }} 
+                onClick={() => handleTakeAssignment(assignments[0]._id)}
+              >
                 Guide me through assignment: {assignments[0].title}
               </Button>
             )}
-            <Button variant="outlined" size="small" sx={{ justifyContent: 'flex-start' }} onClick={() => handleGoToLiveSessions()}>
+            <Button 
+              variant="outlined" 
+              size="large" 
+              startIcon={<VideoCall />}
+              sx={{ 
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5
+              }} 
+              onClick={() => handleGoToLiveSessions()}
+            >
               Show upcoming live sessions
+            </Button>
+            <Button 
+              variant="outlined" 
+              size="large" 
+              startIcon={<Event />}
+              sx={{ 
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5
+              }} 
+              onClick={() => navigate(`/dashboard/student/course/${courseId}/events`)}
+            >
+              View all events and announcements
             </Button>
           </Stack>
 
-          {/* Simple chat mockup - placeholder for real AI */}
-          <Paper variant="outlined" sx={{ p: 1.5, height: 280, overflowY: 'auto', mb: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              AI: Hi! I can recommend materials, summarize a week, or help plan your study.
+          {/* AI Chat Interface */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
+              Chat with AI
             </Typography>
-          </Paper>
-          <Stack direction="row" spacing={1}>
-          <TextField fullWidth placeholder="Ask anything... e.g., 'What should I study next?'" size="small" />
-          <Button variant="contained">Send</Button>
-        </Stack>
-      </Box>
-    </Drawer>
+            <Paper 
+              variant="outlined" 
+              sx={{ 
+                p: 2, 
+                height: 280, 
+                overflowY: 'auto', 
+                mb: 2,
+                backgroundColor: 'rgba(0,0,0,0.02)',
+                borderRadius: 2,
+                border: '1px solid rgba(0,0,0,0.05)'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                <Box sx={{
+                  p: 1,
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: 32,
+                  height: 32
+                }}>
+                  <SmartToyIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                  Hi! I can recommend materials, summarize a week, or help plan your study. What would you like to know?
+                </Typography>
+              </Box>
+            </Paper>
+            <Stack direction="row" spacing={1}>
+              <TextField 
+                fullWidth 
+                placeholder="Ask anything... e.g., 'What should I study next?'" 
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: 'rgba(0,0,0,0.02)'
+                  }
+                }}
+              />
+              <Button 
+                variant="contained"
+                sx={{
+                  background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  borderRadius: 2,
+                  px: 3,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)'
+                  }
+                }}
+              >
+                Send
+              </Button>
+            </Stack>
+          </Box>
+        </Box>
+      </Drawer>
 
-    {/* Week End Feedback Dialog */}
-    <WeekEndFeedback
-      open={showFeedbackDialog}
-      onClose={() => setShowFeedbackDialog(false)}
-      weekTitle={completedWeek?.title || ''}
-      courseTitle={course?.title || ''}
-      onSubmit={handleFeedbackSubmit}
-    />
+      {/* Week End Feedback Dialog */}
+      <WeekEndFeedback
+        open={showFeedbackDialog}
+        onClose={() => setShowFeedbackDialog(false)}
+        weekTitle={completedWeek?.title || ''}
+        courseTitle={course?.title || ''}
+        onSubmit={handleFeedbackSubmit}
+      />
 
-    {/* Success Notification */}
-    <Snackbar
-      open={showSuccessSnackbar}
-      autoHideDuration={3000}
-      onClose={() => setShowSuccessSnackbar(false)}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-    >
-      <Alert 
-        onClose={() => setShowSuccessSnackbar(false)} 
-        severity="success" 
-        sx={{ width: '100%' }}
+      {/* Minimalist Success Notification */}
+      <Snackbar
+        open={showSuccessSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setShowSuccessSnackbar(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ mb: 2 }}
       >
-        {successMessage}
-      </Alert>
-    </Snackbar>
-  </Box>
+        <Alert 
+          onClose={() => setShowSuccessSnackbar(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            borderRadius: 2,
+            boxShadow: '0 8px 25px rgba(76, 175, 80, 0.3)',
+            '& .MuiAlert-icon': {
+              fontSize: '1.5rem'
+            }
+          }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

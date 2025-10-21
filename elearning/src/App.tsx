@@ -8,6 +8,7 @@ import PublicLayout from './components/Layout/PublicLayout';
 import CourseManagementLayout from './components/Layout/CourseManagementLayout';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RouteHandler from './components/Router/RouteHandler';
+import StudentDashboardRedirect from './components/Auth/StudentDashboardRedirect';
 
 // Import pages
 import HomePage from './pages/Home/HomePage';
@@ -53,6 +54,7 @@ import TakeAssessment from './pages/Student/TakeAssessment';
 import EnhancedAssessments from './pages/Student/EnhancedAssessments';
 import UnifiedLearningPage from './pages/Student/UnifiedLearningPage';
 import LearningHub from './pages/Student/LearningHub';
+import EventsAndAnnouncementsPage from './pages/Student/EventsAndAnnouncementsPage';
 import TeacherCourseDashboard from './pages/Teacher/TeacherCourseDashboard';
 import ContentStructureEditor from './pages/Teacher/ContentStructureEditor';
 import CourseEnrollmentSystem from './components/Course/CourseEnrollmentSystem';
@@ -206,7 +208,7 @@ const App: React.FC = () => {
             ) : user?.role === UserRole.TEACHER ? (
               <Navigate to="/dashboard/teacher" replace />
             ) : (
-              <Navigate to="/dashboard/student" replace />
+              <StudentDashboardRedirect userRole={user?.role || UserRole.STUDENT} />
             )
           }
         />
@@ -276,6 +278,8 @@ const App: React.FC = () => {
           <Route path="course/:id/material" element={<CourseMaterialPage />} />
           <Route path="course/:id/live-sessions" element={<StudentLiveSessions />} />
           <Route path="course/:id/announcements" element={<CourseAnnouncementsPage />} />
+          <Route path="course/:courseId/events" element={<EventsAndAnnouncementsPage />} />
+          <Route path="course/:courseId/announcements" element={<EventsAndAnnouncementsPage />} />
           <Route path="course/:id" element={<CourseViewPage />} />
           <Route path="quiz/:quizId" element={<StudentQuizPage />} />
           <Route path="certificate/:certificateId" element={<CertificatePage />} />

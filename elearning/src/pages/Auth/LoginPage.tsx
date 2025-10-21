@@ -28,6 +28,7 @@ import { LoginForm, UserRole } from '../../shared/types';
 import GoogleAuthButton from '../../components/Auth/GoogleAuthButton';
 import RoleSelectionModal from '../../components/Auth/RoleSelectionModal';
 import { googleAuthService } from '../../services/googleAuthService';
+import { loginRedirectService } from '../../services/loginRedirectService';
 
 // Validation rules
 const validationRules = {
@@ -53,7 +54,7 @@ const LoginPage: React.FC = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [interests, setInterests] = useState<any>(null);
 
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -125,15 +126,30 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      await login(formData.email, formData.password);
+      const loginResult = await login(formData.email, formData.password);
       toast.success('Login successful!');
       
-      // If interests were provided, redirect to courses with interests
-      if (interests) {
-        const interestsParam = encodeURIComponent(JSON.stringify(interests));
-        navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`, { replace: true });
-      } else {
-        navigate(from, { replace: true });
+      // Use the user data from the login result directly
+      try {
+        console.log('Login result:', loginResult);
+        // Get the appropriate redirect path based on user role and enrollments
+        const redirectPath = await loginRedirectService.getRedirectPath({
+          userRole: loginResult?.user?.role || UserRole.STUDENT,
+          interests,
+          from
+        });
+        
+        console.log('Redirecting to:', redirectPath);
+        navigate(redirectPath, { replace: true });
+      } catch (redirectError) {
+        console.warn('Error determining redirect path:', redirectError);
+        // Fallback to original logic
+        if (interests) {
+          const interestsParam = encodeURIComponent(JSON.stringify(interests));
+          navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`, { replace: true });
+        } else {
+          navigate(from, { replace: true });
+        }
       }
     } catch (error: any) {
       const errorMessage = error.message || 'Login failed. Please try again.';
@@ -157,12 +173,27 @@ const LoginPage: React.FC = () => {
       // Existing user - direct login success
       toast.success(`Welcome back, ${result.user.firstName}!`);
       
-      // If interests were provided, redirect to courses with interests
-      if (interests) {
-        const interestsParam = encodeURIComponent(JSON.stringify(interests));
-        navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`, { replace: true });
-      } else {
-        navigate(from, { replace: true });
+      // Use the user data from the result directly
+      try {
+        console.log('Google Auth result:', result);
+        // Get the appropriate redirect path based on user role and enrollments
+        const redirectPath = await loginRedirectService.getRedirectPath({
+          userRole: result.user?.role || UserRole.STUDENT,
+          interests,
+          from
+        });
+        
+        console.log('Redirecting to:', redirectPath);
+        navigate(redirectPath, { replace: true });
+      } catch (redirectError) {
+        console.warn('Error determining redirect path:', redirectError);
+        // Fallback to original logic
+        if (interests) {
+          const interestsParam = encodeURIComponent(JSON.stringify(interests));
+          navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`, { replace: true });
+        } else {
+          navigate(from, { replace: true });
+        }
       }
       
       // Trigger auth context update
@@ -571,10 +602,8 @@ const LoginPage: React.FC = () => {
                 fullWidth
                 onClick={() => {
                   setError(null);
-                  // Retry Google auth after a delay
-                  setTimeout(() => {
-                    handleGoogleAuth();
-                  }, 2000);
+                  // Retry by reloading the page to reset Google auth state
+                  window.location.reload();
                 }}
                 sx={{ mt: 1 }}
               >

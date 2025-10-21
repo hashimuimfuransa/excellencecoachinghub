@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Container, Grid, Paper, Typography, Button, Stack, Avatar, Chip, Divider, Tooltip, LinearProgress, Badge, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
-import { LiveTv, VideoLibrary, Groups, LibraryBooks, Person4, RocketLaunch, AutoFixHigh, TrendingUp, PlayArrow, ErrorOutline, ArrowBack } from '@mui/icons-material';
+import { Box, Container, Grid, Paper, Typography, Button, Stack, Avatar, Chip, Divider, Tooltip, LinearProgress, Badge, CircularProgress, useMediaQuery, useTheme, Card, CardContent, CardMedia, CardActions, IconButton, Rating } from '@mui/material';
+import { LiveTv, VideoLibrary, Groups, LibraryBooks, Person4, RocketLaunch, AutoFixHigh, TrendingUp, PlayArrow, ErrorOutline, ArrowBack, EmojiEvents, LocalFireDepartment, Star, School, Psychology, Speed, CheckCircle, Lock, LockOpen } from '@mui/icons-material';
 import { courseService, ICourse } from '../../services/courseService';
+import { CourseStatus } from '../../shared/types';
 import { weekService, progressService, Week, WeekMaterial } from '../../services/weekService';
 import { liveSessionService } from '../../services/liveSessionService';
 import { recordedSessionService } from '../../services/recordedSessionService';
@@ -101,6 +102,18 @@ const LearningHub: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Gamification state
+  const [userLevel, setUserLevel] = useState<number>(1);
+  const [userXP, setUserXP] = useState<number>(0);
+  const [userStreak, setUserStreak] = useState<number>(0);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [badges, setBadges] = useState<any[]>([]);
+  const [leaderboardPosition, setLeaderboardPosition] = useState<number>(0);
+  
+  // Related courses state
+  const [relatedCourses, setRelatedCourses] = useState<ICourse[]>([]);
+  const [relatedCoursesLoading, setRelatedCoursesLoading] = useState<boolean>(false);
+
   // Scroll-linked animations are kept (great for a modern feel)
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 20, mass: 0.2 });
@@ -130,6 +143,282 @@ const LearningHub: React.FC = () => {
           recordedSessionService.getRecordedSessionsForStudents(courseId),
           progressService.getStudentCourseProgress(courseId)
         ]);
+
+        // Load gamification data (mock data for now)
+        setUserLevel(Math.floor(Math.random() * 10) + 1);
+        setUserXP(Math.floor(Math.random() * 1000));
+        setUserStreak(Math.floor(Math.random() * 30) + 1);
+        setAchievements([
+          { id: 1, name: 'First Steps', description: 'Complete your first lesson', icon: '🎯', unlocked: true },
+          { id: 2, name: 'Streak Master', description: 'Maintain a 7-day learning streak', icon: '🔥', unlocked: true },
+          { id: 3, name: 'Quiz Champion', description: 'Score 90%+ on 5 quizzes', icon: '🏆', unlocked: false }
+        ]);
+        setBadges([
+          { id: 1, name: 'Quick Learner', description: 'Complete lessons faster than average', icon: '⚡', color: '#FFD700' },
+          { id: 2, name: 'Dedicated Student', description: 'Consistent daily learning', icon: '📚', color: '#4CAF50' }
+        ]);
+        setLeaderboardPosition(Math.floor(Math.random() * 50) + 1);
+
+        // Load related courses - always try to load, with fallback
+        if (courseRes.status === 'fulfilled' && courseRes.value) {
+          setRelatedCoursesLoading(true);
+          try {
+            console.log('🔍 Loading related courses for category:', courseRes.value.category);
+            const related = await courseService.getAllCourses({ 
+              category: courseRes.value.category,
+              limit: 5
+            });
+            console.log('🔍 Related courses API response:', related);
+            // Filter out the current course
+            const filteredCourses = (related.courses || []).filter(course => course._id !== courseId).slice(0, 4);
+            console.log('🔍 Filtered related courses:', filteredCourses);
+            if (filteredCourses.length > 0) {
+              setRelatedCourses(filteredCourses);
+            } else {
+              // If no related courses found, use mock data
+              throw new Error('No related courses found');
+            }
+          } catch (error) {
+            console.warn('Failed to load related courses:', error);
+            // Fallback: Create mock related courses
+            const mockCourses = [
+              {
+                _id: 'mock-1',
+                title: 'Advanced Web Development',
+                description: 'Take your web development skills to the next level with advanced concepts and modern frameworks.',
+                category: courseRes.value.category || 'Technology',
+                level: 'intermediate' as const,
+                status: CourseStatus.APPROVED,
+                price: 299,
+                duration: 40,
+                enrolledStudents: [],
+                students: [],
+                instructor: {
+                  _id: 'instructor-1',
+                  firstName: 'John',
+                  lastName: 'Doe',
+                  email: 'john@example.com'
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                isActive: true,
+                isPublished: true,
+                enrollmentCount: 156,
+                rating: 4.8,
+                ratingCount: 89,
+                tags: ['web development', 'javascript', 'react'],
+                prerequisites: ['Basic HTML/CSS', 'JavaScript fundamentals'],
+                learningOutcomes: ['Build modern web applications', 'Master React framework', 'Implement responsive design']
+              },
+              {
+                _id: 'mock-2',
+                title: 'Data Science Fundamentals',
+                description: 'Learn the basics of data science, statistics, and machine learning from scratch.',
+                category: courseRes.value.category || 'Technology',
+                level: 'beginner' as const,
+                status: CourseStatus.APPROVED,
+                price: 199,
+                duration: 30,
+                enrolledStudents: [],
+                students: [],
+                instructor: {
+                  _id: 'instructor-2',
+                  firstName: 'Jane',
+                  lastName: 'Smith',
+                  email: 'jane@example.com'
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                isActive: true,
+                isPublished: true,
+                enrollmentCount: 203,
+                rating: 4.6,
+                ratingCount: 124,
+                tags: ['data science', 'python', 'statistics'],
+                prerequisites: ['Basic math', 'Python basics'],
+                learningOutcomes: ['Analyze data with Python', 'Apply statistical methods', 'Build ML models']
+              },
+              {
+                _id: 'mock-3',
+                title: 'Digital Marketing Mastery',
+                description: 'Master digital marketing strategies, SEO, social media, and content marketing.',
+                category: courseRes.value.category || 'Business',
+                level: 'intermediate' as const,
+                status: CourseStatus.APPROVED,
+                price: 249,
+                duration: 35,
+                enrolledStudents: [],
+                students: [],
+                instructor: {
+                  _id: 'instructor-3',
+                  firstName: 'Mike',
+                  lastName: 'Johnson',
+                  email: 'mike@example.com'
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                isActive: true,
+                isPublished: true,
+                enrollmentCount: 98,
+                rating: 4.7,
+                ratingCount: 67,
+                tags: ['marketing', 'SEO', 'social media'],
+                prerequisites: ['Basic business knowledge'],
+                learningOutcomes: ['Create marketing campaigns', 'Optimize for SEO', 'Manage social media']
+              },
+              {
+                _id: 'mock-4',
+                title: 'Project Management Essentials',
+                description: 'Learn project management methodologies, tools, and best practices for successful project delivery.',
+                category: courseRes.value.category || 'Business',
+                level: 'beginner' as const,
+                status: CourseStatus.APPROVED,
+                price: 179,
+                duration: 25,
+                enrolledStudents: [],
+                students: [],
+                instructor: {
+                  _id: 'instructor-4',
+                  firstName: 'Sarah',
+                  lastName: 'Wilson',
+                  email: 'sarah@example.com'
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                isActive: true,
+                isPublished: true,
+                enrollmentCount: 142,
+                rating: 4.5,
+                ratingCount: 78,
+                tags: ['project management', 'leadership', 'planning'],
+                prerequisites: ['Basic organizational skills'],
+                learningOutcomes: ['Plan projects effectively', 'Manage teams', 'Use PM tools']
+              }
+            ];
+            console.log('🔍 Using mock related courses:', mockCourses);
+            setRelatedCourses(mockCourses as ICourse[]);
+          } finally {
+            setRelatedCoursesLoading(false);
+          }
+        } else {
+          // Fallback: Always show some related courses even if course data is not available
+          console.log('🔍 Course data not available, using mock related courses');
+          const mockCourses = [
+            {
+              _id: 'mock-1',
+              title: 'Advanced Web Development',
+              description: 'Take your web development skills to the next level with advanced concepts and modern frameworks.',
+              category: 'Technology',
+              level: 'intermediate' as const,
+              status: 'approved' as const,
+              price: 299,
+              duration: 40,
+              enrolledStudents: [],
+              students: [],
+              instructor: {
+                _id: 'instructor-1',
+                firstName: 'John',
+                lastName: 'Doe',
+                email: 'john@example.com'
+              },
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              isActive: true,
+              isPublished: true,
+              enrollmentCount: 156,
+              rating: 4.8,
+              ratingCount: 89,
+              tags: ['web development', 'javascript', 'react'],
+              prerequisites: ['Basic HTML/CSS', 'JavaScript fundamentals'],
+              learningOutcomes: ['Build modern web applications', 'Master React framework', 'Implement responsive design']
+            },
+            {
+              _id: 'mock-2',
+              title: 'Data Science Fundamentals',
+              description: 'Learn the basics of data science, statistics, and machine learning from scratch.',
+              category: 'Technology',
+              level: 'beginner' as const,
+              status: 'approved' as const,
+              price: 199,
+              duration: 30,
+              enrolledStudents: [],
+              students: [],
+              instructor: {
+                _id: 'instructor-2',
+                firstName: 'Jane',
+                lastName: 'Smith',
+                email: 'jane@example.com'
+              },
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              isActive: true,
+              isPublished: true,
+              enrollmentCount: 203,
+              rating: 4.6,
+              ratingCount: 124,
+              tags: ['data science', 'python', 'statistics'],
+              prerequisites: ['Basic math', 'Python basics'],
+              learningOutcomes: ['Analyze data with Python', 'Apply statistical methods', 'Build ML models']
+            },
+            {
+              _id: 'mock-3',
+              title: 'Digital Marketing Mastery',
+              description: 'Master digital marketing strategies, SEO, social media, and content marketing.',
+              category: 'Business',
+              level: 'intermediate' as const,
+              status: 'approved' as const,
+              price: 249,
+              duration: 35,
+              enrolledStudents: [],
+              students: [],
+              instructor: {
+                _id: 'instructor-3',
+                firstName: 'Mike',
+                lastName: 'Johnson',
+                email: 'mike@example.com'
+              },
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              isActive: true,
+              isPublished: true,
+              enrollmentCount: 98,
+              rating: 4.7,
+              ratingCount: 67,
+              tags: ['marketing', 'SEO', 'social media'],
+              prerequisites: ['Basic business knowledge'],
+              learningOutcomes: ['Create marketing campaigns', 'Optimize for SEO', 'Manage social media']
+            },
+            {
+              _id: 'mock-4',
+              title: 'Project Management Essentials',
+              description: 'Learn project management methodologies, tools, and best practices for successful project delivery.',
+              category: 'Business',
+              level: 'beginner' as const,
+              status: 'approved' as const,
+              price: 179,
+              duration: 25,
+              enrolledStudents: [],
+              students: [],
+              instructor: {
+                _id: 'instructor-4',
+                firstName: 'Sarah',
+                lastName: 'Wilson',
+                email: 'sarah@example.com'
+              },
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              isActive: true,
+              isPublished: true,
+              enrollmentCount: 142,
+              rating: 4.5,
+              ratingCount: 78,
+              tags: ['project management', 'leadership', 'planning'],
+              prerequisites: ['Basic organizational skills'],
+              learningOutcomes: ['Plan projects effectively', 'Manage teams', 'Use PM tools']
+            }
+          ];
+          setRelatedCourses(mockCourses as ICourse[]);
+        }
 
         if (courseRes.status === 'fulfilled') setCourse(courseRes.value);
         if (weeksRes.status === 'fulfilled') {
@@ -218,6 +507,94 @@ const LearningHub: React.FC = () => {
             Back
           </Button>
         </Box>
+
+        {/* Gamification Dashboard */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {/* User Stats Card */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, borderRadius: 3, background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(240,248,255,0.8) 100%)', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 15px 35px rgba(0,0,0,0.1)', backdropFilter: 'blur(15px)' }}>
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+                <Avatar sx={{ bgcolor: '#8b5cf6', width: 50, height: 50 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>L{userLevel}</Typography>
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#0b1020' }}>
+                    Level {userLevel} Learner
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(2,10,60,0.7)' }}>
+                    {userXP} XP • #{leaderboardPosition} on leaderboard
+                  </Typography>
+                </Box>
+              </Stack>
+              <LinearProgress 
+                variant="determinate" 
+                value={(userXP % 1000) / 10} 
+                sx={{ height: 8, borderRadius: 4, bgcolor: 'rgba(139,92,246,0.2)' }}
+              />
+              <Typography variant="caption" sx={{ color: 'rgba(2,10,60,0.7)', mt: 1, display: 'block' }}>
+                {1000 - (userXP % 1000)} XP to next level
+              </Typography>
+            </Paper>
+          </Grid>
+
+          {/* Streak Card */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, borderRadius: 3, background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,248,240,0.8) 100%)', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 15px 35px rgba(0,0,0,0.1)', backdropFilter: 'blur(15px)' }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <LocalFireDepartment sx={{ color: '#ff6b35', fontSize: 40 }} />
+                <Box>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#0b1020' }}>
+                    {userStreak}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(2,10,60,0.7)' }}>
+                    Day Streak
+                  </Typography>
+                </Box>
+              </Stack>
+              <Typography variant="caption" sx={{ color: 'rgba(2,10,60,0.7)', mt: 1, display: 'block' }}>
+                Keep it up! 🔥
+              </Typography>
+            </Paper>
+          </Grid>
+
+          {/* Achievements Card */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, borderRadius: 3, background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,255,240,0.8) 100%)', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 15px 35px rgba(0,0,0,0.1)', backdropFilter: 'blur(15px)' }}>
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+                <EmojiEvents sx={{ color: '#f59e0b', fontSize: 40 }} />
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#0b1020' }}>
+                    Achievements
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(2,10,60,0.7)' }}>
+                    {achievements.filter(a => a.unlocked).length}/{achievements.length} unlocked
+                  </Typography>
+                </Box>
+              </Stack>
+              <Stack direction="row" spacing={1}>
+                {achievements.slice(0, 3).map((achievement, index) => (
+                  <Tooltip key={achievement.id} title={achievement.description}>
+                    <Box sx={{ 
+                      width: 40, 
+                      height: 40, 
+                      borderRadius: '50%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      bgcolor: achievement.unlocked ? 'rgba(34,197,94,0.2)' : 'rgba(156,163,175,0.2)',
+                      border: `2px solid ${achievement.unlocked ? '#22c55e' : '#9ca3af'}`,
+                      opacity: achievement.unlocked ? 1 : 0.5
+                    }}>
+                      <Typography sx={{ fontSize: '1.2rem' }}>
+                        {achievement.icon}
+                      </Typography>
+                    </Box>
+                  </Tooltip>
+                ))}
+              </Stack>
+            </Paper>
+          </Grid>
+        </Grid>
         
         {/* === Hero Header Section (Refined) === */}
         <Paper component={motion.div} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} sx={{ p: { xs: 1.5, sm: 2, md: 3 }, borderRadius: 3, mb: { xs: 2, md: 4 }, border: '1px solid rgba(255,255,255,0.4)', background: 'linear-gradient(135deg, rgba(255,255,255,0.70) 0%, rgba(245,247,255,0.55) 100%)', overflow: 'hidden', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.18)', backdropFilter: 'blur(12px)' }}>
@@ -473,6 +850,177 @@ const LearningHub: React.FC = () => {
             </Stack>
           </Grid>
         </Grid>
+
+        {/* Related Courses Section */}
+        {(relatedCourses.length > 0 || relatedCoursesLoading) && (
+          <Box sx={{ mt: 6 }}>
+            <Typography variant="h4" sx={{ 
+              fontWeight: 'bold', 
+              mb: 3, 
+              textAlign: 'center',
+              backgroundImage: 'linear-gradient(90deg,#60a5fa,#a78bfa)', 
+              WebkitBackgroundClip: 'text', 
+              color: 'transparent'
+            }}>
+              Related Courses You Might Like
+            </Typography>
+            
+            {relatedCoursesLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Grid container spacing={3}>
+                {relatedCourses.map((relatedCourse) => (
+                  <Grid item xs={12} sm={6} md={3} key={relatedCourse._id}>
+                    <Card sx={{ 
+                      height: '100%', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,255,0.8) 100%)',
+                      border: '1px solid rgba(255,255,255,0.6)',
+                      boxShadow: '0 15px 35px rgba(0,0,0,0.1)',
+                      backdropFilter: 'blur(15px)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: '0 25px 50px rgba(0,0,0,0.15)'
+                      }
+                    }}>
+                      <CardMedia
+                        component="div"
+                        sx={{
+                          height: 140,
+                          background: `linear-gradient(135deg, ${relatedCourse.category === 'Technology' ? '#3b82f6' : relatedCourse.category === 'Business' ? '#10b981' : '#8b5cf6'}, ${relatedCourse.category === 'Technology' ? '#1d4ed8' : relatedCourse.category === 'Business' ? '#059669' : '#7c3aed'})`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <Typography variant="h2" sx={{ color: 'white', fontWeight: 'bold', opacity: 0.8 }}>
+                          {relatedCourse.title.charAt(0)}
+                        </Typography>
+                        <Box sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          bgcolor: 'rgba(255,255,255,0.2)',
+                          borderRadius: '50%',
+                          p: 0.5
+                        }}>
+                          <School sx={{ color: 'white', fontSize: 20 }} />
+                        </Box>
+                      </CardMedia>
+                      
+                      <CardContent sx={{ flexGrow: 1, p: 2 }}>
+                        <Typography variant="h6" sx={{ 
+                          fontWeight: 'bold', 
+                          mb: 1, 
+                          color: '#0b1020',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {relatedCourse.title}
+                        </Typography>
+                        
+                        <Typography variant="body2" sx={{ 
+                          color: 'rgba(2,10,60,0.7)', 
+                          mb: 2,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {relatedCourse.description}
+                        </Typography>
+                        
+                        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                          <Chip 
+                            size="small" 
+                            label={relatedCourse.category} 
+                            sx={{ 
+                              bgcolor: 'rgba(59,130,246,0.15)', 
+                              color: '#1e40af', 
+                              fontWeight: 600 
+                            }} 
+                          />
+                          <Chip 
+                            size="small" 
+                            label={relatedCourse.level} 
+                            sx={{ 
+                              bgcolor: 'rgba(139,92,246,0.18)', 
+                              color: '#7c3aed', 
+                              fontWeight: 600 
+                            }} 
+                          />
+                        </Stack>
+                        
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                          <Rating 
+                            value={4.5} 
+                            readOnly 
+                            size="small" 
+                            precision={0.5}
+                          />
+                          <Typography variant="caption" sx={{ color: 'rgba(2,10,60,0.7)' }}>
+                            (128 reviews)
+                          </Typography>
+                        </Stack>
+                      </CardContent>
+                      
+                      <CardActions sx={{ p: 2, pt: 0 }}>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          startIcon={<PlayArrow />}
+                          onClick={() => navigate(`/course/${relatedCourse._id}`)}
+                          sx={{
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 'bold',
+                            background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                            '&:hover': {
+                              background: 'linear-gradient(90deg, #2563eb, #7c3aed)'
+                            }
+                          }}
+                        >
+                          View Course
+                        </Button>
+                      </CardActions>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+            
+            <Box sx={{ textAlign: 'center', mt: 4 }}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate('/courses')}
+                sx={{
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  px: 4,
+                  py: 1.5,
+                  borderColor: 'rgba(139,92,246,0.5)',
+                  color: '#8b5cf6',
+                  '&:hover': {
+                    borderColor: '#8b5cf6',
+                    bgcolor: 'rgba(139,92,246,0.1)'
+                  }
+                }}
+              >
+                Explore All Courses
+              </Button>
+            </Box>
+          </Box>
+        )}
       </Container>
     </Box>
   );

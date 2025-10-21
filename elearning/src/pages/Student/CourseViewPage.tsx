@@ -20,7 +20,9 @@ import {
   ListItemText,
   ListItemButton,
   Badge,
-  LinearProgress
+  LinearProgress,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   ArrowBack,
@@ -65,6 +67,8 @@ const CourseViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // State management
   const [course, setCourse] = useState<ICourse | null>(null);
@@ -186,7 +190,7 @@ const CourseViewPage: React.FC = () => {
     if (!id) return;
     try {
       const res = await recordedSessionService.getRecordedSessionsForStudents(id);
-      const recordings = Array.isArray(res.data) ? res.data : res;
+      const recordings = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
       const lastSeenKey = `course:${id}:recordingsLastSeen`;
       const lastSeenStr = localStorage.getItem(lastSeenKey);
       const lastSeen = lastSeenStr ? new Date(lastSeenStr).getTime() : 0;
@@ -263,7 +267,7 @@ const CourseViewPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
           <CircularProgress />
         </Box>
@@ -273,7 +277,7 @@ const CourseViewPage: React.FC = () => {
 
   if (error || !course) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
         <Alert severity="error" sx={{ mb: 3 }}>
           {error || 'Course not found'}
         </Alert>
@@ -281,6 +285,7 @@ const CourseViewPage: React.FC = () => {
           startIcon={<ArrowBack />}
           onClick={() => navigate('/courses')}
           variant="outlined"
+          size={isMobile ? 'small' : 'medium'}
         >
           Back to My Courses
         </Button>
@@ -305,22 +310,31 @@ const CourseViewPage: React.FC = () => {
 
   if (!isEnrolled) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
         <Alert severity="info" sx={{ mb: 3 }}>
           You need to be enrolled in this course to access the content.
         </Alert>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: { xs: 1, sm: 2 },
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'stretch', sm: 'flex-start' }
+        }}>
           <Button
             onClick={handleEnroll}
             variant="contained"
             disabled={enrolling}
             startIcon={enrolling ? <CircularProgress size={20} /> : <School />}
+            size={isMobile ? 'large' : 'medium'}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             {enrolling ? 'Enrolling...' : 'Enroll in Course'}
           </Button>
           <Button
             onClick={() => navigate('/courses')}
             variant="outlined"
+            size={isMobile ? 'large' : 'medium'}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Browse All Courses
           </Button>
@@ -330,13 +344,14 @@ const CourseViewPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: { xs: 2, sm: 4 } }}>
         <Button
           startIcon={<ArrowBack />}
           onClick={() => navigate('/courses')}
           sx={{ mb: 2 }}
+          size={isMobile ? 'small' : 'medium'}
         >
           Back to My Courses
         </Button>
@@ -344,41 +359,104 @@ const CourseViewPage: React.FC = () => {
         {/* Live Session Status */}
         <LiveSessionStatus courseId={id!} />
 
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
+        <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'flex-start', 
+              gap: { xs: 2, sm: 3 },
+              flexDirection: { xs: 'column', sm: 'row' }
+            }}>
               <Avatar
-                sx={{ width: 80, height: 80, bgcolor: 'primary.main' }}
+                sx={{ 
+                  width: { xs: 60, sm: 80 }, 
+                  height: { xs: 60, sm: 80 }, 
+                  bgcolor: 'primary.main',
+                  alignSelf: { xs: 'center', sm: 'flex-start' }
+                }}
               >
-                <School sx={{ fontSize: 40 }} />
+                <School sx={{ fontSize: { xs: 30, sm: 40 } }} />
               </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h4" gutterBottom>
+              <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
+                <Typography 
+                  variant="h4" 
+                  gutterBottom
+                  sx={{ 
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' },
+                    lineHeight: 1.2
+                  }}
+                >
                   {course.title}
                 </Typography>
-                <Typography variant="body1" color="text.secondary" paragraph>
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary" 
+                  paragraph
+                  sx={{ 
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    lineHeight: 1.6
+                  }}
+                >
                   {course.description}
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Chip label={course.category} variant="outlined" />
-                  <Chip label={course.level} variant="outlined" />
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: { xs: 1, sm: 2 }, 
+                  mb: 2,
+                  flexWrap: 'wrap',
+                  justifyContent: { xs: 'center', sm: 'flex-start' }
+                }}>
+                  <Chip 
+                    label={course.category} 
+                    variant="outlined" 
+                    size={isMobile ? 'small' : 'medium'}
+                  />
+                  <Chip 
+                    label={course.level} 
+                    variant="outlined" 
+                    size={isMobile ? 'small' : 'medium'}
+                  />
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Schedule fontSize="small" />
-                    <Typography variant="body2">{course.duration}h</Typography>
+                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                      {course.duration}h
+                    </Typography>
                   </Box>
                 </Box>
 
                 {/* Progress Information */}
                 <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    gutterBottom
+                    sx={{ 
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      textAlign: { xs: 'center', sm: 'left' }
+                    }}
+                  >
                     Overall Progress: {getOverallProgress()}% Complete
                   </Typography>
                   <LinearProgress 
                     variant="determinate" 
                     value={getOverallProgress()} 
-                    sx={{ height: 8, borderRadius: 4 }}
+                    sx={{ 
+                      height: { xs: 6, sm: 8 }, 
+                      borderRadius: { xs: 3, sm: 4 },
+                      mb: 1
+                    }}
                   />
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary" 
+                    sx={{ 
+                      mt: 1, 
+                      display: 'block',
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      textAlign: { xs: 'center', sm: 'left' }
+                    }}
+                  >
                     Enrolled: {new Date(enrollmentDetails?.enrollmentDate || enrollmentDetails?.createdAt).toLocaleDateString()}
                   </Typography>
                 </Box>
@@ -389,11 +467,19 @@ const CourseViewPage: React.FC = () => {
       </Box>
 
       {/* Learning Path Options */}
-      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+      <Typography 
+        variant="h5" 
+        gutterBottom 
+        sx={{ 
+          mb: { xs: 2, sm: 3 },
+          fontSize: { xs: '1.25rem', sm: '1.5rem' },
+          textAlign: { xs: 'center', sm: 'left' }
+        }}
+      >
         Choose Your Learning Path
       </Typography>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: { xs: 3, sm: 4 } }}>
         {/* Course Material Path */}
         <Grid item xs={12} md={6}>
           <Card 
@@ -426,45 +512,80 @@ const CourseViewPage: React.FC = () => {
             }}
             onClick={handleNotesView}
           >
-            <CardContent sx={{ textAlign: 'center', py: 4, position: 'relative', zIndex: 1 }}>
+            <CardContent sx={{ 
+              textAlign: 'center', 
+              py: { xs: 3, sm: 4 }, 
+              position: 'relative', 
+              zIndex: 1,
+              px: { xs: 2, sm: 3 }
+            }}>
               <Box sx={{ 
                 display: 'inline-flex',
-                p: 2,
+                p: { xs: 1.5, sm: 2 },
                 borderRadius: '50%',
                 bgcolor: 'rgba(255, 255, 255, 0.2)',
-                mb: 2
+                mb: { xs: 1.5, sm: 2 }
               }}>
-                <MenuBook sx={{ fontSize: 48, color: 'white' }} />
+                <MenuBook sx={{ fontSize: { xs: 36, sm: 48 }, color: 'white' }} />
               </Box>
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'white' }}>
+              <Typography 
+                variant="h5" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: 'white',
+                  fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                }}
+              >
                 Course Material
               </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 3, px: 2 }}>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.9)', 
+                  mb: { xs: 2, sm: 3 }, 
+                  px: { xs: 1, sm: 2 },
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  lineHeight: 1.5
+                }}
+              >
                 Access comprehensive course materials with advanced reading features, voice narration, and interactive learning tools
               </Typography>
               
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: { xs: 0.5, sm: 1 }, 
+                mb: { xs: 2, sm: 3 }, 
+                flexWrap: 'wrap' 
+              }}>
                 <Chip 
                   label={`${courseStats.completedNotes}/${courseStats.totalNotes} Sections`}
                   icon={courseStats.completedNotes === courseStats.totalNotes ? <CheckCircle /> : <RadioButtonUnchecked />}
+                  size={isMobile ? 'small' : 'medium'}
                   sx={{
                     backgroundColor: courseStats.completedNotes === courseStats.totalNotes ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255, 255, 255, 0.2)',
                     color: 'white',
                     fontWeight: 500,
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
                     '& .MuiChip-icon': {
-                      color: 'white'
+                      color: 'white',
+                      fontSize: { xs: 16, sm: 20 }
                     }
                   }}
                 />
                 <Chip 
                   label="Voice Reader"
                   icon={<VolumeUp />}
+                  size={isMobile ? 'small' : 'medium'}
                   sx={{
                     backgroundColor: 'rgba(255, 255, 255, 0.2)',
                     color: 'white',
                     fontWeight: 500,
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
                     '& .MuiChip-icon': {
-                      color: 'white'
+                      color: 'white',
+                      fontSize: { xs: 16, sm: 20 }
                     }
                   }}
                 />
@@ -473,19 +594,21 @@ const CourseViewPage: React.FC = () => {
               <Button 
                 variant="contained"
                 startIcon={<PlayArrow />}
+                size={isMobile ? 'large' : 'medium'}
                 sx={{
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   color: 'white',
-                  padding: '12px 24px',
+                  padding: { xs: '10px 20px', sm: '12px 24px' },
                   borderRadius: '25px',
                   textTransform: 'none',
                   fontWeight: 600,
-                  fontSize: '1rem',
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
                   backdropFilter: 'blur(10px)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
+                  width: { xs: '100%', sm: 'auto' },
                   '&:hover': {
                     backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                    transform: 'scale(1.05)',
+                    transform: { xs: 'none', sm: 'scale(1.05)' },
                   },
                 }}
               >
@@ -527,34 +650,66 @@ const CourseViewPage: React.FC = () => {
             }}
             onClick={() => { markRecordingsSeen(); handleLiveSessionsView(); }}
           >
-            <CardContent sx={{ textAlign: 'center', py: 4, position: 'relative', zIndex: 1 }}>
+            <CardContent sx={{ 
+              textAlign: 'center', 
+              py: { xs: 3, sm: 4 }, 
+              position: 'relative', 
+              zIndex: 1,
+              px: { xs: 2, sm: 3 }
+            }}>
               <Box sx={{ 
                 display: 'inline-flex',
-                p: 2,
+                p: { xs: 1.5, sm: 2 },
                 borderRadius: '50%',
                 bgcolor: 'rgba(255, 255, 255, 0.2)',
-                mb: 2
+                mb: { xs: 1.5, sm: 2 }
               }}>
-                <VideoCall sx={{ fontSize: 48, color: 'white' }} />
+                <VideoCall sx={{ fontSize: { xs: 36, sm: 48 }, color: 'white' }} />
               </Box>
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'white' }}>
+              <Typography 
+                variant="h5" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: 'white',
+                  fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                }}
+              >
                 Live Sessions & Videos
               </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 3, px: 2 }}>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.9)', 
+                  mb: { xs: 2, sm: 3 }, 
+                  px: { xs: 1, sm: 2 },
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  lineHeight: 1.5
+                }}
+              >
                 Join live classes, watch recorded sessions, and interact with instructors in real-time
               </Typography>
               
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: { xs: 0.5, sm: 1 }, 
+                mb: { xs: 2, sm: 3 }, 
+                flexWrap: 'wrap' 
+              }}>
                 <Badge badgeContent={courseStats.upcomingLiveSessions} color="warning">
                   <Chip 
                     label="Live Sessions"
                     icon={<LiveTv />}
+                    size={isMobile ? 'small' : 'medium'}
                     sx={{
                       backgroundColor: 'rgba(255, 255, 255, 0.2)',
                       color: 'white',
                       fontWeight: 500,
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
                       '& .MuiChip-icon': {
-                        color: 'white'
+                        color: 'white',
+                        fontSize: { xs: 16, sm: 20 }
                       }
                     }}
                   />
@@ -563,12 +718,15 @@ const CourseViewPage: React.FC = () => {
                   <Chip 
                     label={unseenRecordings > 0 ? 'New Recordings' : 'Recordings'}
                     icon={<NotificationsActive />}
+                    size={isMobile ? 'small' : 'medium'}
                     sx={{
                       backgroundColor: 'rgba(255, 255, 255, 0.2)',
                       color: 'white',
                       fontWeight: 500,
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
                       '& .MuiChip-icon': {
-                        color: 'white'
+                        color: 'white',
+                        fontSize: { xs: 16, sm: 20 }
                       }
                     }}
                   />
@@ -576,12 +734,15 @@ const CourseViewPage: React.FC = () => {
                 <Chip 
                   label="Interactive"
                   icon={<Person />}
+                  size={isMobile ? 'small' : 'medium'}
                   sx={{
                     backgroundColor: 'rgba(255, 255, 255, 0.2)',
                     color: 'white',
                     fontWeight: 500,
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
                     '& .MuiChip-icon': {
-                      color: 'white'
+                      color: 'white',
+                      fontSize: { xs: 16, sm: 20 }
                     }
                   }}
                 />
@@ -590,19 +751,21 @@ const CourseViewPage: React.FC = () => {
               <Button 
                 variant="contained"
                 startIcon={<PlayArrow />}
+                size={isMobile ? 'large' : 'medium'}
                 sx={{
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   color: 'white',
-                  padding: '12px 24px',
+                  padding: { xs: '10px 20px', sm: '12px 24px' },
                   borderRadius: '25px',
                   textTransform: 'none',
                   fontWeight: 600,
-                  fontSize: '1rem',
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
                   backdropFilter: 'blur(10px)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
+                  width: { xs: '100%', sm: 'auto' },
                   '&:hover': {
                     backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                    transform: 'scale(1.05)',
+                    transform: { xs: 'none', sm: 'scale(1.05)' },
                   },
                 }}
               >
@@ -614,29 +777,68 @@ const CourseViewPage: React.FC = () => {
       </Grid>
 
       {/* Course Components */}
-      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+      <Typography 
+        variant="h5" 
+        gutterBottom 
+        sx={{ 
+          mb: { xs: 2, sm: 3 },
+          fontSize: { xs: '1.25rem', sm: '1.5rem' },
+          textAlign: { xs: 'center', sm: 'left' }
+        }}
+      >
         Course Components
       </Typography>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: { xs: 3, sm: 4 } }}>
         {/* Assignments */}
         <Grid item xs={12} sm={6} md={3}>
           <Card 
-            sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
+            sx={{ 
+              cursor: 'pointer', 
+              '&:hover': { 
+                boxShadow: { xs: 2, sm: 3 },
+                transform: { xs: 'none', sm: 'translateY(-2px)' }
+              },
+              transition: 'all 0.3s ease'
+            }}
             onClick={handleAssignmentsView}
           >
-            <CardContent sx={{ textAlign: 'center' }}>
-              <Assignment sx={{ fontSize: 48, color: 'warning.main', mb: 1 }} />
-              <Typography variant="h6" gutterBottom>
+            <CardContent sx={{ 
+              textAlign: 'center',
+              p: { xs: 2, sm: 3 }
+            }}>
+              <Assignment sx={{ 
+                fontSize: { xs: 36, sm: 48 }, 
+                color: 'warning.main', 
+                mb: 1 
+              }} />
+              <Typography 
+                variant="h6" 
+                gutterBottom
+                sx={{ 
+                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                }}
+              >
                 Assignments
               </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                gutterBottom
+                sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
+              >
                 {courseStats.completedAssignments}/{courseStats.totalAssignments} Completed
               </Typography>
               <LinearProgress 
                 variant="determinate" 
                 value={courseStats.totalAssignments > 0 ? (courseStats.completedAssignments / courseStats.totalAssignments) * 100 : 0}
-                sx={{ mt: 1 }}
+                sx={{ 
+                  mt: 1,
+                  height: { xs: 4, sm: 6 },
+                  borderRadius: { xs: 2, sm: 3 }
+                }}
               />
             </CardContent>
           </Card>
@@ -645,21 +847,52 @@ const CourseViewPage: React.FC = () => {
         {/* Assessments */}
         <Grid item xs={12} sm={6} md={3}>
           <Card 
-            sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
+            sx={{ 
+              cursor: 'pointer', 
+              '&:hover': { 
+                boxShadow: { xs: 2, sm: 3 },
+                transform: { xs: 'none', sm: 'translateY(-2px)' }
+              },
+              transition: 'all 0.3s ease'
+            }}
             onClick={handleAssessmentsView}
           >
-            <CardContent sx={{ textAlign: 'center' }}>
-              <Quiz sx={{ fontSize: 48, color: 'info.main', mb: 1 }} />
-              <Typography variant="h6" gutterBottom>
+            <CardContent sx={{ 
+              textAlign: 'center',
+              p: { xs: 2, sm: 3 }
+            }}>
+              <Quiz sx={{ 
+                fontSize: { xs: 36, sm: 48 }, 
+                color: 'info.main', 
+                mb: 1 
+              }} />
+              <Typography 
+                variant="h6" 
+                gutterBottom
+                sx={{ 
+                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                }}
+              >
                 Assessments
               </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                gutterBottom
+                sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
+              >
                 {courseStats.completedQuizzes}/{courseStats.totalQuizzes} Completed
               </Typography>
               <LinearProgress 
                 variant="determinate" 
                 value={courseStats.totalQuizzes > 0 ? (courseStats.completedQuizzes / courseStats.totalQuizzes) * 100 : 0}
-                sx={{ mt: 1 }}
+                sx={{ 
+                  mt: 1,
+                  height: { xs: 4, sm: 6 },
+                  borderRadius: { xs: 2, sm: 3 }
+                }}
               />
             </CardContent>
           </Card>
@@ -668,17 +901,43 @@ const CourseViewPage: React.FC = () => {
         {/* Announcements */}
         <Grid item xs={12} sm={6} md={3}>
           <Card 
-            sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
+            sx={{ 
+              cursor: 'pointer', 
+              '&:hover': { 
+                boxShadow: { xs: 2, sm: 3 },
+                transform: { xs: 'none', sm: 'translateY(-2px)' }
+              },
+              transition: 'all 0.3s ease'
+            }}
             onClick={handleAnnouncementsView}
           >
-            <CardContent sx={{ textAlign: 'center' }}>
+            <CardContent sx={{ 
+              textAlign: 'center',
+              p: { xs: 2, sm: 3 }
+            }}>
               <Badge badgeContent={courseStats.unreadAnnouncements} color="error">
-                <Announcement sx={{ fontSize: 48, color: 'success.main', mb: 1 }} />
+                <Announcement sx={{ 
+                  fontSize: { xs: 36, sm: 48 }, 
+                  color: 'success.main', 
+                  mb: 1 
+                }} />
               </Badge>
-              <Typography variant="h6" gutterBottom>
+              <Typography 
+                variant="h6" 
+                gutterBottom
+                sx={{ 
+                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                }}
+              >
                 Announcements
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
+              >
                 {courseStats.unreadAnnouncements} Unread
               </Typography>
             </CardContent>
@@ -687,16 +946,48 @@ const CourseViewPage: React.FC = () => {
 
         {/* Progress */}
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent sx={{ textAlign: 'center' }}>
-              <CheckCircle sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
-              <Typography variant="h6" gutterBottom>
+          <Card sx={{ 
+            '&:hover': { 
+              boxShadow: { xs: 2, sm: 3 },
+              transform: { xs: 'none', sm: 'translateY(-2px)' }
+            },
+            transition: 'all 0.3s ease'
+          }}>
+            <CardContent sx={{ 
+              textAlign: 'center',
+              p: { xs: 2, sm: 3 }
+            }}>
+              <CheckCircle sx={{ 
+                fontSize: { xs: 36, sm: 48 }, 
+                color: 'primary.main', 
+                mb: 1 
+              }} />
+              <Typography 
+                variant="h6" 
+                gutterBottom
+                sx={{ 
+                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                }}
+              >
                 Progress
               </Typography>
-              <Typography variant="h4" color="primary.main" gutterBottom>
+              <Typography 
+                variant="h4" 
+                color="primary.main" 
+                gutterBottom
+                sx={{ 
+                  fontSize: { xs: '1.75rem', sm: '2.125rem' }
+                }}
+              >
                 {getOverallProgress()}%
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
+              >
                 Course Completion
               </Typography>
             </CardContent>
@@ -705,13 +996,22 @@ const CourseViewPage: React.FC = () => {
       </Grid>
 
       {/* Recent Activity */}
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, sm: 3 }}>
         {/* Recent Announcements */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <NotificationsActive color="primary" />
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography 
+                variant="h6" 
+                gutterBottom 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                }}
+              >
+                <NotificationsActive color="primary" sx={{ fontSize: { xs: 20, sm: 24 } }} />
                 Recent Announcements
               </Typography>
               <Divider sx={{ mb: 2 }} />
@@ -719,24 +1019,41 @@ const CourseViewPage: React.FC = () => {
                 <List dense>
                   {recentAnnouncements.map((announcement, index) => (
                     <ListItem key={index} disablePadding>
-                      <ListItemButton>
+                      <ListItemButton sx={{ py: { xs: 0.5, sm: 1 } }}>
                         <ListItemText
                           primary={announcement.title}
                           secondary={new Date(announcement.createdAt).toLocaleDateString()}
+                          primaryTypographyProps={{
+                            sx: { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                          }}
+                          secondaryTypographyProps={{
+                            sx: { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
+                          }}
                         />
                       </ListItemButton>
                     </ListItem>
                   ))}
                 </List>
               ) : (
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    textAlign: 'center',
+                    py: 2
+                  }}
+                >
                   No recent announcements
                 </Typography>
               )}
               <Button 
                 size="small" 
                 onClick={handleAnnouncementsView}
-                sx={{ mt: 1 }}
+                sx={{ 
+                  mt: 1,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
               >
                 View All
               </Button>
@@ -747,9 +1064,18 @@ const CourseViewPage: React.FC = () => {
         {/* Upcoming Sessions */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Schedule color="secondary" />
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography 
+                variant="h6" 
+                gutterBottom 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                }}
+              >
+                <Schedule color="secondary" sx={{ fontSize: { xs: 20, sm: 24 } }} />
                 Upcoming Sessions
               </Typography>
               <Divider sx={{ mb: 2 }} />
@@ -757,20 +1083,34 @@ const CourseViewPage: React.FC = () => {
                 <List dense>
                   {upcomingSessions.map((session) => (
                     <ListItem key={session._id} disablePadding>
-                      <ListItemButton>
+                      <ListItemButton sx={{ py: { xs: 0.5, sm: 1 } }}>
                         <ListItemIcon>
-                          <VideoCall color="secondary" />
+                          <VideoCall color="secondary" sx={{ fontSize: { xs: 18, sm: 20 } }} />
                         </ListItemIcon>
                         <ListItemText
                           primary={session.title}
                           secondary={new Date(session.scheduledTime).toLocaleString()}
+                          primaryTypographyProps={{
+                            sx: { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                          }}
+                          secondaryTypographyProps={{
+                            sx: { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
+                          }}
                         />
                       </ListItemButton>
                     </ListItem>
                   ))}
                 </List>
               ) : (
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    textAlign: 'center',
+                    py: 2
+                  }}
+                >
                   No upcoming sessions
                 </Typography>
               )}
@@ -778,7 +1118,10 @@ const CourseViewPage: React.FC = () => {
                 size="small" 
                 color="secondary"
                 onClick={handleLiveSessionsView}
-                sx={{ mt: 1 }}
+                sx={{ 
+                  mt: 1,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
               >
                 View All Sessions
               </Button>

@@ -34,6 +34,7 @@ import { RegisterForm, UserRole } from '../../shared/types';
 import GoogleAuthButton from '../../components/Auth/GoogleAuthButton';
 import RoleSelectionModal from '../../components/Auth/RoleSelectionModal';
 import { googleAuthService } from '../../services/googleAuthService';
+import { loginRedirectService } from '../../services/loginRedirectService';
 
 // Type for form validation errors
 type RegisterFormErrors = {
@@ -163,15 +164,28 @@ const RegisterPage: React.FC = () => {
     setError(null);
 
     try {
-      await register(formData);
+      const registerResult = await register(formData);
       toast.success('Registration successful! Please check your email to verify your account.');
       
-      // If interests were provided, redirect to courses with interests
-      if (interests) {
-        const interestsParam = encodeURIComponent(JSON.stringify(interests));
-        navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`);
-      } else {
-        navigate('/');
+      // Use the user data from the register result directly
+      try {
+        // Get the appropriate redirect path based on user role and enrollments
+        const redirectPath = await loginRedirectService.getRedirectPath({
+          userRole: formData.role,
+          interests,
+          from: '/'
+        });
+        
+        navigate(redirectPath, { replace: true });
+      } catch (redirectError) {
+        console.warn('Error determining redirect path:', redirectError);
+        // Fallback to original logic
+        if (interests) {
+          const interestsParam = encodeURIComponent(JSON.stringify(interests));
+          navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`);
+        } else {
+          navigate('/');
+        }
       }
     } catch (error: any) {
       const errorMessage = error.message || 'Registration failed. Please try again.';
@@ -199,12 +213,25 @@ const RegisterPage: React.FC = () => {
       // Existing user - direct login success
       toast.success(`Welcome back, ${result.user.firstName}!`);
       
-      // If interests were provided, redirect to courses with interests
-      if (interests) {
-        const interestsParam = encodeURIComponent(JSON.stringify(interests));
-        navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`);
-      } else {
-        navigate('/');
+      // Use the user data from the result directly
+      try {
+        // Get the appropriate redirect path based on user role and enrollments
+        const redirectPath = await loginRedirectService.getRedirectPath({
+          userRole: result.user?.role || UserRole.STUDENT,
+          interests,
+          from: '/'
+        });
+        
+        navigate(redirectPath, { replace: true });
+      } catch (redirectError) {
+        console.warn('Error determining redirect path:', redirectError);
+        // Fallback to original logic
+        if (interests) {
+          const interestsParam = encodeURIComponent(JSON.stringify(interests));
+          navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`);
+        } else {
+          navigate('/');
+        }
       }
       
       // Trigger auth context update
@@ -241,12 +268,25 @@ const RegisterPage: React.FC = () => {
         toast.success(`Welcome to Excellence Coaching Hub, ${result.user.firstName}!`);
         setShowRoleSelection(false);
         
-        // If interests were provided, redirect to courses with interests
-        if (interests) {
-          const interestsParam = encodeURIComponent(JSON.stringify(interests));
-          navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`);
-        } else {
-          navigate('/');
+        // Use the user data from the result directly
+        try {
+          // Get the appropriate redirect path based on user role and enrollments
+          const redirectPath = await loginRedirectService.getRedirectPath({
+            userRole: role,
+            interests,
+            from: '/'
+          });
+          
+          navigate(redirectPath, { replace: true });
+        } catch (redirectError) {
+          console.warn('Error determining redirect path:', redirectError);
+          // Fallback to original logic
+          if (interests) {
+            const interestsParam = encodeURIComponent(JSON.stringify(interests));
+            navigate(`/dashboard/student/courses?tab=discover&interests=${interestsParam}`);
+          } else {
+            navigate('/');
+          }
         }
         
         // Trigger auth context update

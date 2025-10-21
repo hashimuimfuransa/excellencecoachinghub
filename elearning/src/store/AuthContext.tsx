@@ -69,8 +69,8 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 
 // Auth context interface
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
-  register: (userData: any) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ user: IUser; token: string }>;
+  register: (userData: any) => Promise<{ user: IUser; token: string }>;
   logout: () => void;
   updateUser: (user: IUser) => void;
   refreshUser: () => Promise<void>;
@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Login function
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string): Promise<{ user: IUser; token: string }> => {
     dispatch({ type: 'AUTH_START' });
     try {
       const { authService } = await import('../services/authService');
@@ -151,6 +151,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           token: authData.token
         }
       });
+
+      return { user: authData.user, token: authData.token };
     } catch (error) {
       dispatch({ type: 'AUTH_FAILURE' });
       throw error;
@@ -158,7 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Register function
-  const register = async (userData: any): Promise<void> => {
+  const register = async (userData: any): Promise<{ user: IUser; token: string }> => {
     dispatch({ type: 'AUTH_START' });
     try {
       const { authService } = await import('../services/authService');
@@ -171,6 +173,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           token: authData.token
         }
       });
+
+      return { user: authData.user, token: authData.token };
     } catch (error) {
       dispatch({ type: 'AUTH_FAILURE' });
       throw error;

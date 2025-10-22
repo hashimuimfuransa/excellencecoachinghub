@@ -22,6 +22,7 @@ import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import TrendingCoursesSection from '../components/TrendingCoursesSection';
 import FloatingContact from '../components/FloatingContact';
+import FloatingAIAssistant from '../components/FloatingAIAssistant';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -106,6 +107,9 @@ const HomePage: React.FC = () => {
 
       {/* Floating Contact Component */}
       <FloatingContact />
+      
+      {/* Floating AI Assistant Component */}
+      <FloatingAIAssistant />
     </Box>
   );
 };

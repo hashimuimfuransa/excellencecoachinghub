@@ -53,7 +53,9 @@ import {
   LightMode,
   DarkMode,
   Description,
-  Assessment
+  Assessment,
+  TrendingUp,
+  WorkspacePremium
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import Footer from './Footer';
@@ -148,17 +150,73 @@ const PublicLayout: React.FC = () => {
     setSearchQuery(e.target.value);
   };
 
-  // Course categories data
+  // Real learning categories data - Professional and Attractive
   const courseCategories = [
-    { name: 'Computer Science', icon: <Computer />, color: '#1976d2' },
-    { name: 'Business & Management', icon: <Business />, color: '#388e3c' },
-    { name: 'Data Science', icon: <Science />, color: '#f57c00' },
-    { name: 'Design & Creative', icon: <Palette />, color: '#9c27b0' },
-    { name: 'Languages', icon: <Language />, color: '#d32f2f' },
-    { name: 'Health & Medicine', icon: <LocalHospital />, color: '#00796b' },
-    { name: 'Engineering', icon: <Engineering />, color: '#5d4037' },
-    { name: 'Mathematics', icon: <Calculate />, color: '#303f9f' },
-    { name: 'Past Papers', icon: <Description />, color: '#e91e63', path: '/past-papers' }
+    { 
+      name: 'Professional Coaching', 
+      icon: <Business />, 
+      color: '#667eea',
+      description: 'Leadership, Executive, Project Management, CPA/CAT/ACCA',
+      badge: '⭐ Popular',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    },
+    { 
+      name: 'Business & Entrepreneurship', 
+      icon: <TrendingUp />, 
+      color: '#4facfe',
+      description: 'Startup, Strategy, Finance, Marketing, Innovation',
+      badge: '⭐ Popular',
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    },
+    { 
+      name: 'Academic Coaching', 
+      icon: <MenuBook />, 
+      color: '#a8edea',
+      description: 'Primary, Secondary, University, Nursery, Exams, Research',
+      badge: 'All levels',
+      gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
+    },
+    { 
+      name: 'Language Coaching', 
+      icon: <Language />, 
+      color: '#fa709a',
+      description: 'English, French, Kinyarwanda, Business Communication',
+      badge: 'Fluency',
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+    },
+    { 
+      name: 'Technical & Digital', 
+      icon: <Computer />, 
+      color: '#43e97b',
+      description: 'AI, Data, Cybersecurity, Cloud, Dev, Digital Marketing',
+      badge: 'In-demand',
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    },
+    { 
+      name: 'Job Seeker Coaching', 
+      icon: <WorkspacePremium />, 
+      color: '#ff9966',
+      description: 'Career choice, skills, exams, interview, resume',
+      badge: 'Career-ready',
+      gradient: 'linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)'
+    },
+    { 
+      name: 'Personal & Corporate Development', 
+      icon: <AutoAwesome />, 
+      color: '#9c27b0',
+      description: 'Soft skills, Team building, Communication, Leadership',
+      badge: 'Growth',
+      gradient: 'linear-gradient(135deg, #9c27b0 0%, #e91e63 100%)'
+    },
+    { 
+      name: 'Past Papers & Exams', 
+      icon: <Assessment />, 
+      color: '#e91e63', 
+      path: '/past-papers',
+      description: 'Practice tests, Exam preparation, Past papers',
+      badge: 'Practice',
+      gradient: 'linear-gradient(135deg, #e91e63 0%, #f06292 100%)'
+    }
   ];
 
   // Ultra-Modern Attractive Mobile drawer content
@@ -940,7 +998,7 @@ const PublicLayout: React.FC = () => {
         {drawer}
       </Drawer>
 
-      {/* Ultra-Modern Explore Categories Popover */}
+      {/* Ultra-Modern Professional Categories Popover */}
       <Popover
         open={Boolean(exploreAnchorEl)}
         anchorEl={exploreAnchorEl}
@@ -956,42 +1014,49 @@ const PublicLayout: React.FC = () => {
         PaperProps={{
           sx: {
             mt: 1,
-            minWidth: 400,
-            maxWidth: 480,
-            borderRadius: 3,
+            minWidth: 520,
+            maxWidth: 600,
+            borderRadius: 4,
             bgcolor: '#ffffff',
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden'
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+            border: '1px solid rgba(99, 102, 241, 0.1)',
+            overflow: 'hidden',
+            backdropFilter: 'blur(20px)',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)'
           }
         }}
       >
         <Box sx={{ p: 4 }}>
-          {/* Clean Minimal Header */}
-          <Box sx={{ mb: 4 }}>
+          {/* Professional Header */}
+          <Box sx={{ mb: 4, textAlign: 'center' }}>
             <Typography 
-              variant="h6" 
+              variant="h5" 
               sx={{ 
                 mb: 1, 
-                fontWeight: 600, 
+                fontWeight: 700, 
                 color: '#0f172a',
-                fontSize: '1.1rem'
+                fontSize: '1.3rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
               }}
             >
-              Browse Categories
+              Learning Categories
             </Typography>
             <Typography 
               variant="body2" 
               sx={{ 
                 color: '#64748b', 
-                fontSize: '0.9rem'
+                fontSize: '0.95rem',
+                fontWeight: 500
               }}
             >
-              Explore courses organized by topic
+              Discover courses tailored to your professional goals
             </Typography>
           </Box>
           
-          {/* Clean Minimal Category Grid */}
+          {/* Professional Category Grid */}
           <Grid container spacing={2}>
             {courseCategories.map((category, index) => (
               <Grid item xs={6} key={index}>
@@ -1000,87 +1065,156 @@ const PublicLayout: React.FC = () => {
                   variant="text"
                   onClick={() => handleCategoryClick(category.name, category.path)}
                   sx={{
-                    p: 2.5,
+                    p: 3,
                     height: 'auto',
-                    minHeight: 80,
+                    minHeight: 120,
                     flexDirection: 'column',
                     alignItems: 'center',
                     textAlign: 'center',
-                    borderRadius: 2,
-                    bgcolor: '#f8fafc',
+                    borderRadius: 3,
+                    background: 'rgba(255, 255, 255, 0.8)',
                     color: '#374151',
-                    border: '1px solid transparent',
-                    transition: 'all 0.2s ease',
+                    border: '1px solid rgba(0, 0, 0, 0.08)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
                     '&:hover': {
-                      bgcolor: 'rgba(59, 130, 246, 0.06)',
-                      borderColor: 'rgba(59, 130, 246, 0.2)',
-                      color: '#3b82f6',
-                      transform: 'translateY(-1px)'
+                      background: 'rgba(255, 255, 255, 0.95)',
+                      borderColor: category.color,
+                      color: category.color,
+                      transform: 'translateY(-4px) scale(1.02)',
+                      boxShadow: `0 12px 40px ${category.color}20, 0 0 0 1px ${category.color}30`,
+                      '& .category-icon': {
+                        transform: 'scale(1.2) rotate(5deg)',
+                        color: category.color
+                      },
+                      '& .category-badge': {
+                        background: category.gradient,
+                        color: '#ffffff',
+                        transform: 'scale(1.1)'
+                      }
                     }
                   }}
                 >
-                  <Box sx={{ mb: 1.5 }}>
+                  {/* Gradient Background */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: category.gradient,
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      '&:hover': {
+                        opacity: 0.05
+                      }
+                    }}
+                  />
+                  
+                  {/* Icon */}
+                  <Box sx={{ mb: 2, position: 'relative', zIndex: 2 }}>
                     <Box
+                      className="category-icon"
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: 36,
-                        height: 36,
-                        borderRadius: 2,
+                        width: 48,
+                        height: 48,
+                        borderRadius: 3,
+                        background: `${category.color}15`,
                         color: category.color,
-                        fontSize: '1.3rem'
+                        fontSize: '1.5rem',
+                        border: `2px solid ${category.color}20`,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: `0 4px 20px ${category.color}20`
                       }}
                     >
                       {category.icon}
                     </Box>
                   </Box>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontWeight: 500, 
-                      lineHeight: 1.2,
-                      fontSize: '0.85rem'
-                    }}
-                  >
-                    {category.name}
-                  </Typography>
+                  
+                  {/* Content */}
+                  <Box sx={{ position: 'relative', zIndex: 2, width: '100%' }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        fontWeight: 600, 
+                        lineHeight: 1.3,
+                        fontSize: '0.9rem',
+                        mb: 1,
+                        color: 'inherit'
+                      }}
+                    >
+                      {category.name}
+                    </Typography>
+                    
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: 'rgba(0, 0, 0, 0.6)',
+                        fontSize: '0.75rem',
+                        lineHeight: 1.2,
+                        display: 'block',
+                        mb: 1.5
+                      }}
+                    >
+                      {category.description}
+                    </Typography>
+                    
+                    <Chip
+                      className="category-badge"
+                      label={category.badge}
+                      size="small"
+                      sx={{
+                        background: `${category.color}15`,
+                        color: category.color,
+                        fontWeight: 600,
+                        fontSize: '0.7rem',
+                        border: `1px solid ${category.color}30`,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                      }}
+                    />
+                  </Box>
                 </Button>
               </Grid>
             ))}
           </Grid>
           
-          {/* Clean CTA Section */}
+          {/* Professional CTA Section */}
           <Box sx={{ 
             mt: 4, 
             pt: 4, 
-            borderTop: '1px solid #e2e8f0'
+            borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+            textAlign: 'center'
           }}>
             <Button
               fullWidth
               variant="contained"
-              startIcon={<MenuBook sx={{ fontSize: '1rem' }} />}
+              startIcon={<MenuBook sx={{ fontSize: '1.1rem' }} />}
               onClick={() => {
                 handleExploreClose();
                 navigate('/courses');
               }}
               sx={{
-                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                borderRadius: 2,
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                py: 1.5,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: 3,
+                fontWeight: 700,
+                fontSize: '1rem',
+                py: 2,
                 textTransform: 'none',
-                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
-                transition: 'all 0.2s ease',
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                  background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)'
                 }
               }}
             >
-              View All Courses
+              Explore All Courses
             </Button>
           </Box>
         </Box>

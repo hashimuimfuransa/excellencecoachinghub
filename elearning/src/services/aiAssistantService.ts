@@ -300,37 +300,23 @@ export const aiAssistantService = {
     console.log('AI Assistant: Context:', data.context);
 
     try {
-      // First try backend API (uses Gemini AI on server)
-      console.log('AI Assistant: Trying backend API...');
-      const response = await apiService.post<{
-        question: string;
-        response: string;
-        timestamp: string;
-        suggestions?: string[];
-      }>('/ai-assistant/chat', {
-        question: data.userMessage,
-        context: JSON.stringify(data.context),
-        previousMessages: data.previousMessages,
-        courseId: data.context?.courseId,
-        courseTitle: data.context?.courseTitle,
-        courseContent: data.context?.content
+      // Skip backend API to avoid authentication issues - go directly to Gemini AI
+      console.log('AI Assistant: Using direct Gemini AI...');
+      
+      // Try direct Gemini AI first
+      const geminiResponse = await geminiAIService.sendMessage({
+        userMessage: data.userMessage,
+        context: data.context,
+        previousMessages: data.previousMessages
       });
 
-      if (response.success && response.data) {
-        console.log('AI Assistant: Backend API response received');
-        console.log('AI Assistant: Response data:', response.data);
-        return {
-          message: response.data.response || 'I received your message but had trouble generating a response.',
-          suggestions: response.data.suggestions || generateSuggestions(data.userMessage, data.context)
-        };
-      }
-
-      throw new Error(response.error || 'Failed to get AI response');
-    } catch (apiError: any) {
-      console.log('AI Assistant: Backend API failed:', apiError);
+      console.log('AI Assistant: Direct Gemini AI response received');
+      return geminiResponse;
+    } catch (geminiError: any) {
+      console.log('AI Assistant: Direct Gemini AI failed:', geminiError);
 
       // Check if it's a service overload error
-      if (apiError.message?.includes('overloaded') || apiError.message?.includes('503')) {
+      if (geminiError.message?.includes('overloaded') || geminiError.message?.includes('503')) {
         return {
           message: `🤖 I'm currently experiencing high demand! The AI service is temporarily overloaded, but I can still help you with:
 
@@ -352,50 +338,13 @@ What can I help you with using my built-in knowledge?`,
         };
       }
 
-      console.log('AI Assistant: Trying direct Gemini AI...');
+      console.log('AI Assistant: Using enhanced fallback response');
 
-      try {
-        // Fallback to direct Gemini AI
-        const geminiResponse = await geminiAIService.sendMessage({
-          userMessage: data.userMessage,
-          context: data.context,
-          previousMessages: data.previousMessages
-        });
-
-        console.log('AI Assistant: Direct Gemini AI response received');
-        return geminiResponse;
-      } catch (geminiError: any) {
-        console.log('AI Assistant: Direct Gemini AI failed:', geminiError);
-
-        // Check if Gemini is also overloaded
-        if (geminiError.message?.includes('overloaded') || geminiError.message?.includes('503')) {
-          return {
-            message: `🤖 Both AI services are currently experiencing high demand! Don't worry - I can still help you with platform guidance and study tips.
-
-📚 **Available Help:**
-• Course navigation and features
-• Study strategies and techniques
-• Platform tutorials and tips
-• General learning guidance
-
-🔄 **For AI-Powered Features:**
-• Try again in 5-10 minutes
-• AI services should return to normal capacity soon
-• Complex analysis and personalized responses will be available then
-
-What would you like help with right now?`,
-            suggestions: ['Platform tutorial', 'Study tips', 'Course help', 'Try again later']
-          };
-        }
-
-        console.log('AI Assistant: Using enhanced fallback response');
-
-        // Enhanced fallback response (still intelligent, but local)
-        return {
-          message: getMockResponse(data.userMessage, data.context),
-          suggestions: getMockSuggestions(data.userMessage)
-        };
-      }
+      // Enhanced fallback response (still intelligent, but local)
+      return {
+        message: getMockResponse(data.userMessage, data.context),
+        suggestions: getMockSuggestions(data.userMessage)
+      };
     }
   },
 

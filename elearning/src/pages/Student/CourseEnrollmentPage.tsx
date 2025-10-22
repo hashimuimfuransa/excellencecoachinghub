@@ -302,12 +302,13 @@ const CourseEnrollmentPage: React.FC = () => {
                     }}
                   >
                     <MenuItem value="">All Categories</MenuItem>
-                    <MenuItem value="Programming">💻 Programming</MenuItem>
-                    <MenuItem value="Design">🎨 Design</MenuItem>
-                    <MenuItem value="Business">💼 Business</MenuItem>
-                    <MenuItem value="Marketing">📈 Marketing</MenuItem>
-                    <MenuItem value="Data Science">📊 Data Science</MenuItem>
-                    <MenuItem value="Languages">🌍 Languages</MenuItem>
+                    <MenuItem value="Professional Coaching">💼 Professional Coaching</MenuItem>
+                    <MenuItem value="Business & Entrepreneurship">🚀 Business & Entrepreneurship</MenuItem>
+                    <MenuItem value="Academic Coaching">🎓 Academic Coaching</MenuItem>
+                    <MenuItem value="Language Coaching">🌍 Language Coaching</MenuItem>
+                    <MenuItem value="Technical & Digital">💻 Technical & Digital</MenuItem>
+                    <MenuItem value="Job Seeker Coaching">💼 Job Seeker Coaching</MenuItem>
+                    <MenuItem value="Personal & Corporate Development">🌟 Personal & Corporate Development</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>

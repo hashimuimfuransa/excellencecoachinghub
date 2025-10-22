@@ -94,6 +94,7 @@ export const learningSubcategories: { [key: string]: string[] } = {
     'Innovation & Growth Coaching',
   ],
   academic_coaching: [
+    'Nursery Coaching',
     'Primary Coaching',
     'Secondary Coaching',
     'University Coaching',

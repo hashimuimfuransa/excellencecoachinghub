@@ -372,16 +372,56 @@ const Layout: React.FC = () => {
     setSearchQuery(e.target.value);
   };
 
-  // Course categories data
+  // Real learning categories data - Professional and Attractive
   const courseCategories = [
-    { name: 'Computer Science', icon: <Computer />, color: '#1976d2' },
-    { name: 'Business & Management', icon: <Business />, color: '#388e3c' },
-    { name: 'Data Science', icon: <Science />, color: '#f57c00' },
-    { name: 'Design & Creative', icon: <Palette />, color: '#9c27b0' },
-    { name: 'Languages', icon: <Language />, color: '#d32f2f' },
-    { name: 'Health & Medicine', icon: <LocalHospital />, color: '#00796b' },
-    { name: 'Engineering', icon: <Engineering />, color: '#5d4037' },
-    { name: 'Mathematics', icon: <Calculate />, color: '#303f9f' }
+    { 
+      name: 'Professional Coaching', 
+      icon: <Business />, 
+      color: '#667eea',
+      description: 'Leadership, Executive, Project Management, CPA/CAT/ACCA'
+    },
+    { 
+      name: 'Business & Entrepreneurship', 
+      icon: <TrendingUp />, 
+      color: '#4facfe',
+      description: 'Startup, Strategy, Finance, Marketing, Innovation'
+    },
+    { 
+      name: 'Academic Coaching', 
+      icon: <School />, 
+      color: '#a8edea',
+      description: 'Primary, Secondary, University, Nursery, Exams, Research'
+    },
+    { 
+      name: 'Language Coaching', 
+      icon: <Language />, 
+      color: '#fa709a',
+      description: 'English, French, Kinyarwanda, Business Communication'
+    },
+    { 
+      name: 'Technical & Digital', 
+      icon: <Computer />, 
+      color: '#43e97b',
+      description: 'AI, Data, Cybersecurity, Cloud, Dev, Digital Marketing'
+    },
+    { 
+      name: 'Job Seeker Coaching', 
+      icon: <Work />, 
+      color: '#ff9966',
+      description: 'Career choice, skills, exams, interview, resume'
+    },
+    { 
+      name: 'Personal & Corporate Development', 
+      icon: <Psychology />, 
+      color: '#9c27b0',
+      description: 'Soft skills, Team building, Communication, Leadership'
+    },
+    { 
+      name: 'Health & Medicine', 
+      icon: <LocalHospital />, 
+      color: '#00796b',
+      description: 'Medical training, Healthcare, Nursing, Pharmacy'
+    }
   ];
 
   // Enhanced drawer content

@@ -141,6 +141,7 @@ const learningCategories = [
     icon: <School sx={{ fontSize: 40 }} />,
     color: '#FF9800',
     subcategories: [
+      'Nursery Coaching',
       'Primary Coaching',
       'Secondary Coaching',
       'University Coaching',

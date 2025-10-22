@@ -30,11 +30,8 @@ import {
   Help,
   Psychology
 } from '@mui/icons-material';
-import { aiAssistantService } from '../services/aiAssistantService';
-import { SafeDialogTransition } from '../utils/transitionFix';
 import { motion } from 'framer-motion';
-
-const Transition = SafeDialogTransition;
+import { geminiAIService } from '../services/geminiAIService';
 
 interface Message {
   id: string;
@@ -47,12 +44,7 @@ interface Message {
 interface FloatingAIAssistantProps {
   context?: {
     page?: string;
-    courseId?: string;
-    lessonId?: string;
-    content?: string;
-    courseTitle?: string;
-    courseCategory?: string;
-    [key: string]: any; // Allow additional context properties
+    [key: string]: any;
   };
 }
 
@@ -68,7 +60,6 @@ const FloatingAIAssistant: React.FC<FloatingAIAssistantProps> = ({ context }) =>
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [showText, setShowText] = useState(false);
-  const [aiServiceStatus, setAiServiceStatus] = useState<'available' | 'overloaded' | 'unknown'>('unknown');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -79,45 +70,43 @@ const FloatingAIAssistant: React.FC<FloatingAIAssistantProps> = ({ context }) =>
   // Initialize with welcome message
   useEffect(() => {
     if (open && messages.length === 0) {
-      const contextInfo = context?.courseTitle ? `\n\nI see you're studying "${context.courseTitle}". I can provide specific help with this course!` : '';
-
       const welcomeMessage: Message = {
         id: 'welcome',
-        text: `Hi there! 👋 Welcome to your AI learning assistant!
+        text: `Hi there! 👋 Welcome to Excellence Coaching Hub!
 
-I'm here to help you succeed on Excellence Coaching Hub. I can assist you with:
+I'm your AI assistant and I'm here to help you with:
 
-📚 **Learning Support:**
-• Explain complex concepts in simple terms
-• Provide effective study strategies and tips
-• Help with assignments and homework
-• Break down difficult topics step by step
+🎯 **Platform Navigation:**
+• Guide you through our services
+• Help you find the right courses
+• Explain how our job portal works
+• Show you trending opportunities
 
-🎯 **Platform Guidance:**
-• Show you how to use website features
-• Guide you through courses and materials
-• Help you navigate live sessions
-• Explain progress tracking and features
+💡 **Learning Support:**
+• Study tips and strategies
+• Course recommendations
+• Career guidance
+• Skill development advice
 
-💬 **Conversational Help:**
-• Answer any questions about your studies
-• Provide motivation and encouragement
-• Chat about learning strategies
-• Discuss course-related topics${contextInfo}
+🚀 **Getting Started:**
+• Account setup and registration
+• Platform features overview
+• How to apply for jobs
+• Course enrollment process
 
 What would you like to explore today?`,
         isUser: false,
         timestamp: new Date(),
         suggestions: [
-          'How do I use this platform?',
-          'Explain a concept',
-          'Give me study tips',
-          'Help with assignments'
+          'How do I get started?',
+          'Show me trending courses',
+          'Help with job search',
+          'Platform features'
         ]
       };
       setMessages([welcomeMessage]);
     }
-  }, [open, context]);
+  }, [open]);
 
   // Show text on hover for desktop
   const handleMouseEnter = () => {
@@ -147,43 +136,35 @@ What would you like to explore today?`,
     setLoading(true);
 
     try {
-      // Prepare context for AI
-      const aiContext = {
-        userMessage: inputText,
-        context: context || {},
-        previousMessages: messages.slice(-5) // Last 5 messages for context
-      };
-
-      const response = await aiAssistantService.sendMessage(aiContext);
-
-      // Update AI service status based on response
-      if (response.message.includes('overloaded') || response.message.includes('high demand')) {
-        setAiServiceStatus('overloaded');
-      } else {
-        setAiServiceStatus('available');
-      }
+      const response = await geminiAIService.sendMessage({
+        message: inputText,
+        context: {
+          page: 'homepage',
+          platform: 'Excellence Coaching Hub',
+          ...context
+        }
+      });
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: response.message,
         isUser: false,
         timestamp: new Date(),
-        suggestions: response.suggestions
+        suggestions: response.suggestions || [
+          'Tell me more',
+          'Platform help',
+          'Course recommendations',
+          'Job search tips'
+        ]
       };
-
       setMessages(prev => [...prev, aiMessage]);
-    } catch (error: any) {
-      // Update status based on error type
-      if (error.message?.includes('overloaded') || error.message?.includes('503')) {
-        setAiServiceStatus('overloaded');
-      }
-
+    } catch (error) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'Sorry, I encountered an error. The AI service might be temporarily overloaded. Please try again in a few minutes.',
+        text: 'Sorry, I encountered an error. Please try again later.',
         isUser: false,
         timestamp: new Date(),
-        suggestions: ['Try again later', 'Platform help', 'Study tips', 'Course navigation']
+        suggestions: ['Try again', 'Platform help', 'Contact support']
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -191,16 +172,9 @@ What would you like to explore today?`,
     }
   };
 
-  const handleSuggestionClick = async (suggestion: string) => {
-    // Handle special suggestions
-    if (suggestion.includes('Explain')) {
-      setInputText(suggestion);
-    } else {
-      setInputText(suggestion);
-    }
+  const handleSuggestionClick = (suggestion: string) => {
+    setInputText(suggestion);
   };
-
-
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -268,6 +242,10 @@ What would you like to explore today?`,
         {/* Responsive Floating Action Button */}
         <Tooltip title={isMobile ? "AI Assistant" : ""} arrow placement="right">
           <Fab
+            component={motion.button}
+            whileHover={{ scale: isMobile ? 1.05 : 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            color="primary"
             onClick={() => setOpen(true)}
             size={isMobile ? "medium" : "large"}
             sx={{
@@ -278,7 +256,6 @@ What would you like to explore today?`,
               '&:hover': {
                 background: 'linear-gradient(45deg, #5a67d8, #6b46c1)',
                 boxShadow: '0 12px 35px rgba(102, 126, 234, 0.6)',
-                transform: 'scale(1.05)',
               },
             }}
           >
@@ -290,8 +267,6 @@ What would you like to explore today?`,
       {/* Responsive AI Assistant Dialog */}
       <Dialog
         open={open}
-        TransitionComponent={Transition}
-        keepMounted
         onClose={() => setOpen(false)}
         fullScreen={fullscreen || isMobile}
         maxWidth={isMobile ? "xs" : isTablet ? "sm" : "md"}
@@ -343,41 +318,17 @@ What would you like to explore today?`,
                 variant={isMobile ? "h6" : "h5"} 
                 sx={{ fontWeight: 700, mb: 0.5 }}
               >
-                AI Learning Assistant
+                AI Assistant
               </Typography>
-              {aiServiceStatus === 'overloaded' && (
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'rgba(255,255,255,0.9)', 
-                    fontSize: { xs: '0.7rem', sm: '0.8rem' }
-                  }}
-                >
-                  ⚠️ High demand - responses may be delayed
-                </Typography>
-              )}
-              {aiServiceStatus === 'available' && (
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'rgba(255,255,255,0.9)', 
-                    fontSize: { xs: '0.7rem', sm: '0.8rem' }
-                  }}
-                >
-                  ✅ Ready to help you learn
-                </Typography>
-              )}
-              {aiServiceStatus === 'unknown' && (
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'rgba(255,255,255,0.9)', 
-                    fontSize: { xs: '0.7rem', sm: '0.8rem' }
-                  }}
-                >
-                  🤖 Your personal study companion
-                </Typography>
-              )}
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: 'rgba(255,255,255,0.9)', 
+                  fontSize: { xs: '0.7rem', sm: '0.8rem' }
+                }}
+              >
+                🤖 Your personal platform guide
+              </Typography>
             </Box>
           </Box>
           <Box sx={{ position: 'relative', zIndex: 1 }}>
@@ -535,31 +486,31 @@ What would you like to explore today?`,
                   size="small"
                   variant="outlined"
                   startIcon={<Help />}
-                  onClick={() => setInputText('How do I use this platform?')}
+                  onClick={() => setInputText('How do I get started?')}
                   disabled={loading}
                   sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
                 >
-                  Platform Help
+                  Get Started
                 </Button>
                 <Button
                   size="small"
                   variant="outlined"
                   startIcon={<Lightbulb />}
-                  onClick={() => setInputText('Explain the main concepts')}
+                  onClick={() => setInputText('Show me trending courses')}
                   disabled={loading}
                   sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
                 >
-                  Explain Concepts
+                  Courses
                 </Button>
                 <Button
                   size="small"
                   variant="outlined"
                   startIcon={<Psychology />}
-                  onClick={() => setInputText('Give me study tips and strategies')}
+                  onClick={() => setInputText('Help with job search')}
                   disabled={loading}
                   sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
                 >
-                  Study Tips
+                  Jobs
                 </Button>
               </Box>
             </Box>
@@ -571,7 +522,7 @@ What would you like to explore today?`,
                   fullWidth
                   multiline
                   maxRows={3}
-                  placeholder="Ask me anything about your learning..."
+                  placeholder="Ask me anything about our platform..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyPress={handleKeyPress}

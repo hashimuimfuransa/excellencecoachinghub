@@ -70,6 +70,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useQuery } from 'react-query';
 import { courseService } from '../../services/courseService';
 import FloatingContact from '../../components/FloatingContact';
+import FloatingAIAssistant from '../../components/FloatingAIAssistant';
 import HomeLearningInterestPopup from '../../components/Home/HomeLearningInterestPopup';
 
 // Ultra-Modern Hero Section with Contemporary Design
@@ -616,7 +617,7 @@ const CategoriesSection: React.FC = () => {
       color: '#a8edea',
       gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
       count: 'All levels',
-      description: 'Primary, Secondary, University, Exams, Research'
+      description: 'Primary, Secondary, University, Nursery, Exams, Research'
     },
     {
       name: 'Language Coaching',
@@ -3403,6 +3404,7 @@ const HomePage: React.FC = () => {
       <FAQSection />
       <CTASection />
       <FloatingContact />
+      <FloatingAIAssistant />
       
       {/* Learning Interest Popup */}
       <HomeLearningInterestPopup

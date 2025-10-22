@@ -65,6 +65,7 @@ import PublicLayout from '../layouts/PublicLayout';
 import { jobService } from '../services/jobService';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
+import FloatingAIAssistant from '../components/FloatingAIAssistant';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -2701,6 +2702,7 @@ const HomePage: React.FC = () => {
       </Container>
       </Box>
       <FloatingContact />
+      <FloatingAIAssistant />
     </PublicLayout>
   );
 };

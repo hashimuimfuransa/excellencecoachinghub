@@ -24,6 +24,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const schema = yup.object({
   email: yup
@@ -39,6 +40,7 @@ interface ForgotPasswordFormData {
 const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const { forgotPassword } = useAuth();
+  const { isDarkMode } = useThemeContext();
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
@@ -149,7 +151,9 @@ const ForgotPasswordPage: React.FC = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)'
+          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         display: 'flex',
         alignItems: 'center',
         py: 4,
@@ -168,6 +172,13 @@ const ForgotPasswordPage: React.FC = () => {
               borderRadius: 3,
               position: 'relative',
               overflow: 'hidden',
+              boxShadow: isDarkMode 
+                ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+                : '0 20px 60px rgba(0, 0, 0, 0.2)',
+              background: isDarkMode 
+                ? 'rgba(26, 26, 46, 0.95)'
+                : 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(10px)',
             }}
           >
             {/* Background decoration */}
@@ -178,9 +189,11 @@ const ForgotPasswordPage: React.FC = () => {
                 right: -50,
                 width: 150,
                 height: 150,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
+                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 borderRadius: '50%',
-                opacity: 0.1,
+                opacity: isDarkMode ? 0.15 : 0.1,
               }}
             />
 

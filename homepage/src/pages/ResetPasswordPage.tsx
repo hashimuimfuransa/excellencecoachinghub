@@ -25,6 +25,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const schema = yup.object({
   password: yup
@@ -50,6 +51,7 @@ const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { resetPassword } = useAuth();
+  const { isDarkMode } = useThemeContext();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -108,7 +110,9 @@ const ResetPasswordPage: React.FC = () => {
       <Box
         sx={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: isDarkMode 
+            ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)'
+            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           display: 'flex',
           alignItems: 'center',
           py: 4,
@@ -126,6 +130,13 @@ const ResetPasswordPage: React.FC = () => {
                 p: { xs: 3, md: 5 },
                 borderRadius: 3,
                 textAlign: 'center',
+                boxShadow: isDarkMode 
+                  ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+                  : '0 20px 60px rgba(0, 0, 0, 0.2)',
+                background: isDarkMode 
+                  ? 'rgba(26, 26, 46, 0.95)'
+                  : 'rgba(255, 255, 255, 0.98)',
+                backdropFilter: 'blur(10px)',
               }}
             >
               <Avatar
@@ -173,7 +184,9 @@ const ResetPasswordPage: React.FC = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)'
+          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         display: 'flex',
         alignItems: 'center',
         py: 4,
@@ -192,6 +205,13 @@ const ResetPasswordPage: React.FC = () => {
               borderRadius: 3,
               position: 'relative',
               overflow: 'hidden',
+              boxShadow: isDarkMode 
+                ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+                : '0 20px 60px rgba(0, 0, 0, 0.2)',
+              background: isDarkMode 
+                ? 'rgba(26, 26, 46, 0.95)'
+                : 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(10px)',
             }}
           >
             {/* Background decoration */}

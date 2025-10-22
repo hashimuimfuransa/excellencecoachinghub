@@ -528,7 +528,7 @@ const ApplicationManagement: React.FC = () => {
                         </Avatar>
                         <Box>
                           <Typography variant="body2" fontWeight="medium">
-                            {application.applicantName}
+                            {application.applicant}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {application.applicantEmail}
@@ -541,7 +541,7 @@ const ApplicationManagement: React.FC = () => {
                         {application.jobTitle}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Job ID: {application.jobId}
+                        Job ID: {application.job}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -665,7 +665,7 @@ const ApplicationManagement: React.FC = () => {
                     <Stack spacing={2}>
                       <Box>
                         <Typography variant="body2" color="text.secondary">Name</Typography>
-                        <Typography variant="h6">{selectedApplication.applicantName}</Typography>
+                        <Typography variant="h6">{selectedApplication.applicant}</Typography>
                       </Box>
                       <Box>
                         <Typography variant="body2" color="text.secondary">Email</Typography>

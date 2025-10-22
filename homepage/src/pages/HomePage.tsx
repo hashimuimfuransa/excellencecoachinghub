@@ -20,6 +20,7 @@ import PlatformLinksSection from '../components/PlatformLinksSection';
 import TestimonialsSection from '../components/TestimonialsSection';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
+import TrendingCoursesSection from '../components/TrendingCoursesSection';
 import FloatingContact from '../components/FloatingContact';
 
 const HomePage: React.FC = () => {
@@ -65,8 +66,8 @@ const HomePage: React.FC = () => {
       {/* About Section */}
       <AboutSection />
 
-      {/* Services Section */}
-      <ServicesSection />
+      {/* Services Section - Only show when user is not logged in */}
+      {!user && <ServicesSection />}
 
       {/* Trending Jobs Section */}
       <TrendingJobsSection />
@@ -76,6 +77,9 @@ const HomePage: React.FC = () => {
 
       {/* Platform Links Section */}
       <PlatformLinksSection />
+
+      {/* Trending Courses Section */}
+      <TrendingCoursesSection />
 
       {/* Testimonials Section */}
       <TestimonialsSection />

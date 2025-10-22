@@ -93,7 +93,8 @@ const Navbar: React.FC = () => {
     { label: 'About', action: () => scrollToSection('about'), icon: <Info /> },
     { label: 'Services', action: () => scrollToSection('services'), icon: <Handyman /> },
     { label: 'How It Works', action: () => scrollToSection('how-it-works'), icon: <Work /> },
-    { label: 'Platforms', action: () => scrollToSection('platforms'), icon: <Handyman /> },
+    { label: 'Elearning', action: () => window.open('https://elearning.excellencecoachinghub.com', '_blank'), icon: <Handyman /> },
+    { label: 'Job Portal', action: () => window.open('https://exjobnet.com', '_blank'), icon: <Work /> },
     { label: 'Trending Jobs', action: () => scrollToSection('trending-jobs'), icon: <Work /> },
     { label: 'Testimonials', action: () => scrollToSection('testimonials'), icon: <Star /> },
   ];

@@ -33,6 +33,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const schema = yup.object({
   firstName: yup
@@ -80,7 +81,8 @@ interface RegisterFormData {
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const { register, loginWithGoogle } = useAuth();
+  const { register, loginWithGoogle, user } = useAuth();
+  const { isDarkMode } = useThemeContext();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -103,6 +105,15 @@ const RegisterPage: React.FC = () => {
     },
   });
 
+  const getRedirectUrl = (userRole: string) => {
+    if (userRole === 'student' || userRole === 'teacher') {
+      return 'https://elearning.excellencecoachinghub.com';
+    } else if (userRole === 'job_seeker' || userRole === 'employer') {
+      return 'https://exjobnet.com';
+    }
+    return '/dashboard'; // fallback
+  };
+
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setLoading(true);
@@ -114,7 +125,16 @@ const RegisterPage: React.FC = () => {
         role: data.role,
       });
       toast.success('Registration successful! Welcome to Excellence Coaching Hub.');
-      navigate('/dashboard'); // Redirect to dashboard after successful registration
+      
+      // Redirect based on user role - user will be updated in context after registration
+      setTimeout(() => {
+        const redirectUrl = getRedirectUrl(data.role);
+        if (redirectUrl.startsWith('http')) {
+          window.location.href = redirectUrl;
+        } else {
+          navigate(redirectUrl);
+        }
+      }, 100); // Small delay to ensure user state is updated
     } catch (error: any) {
       toast.error(error.message || 'Registration failed. Please try again.');
     } finally {
@@ -139,7 +159,15 @@ const RegisterPage: React.FC = () => {
         });
       } else {
         toast.success('Welcome back to Excellence Coaching Hub!');
-        navigate('/dashboard');
+        // Redirect based on user role
+        setTimeout(() => {
+          const redirectUrl = getRedirectUrl(user?.role || '');
+          if (redirectUrl.startsWith('http')) {
+            window.location.href = redirectUrl;
+          } else {
+            navigate(redirectUrl);
+          }
+        }, 100);
       }
     } catch (error: any) {
       console.error('Google registration error:', error);
@@ -174,7 +202,9 @@ const RegisterPage: React.FC = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)'
+          : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
         display: 'flex',
         alignItems: 'center',
         py: 4,
@@ -192,7 +222,9 @@ const RegisterPage: React.FC = () => {
           width: '300px',
           height: '300px',
           borderRadius: '50%',
-          background: 'rgba(255, 255, 255, 0.05)',
+          background: isDarkMode 
+            ? 'rgba(74, 222, 128, 0.1)'
+            : 'rgba(255, 255, 255, 0.05)',
           filter: 'blur(40px)',
           zIndex: 0,
         }}
@@ -216,7 +248,9 @@ const RegisterPage: React.FC = () => {
           width: '250px',
           height: '250px',
           borderRadius: '50%',
-          background: 'rgba(255, 107, 107, 0.1)',
+          background: isDarkMode 
+            ? 'rgba(255, 255, 255, 0.05)'
+            : 'rgba(255, 107, 107, 0.1)',
           filter: 'blur(30px)',
           zIndex: 0,
         }}
@@ -244,8 +278,12 @@ const RegisterPage: React.FC = () => {
               borderRadius: 3,
               position: 'relative',
               overflow: 'hidden',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.2)',
-              background: 'rgba(255, 255, 255, 0.98)',
+              boxShadow: isDarkMode 
+                ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+                : '0 20px 60px rgba(0, 0, 0, 0.2)',
+              background: isDarkMode 
+                ? 'rgba(26, 26, 46, 0.95)'
+                : 'rgba(255, 255, 255, 0.98)',
               backdropFilter: 'blur(10px)',
               zIndex: 1,
             }}
@@ -267,9 +305,11 @@ const RegisterPage: React.FC = () => {
                 right: -80,
                 width: 200,
                 height: 200,
-                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
+                  : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                 borderRadius: '50%',
-                opacity: 0.1,
+                opacity: isDarkMode ? 0.15 : 0.1,
               }}
             />
 

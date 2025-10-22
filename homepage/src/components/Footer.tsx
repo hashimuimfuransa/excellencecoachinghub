@@ -30,9 +30,11 @@ import {
   Gavel
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const Footer: React.FC = () => {
   const navigate = useNavigate();
+  const { isDarkMode } = useThemeContext();
 
   const footerSections = [
     {
@@ -81,7 +83,9 @@ const Footer: React.FC = () => {
     <Box
       component="footer"
       sx={{
-        background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)'
+          : 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
         color: 'white',
         mt: 'auto',
         pt: 6,
@@ -105,10 +109,10 @@ const Footer: React.FC = () => {
                   WebkitTextFillColor: 'transparent'
                 }}
               >
-                ExJobNet
+                Excellence Coaching Hub
               </Typography>
               <Typography variant="body1" sx={{ mb: 3, opacity: 0.9, lineHeight: 1.6 }}>
-                ExJobNet is a dynamic career platform combining the best of professional networking and job readiness—offering features like personalized profiles, interactive job preparation tools, live coaching, and secure certifications to empower both individuals and organizations in Africa's job ecosystem.
+                Excellence Coaching Hub is a comprehensive platform combining the best of professional networking, job readiness, and educational excellence—offering features like personalized profiles, interactive job preparation tools, live coaching, comprehensive learning programs, and secure certifications to empower both individuals and organizations in Africa's digital ecosystem.
               </Typography>
               
               {/* Social Links */}

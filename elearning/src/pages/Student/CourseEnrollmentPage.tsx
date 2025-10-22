@@ -29,6 +29,7 @@ import {
 import {
   School,
   Person,
+  People,
   Star,
   Search,
   FilterList,
@@ -41,7 +42,8 @@ import {
   LocalFireDepartment,
   Celebration,
   ArrowBack,
-  Dashboard
+  Dashboard,
+  AccessTime
 } from '@mui/icons-material';
 import { courseService, ICourse } from '../../services/courseService';
 import { enrollmentService } from '../../services/enrollmentService';

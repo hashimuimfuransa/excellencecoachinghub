@@ -24,6 +24,7 @@ import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 interface RoleOption {
   id: string;
@@ -38,9 +39,19 @@ const RoleSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { completeGoogleRegistration } = useAuth();
+  const { isDarkMode } = useThemeContext();
   
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [loading, setLoading] = useState(false);
+
+  const getRedirectUrl = (userRole: string) => {
+    if (userRole === 'student' || userRole === 'teacher') {
+      return 'https://elearning.excellencecoachinghub.com';
+    } else if (userRole === 'job_seeker' || userRole === 'employer') {
+      return 'https://exjobnet.com';
+    }
+    return '/dashboard'; // fallback
+  };
 
   // Get user data from navigation state (passed from Google auth)
   const googleUserData = location.state?.googleUserData;
@@ -73,8 +84,8 @@ const RoleSelectionPage: React.FC = () => {
       ]
     },
     {
-      id: 'professional',
-      title: 'Professional',
+      id: 'job_seeker',
+      title: 'Job Seeker',
       description: 'Enhance your career and find opportunities',
       icon: <Work sx={{ fontSize: 40 }} />,
       color: '#4caf50',
@@ -123,7 +134,14 @@ const RoleSelectionPage: React.FC = () => {
       await completeGoogleRegistration(googleUserData, selectedRole);
 
       toast.success(`Welcome to Excellence Coaching Hub! Your ${selectedRole} account has been created.`);
-      navigate('/dashboard');
+      
+      // Redirect based on selected role
+      const redirectUrl = getRedirectUrl(selectedRole);
+      if (redirectUrl.startsWith('http')) {
+        window.location.href = redirectUrl;
+      } else {
+        navigate(redirectUrl);
+      }
     } catch (error: any) {
       console.error('Role selection error:', error);
       toast.error(error.message || 'Failed to complete registration. Please try again.');
@@ -148,7 +166,9 @@ const RoleSelectionPage: React.FC = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)'
+          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         py: 4,
         position: 'relative',
         overflow: 'hidden',
@@ -164,7 +184,9 @@ const RoleSelectionPage: React.FC = () => {
           width: '200px',
           height: '200px',
           borderRadius: '50%',
-          background: 'rgba(255, 255, 255, 0.1)',
+          background: isDarkMode 
+            ? 'rgba(74, 222, 128, 0.1)'
+            : 'rgba(255, 255, 255, 0.1)',
           filter: 'blur(40px)',
           zIndex: 0,
         }}
@@ -192,8 +214,12 @@ const RoleSelectionPage: React.FC = () => {
               borderRadius: 3,
               position: 'relative',
               overflow: 'hidden',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.2)',
-              background: 'rgba(255, 255, 255, 0.98)',
+              boxShadow: isDarkMode 
+                ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+                : '0 20px 60px rgba(0, 0, 0, 0.2)',
+              background: isDarkMode 
+                ? 'rgba(26, 26, 46, 0.95)'
+                : 'rgba(255, 255, 255, 0.98)',
               backdropFilter: 'blur(10px)',
               zIndex: 1,
             }}

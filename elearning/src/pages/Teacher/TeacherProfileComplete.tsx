@@ -56,6 +56,7 @@ const TeacherProfileComplete: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
 
   // Form data
   const [formData, setFormData] = useState<IUpdateTeacherProfileData>({
@@ -120,6 +121,21 @@ const TeacherProfileComplete: React.FC = () => {
     calculateCompletionPercentage();
   }, [formData, cvFile, profilePicture]);
 
+  // Auto-save form data to localStorage to prevent data loss
+  useEffect(() => {
+    if (formData && Object.keys(formData).length > 0) {
+      setAutoSaveStatus('saving');
+      try {
+        localStorage.setItem('teacherProfileFormData', JSON.stringify(formData));
+        setAutoSaveStatus('saved');
+        console.log('💾 Form data auto-saved to localStorage');
+      } catch (error) {
+        console.warn('Failed to save form data to localStorage:', error);
+        setAutoSaveStatus('error');
+      }
+    }
+  }, [formData]);
+
 
 
   const loadProfile = async () => {
@@ -128,11 +144,72 @@ const TeacherProfileComplete: React.FC = () => {
       const profileData = await teacherProfileService.getMyProfile();
       console.log('🔍 Profile loaded:', profileData);
       console.log('🔍 CV Document:', profileData.cvDocument);
+      console.log('🔍 Profile Status:', profileData.profileStatus);
+      console.log('🔍 Profile Data Keys:', Object.keys(profileData));
+      console.log('🔍 Specialization:', profileData.specialization);
+      console.log('🔍 Bio:', profileData.bio);
+      console.log('🔍 Experience:', profileData.experience);
       
       setProfile(profileData);
+
+      // Try to restore form data from localStorage first
+      let savedFormData = null;
+      try {
+        const savedData = localStorage.getItem('teacherProfileFormData');
+        if (savedData) {
+          savedFormData = JSON.parse(savedData);
+          console.log('📱 Restored form data from localStorage:', savedFormData);
+        }
+      } catch (error) {
+        console.warn('Failed to parse saved form data:', error);
+      }
       
-      // Populate form with existing data
-      setFormData({
+      // For pending/approved profiles, prioritize server data over localStorage
+      // For incomplete profiles, use localStorage if available (for auto-save feature)
+      const shouldUseServerData = profileData.profileStatus === 'pending' || profileData.profileStatus === 'approved';
+      
+      // Clear localStorage for pending/approved profiles to avoid confusion
+      if (shouldUseServerData && savedFormData) {
+        try {
+          localStorage.removeItem('teacherProfileFormData');
+          console.log('🧹 Cleared localStorage for pending/approved profile');
+        } catch (error) {
+          console.warn('Failed to clear localStorage:', error);
+        }
+      }
+      
+      // Use server data if profile is pending/approved, otherwise use saved form data if available
+      const baseFormData = shouldUseServerData ? {
+        phone: profileData.phone || '',
+        dateOfBirth: profileData.dateOfBirth ? profileData.dateOfBirth.split('T')[0] : '',
+        nationalId: profileData.nationalId || '',
+        address: {
+          province: profileData.address?.province || '',
+          district: profileData.address?.district || '',
+          sector: profileData.address?.sector || '',
+          cell: profileData.address?.cell || '',
+          village: profileData.address?.village || '',
+          country: profileData.address?.country || 'Rwanda'
+        },
+        specialization: profileData.specialization || [],
+        bio: profileData.bio || '',
+        experience: profileData.experience || 0,
+        education: profileData.education || [],
+        certifications: profileData.certifications || [],
+        skills: profileData.skills || [],
+        languages: profileData.languages || [],
+        teachingAreas: profileData.teachingAreas || [],
+        preferredLevels: profileData.preferredLevels || [],
+        hourlyRate: profileData.hourlyRate || 0,
+        paymentType: profileData.paymentType || 'per_hour',
+        monthlyRate: profileData.monthlyRate || 0,
+        socialLinks: {
+          linkedin: profileData.socialLinks?.linkedin || '',
+          github: profileData.socialLinks?.github || '',
+          portfolio: profileData.socialLinks?.portfolio || '',
+          website: profileData.socialLinks?.website || ''
+        }
+      } : (savedFormData || {
         phone: profileData.phone || '',
         dateOfBirth: profileData.dateOfBirth ? profileData.dateOfBirth.split('T')[0] : '',
         nationalId: profileData.nationalId || '',
@@ -163,6 +240,10 @@ const TeacherProfileComplete: React.FC = () => {
           website: profileData.socialLinks?.website || ''
         }
       });
+
+      setFormData(baseFormData);
+      console.log('🔍 Form data set:', baseFormData);
+      console.log('🔍 Using server data:', shouldUseServerData);
 
       if (profileData.profilePicture) {
         setProfilePicturePreview(profileData.profilePicture);
@@ -294,7 +375,18 @@ const TeacherProfileComplete: React.FC = () => {
         console.log('✅ CV uploaded successfully');
         setSuccess('CV uploaded successfully');
         setCvFile(null);
-        await loadProfile(); // Reload to get updated CV info
+        
+        // Update profile state with CV info without reloading entire form
+        if (profile) {
+          setProfile(prev => prev ? {
+            ...prev,
+            cvDocument: response.data?.cvDocument || prev.cvDocument
+          } : null);
+        }
+        
+        // Clear the file input
+        const input = document.getElementById('cv-upload') as HTMLInputElement;
+        if (input) input.value = '';
       } else {
         console.error('❌ CV upload failed:', response.error);
         setError(response.error || 'Failed to upload CV');
@@ -380,8 +472,20 @@ const TeacherProfileComplete: React.FC = () => {
       const response = await teacherProfileService.submitProfile();
       if (response.success) {
         setSuccess('Profile submitted for review successfully! You will receive an email confirmation.');
+        
+        // Clear saved form data since profile is now submitted
+        try {
+          localStorage.removeItem('teacherProfileFormData');
+          console.log('🧹 Cleared saved form data after successful submission');
+        } catch (error) {
+          console.warn('Failed to clear saved form data:', error);
+        }
+        
+        // Reload profile to get updated status
+        await loadProfile();
+        
         setTimeout(() => {
-          navigate('/dashboard/teacher/profile/complete');
+          navigate('/teacher/profile-completion');
         }, 2000);
       } else {
         setError(response.error || 'Failed to submit profile');
@@ -416,11 +520,37 @@ const TeacherProfileComplete: React.FC = () => {
             </Box>
           }
           action={
-            <Chip 
-              label={`${completionPercentage}% Complete`}
-              color={completionPercentage === 100 ? 'success' : 'primary'}
-              variant="outlined"
-            />
+            <Box display="flex" alignItems="center" gap={1}>
+              <Chip 
+                label={`${completionPercentage}% Complete`}
+                color={completionPercentage === 100 ? 'success' : 'primary'}
+                variant="outlined"
+              />
+              {autoSaveStatus === 'saved' && (
+                <Chip 
+                  label="Auto-saved"
+                  color="success"
+                  size="small"
+                  icon={<Check />}
+                />
+              )}
+              {autoSaveStatus === 'saving' && (
+                <Chip 
+                  label="Saving..."
+                  color="info"
+                  size="small"
+                  icon={<CircularProgress size={12} />}
+                />
+              )}
+              {autoSaveStatus === 'error' && (
+                <Chip 
+                  label="Save failed"
+                  color="error"
+                  size="small"
+                  icon={<Warning />}
+                />
+              )}
+            </Box>
           }
           sx={{ pb: 1 }}
         />
@@ -450,6 +580,23 @@ const TeacherProfileComplete: React.FC = () => {
               </Box>
             </Alert>
           )}
+
+          {/* Auto-save info */}
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              💾 <strong>Auto-save enabled:</strong> Your form data is automatically saved as you type, so you won't lose your progress even if the page refreshes or you navigate away.
+              {profile?.profileStatus === 'pending' && (
+                <Box component="span" sx={{ display: 'block', mt: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                  📋 Showing your submitted profile data (Status: Pending Review)
+                </Box>
+              )}
+              {profile?.profileStatus === 'approved' && (
+                <Box component="span" sx={{ display: 'block', mt: 1, fontWeight: 'bold', color: 'success.main' }}>
+                  ✅ Showing your approved profile data (Status: Approved)
+                </Box>
+              )}
+            </Typography>
+          </Alert>
 
           {/* Step Navigation */}
           <Box sx={{ mb: { xs: 2, md: 4 } }}>

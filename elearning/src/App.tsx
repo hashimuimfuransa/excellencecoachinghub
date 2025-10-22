@@ -7,6 +7,7 @@ import Layout from './components/Layout/Layout';
 import PublicLayout from './components/Layout/PublicLayout';
 import CourseManagementLayout from './components/Layout/CourseManagementLayout';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
+import TeacherProfileGuard from './components/Auth/TeacherProfileGuard';
 import RouteHandler from './components/Router/RouteHandler';
 import StudentDashboardRedirect from './components/Auth/StudentDashboardRedirect';
 
@@ -28,6 +29,7 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import TeacherDashboard from './pages/Teacher/TeacherDashboard';
 import TeacherProfile from './pages/Teacher/TeacherProfile';
 import TeacherProfileComplete from './pages/Teacher/TeacherProfileComplete';
+import TeacherProfileCompletionPage from './pages/Teacher/TeacherProfileCompletionPage';
 import TeacherCourses from './pages/Teacher/TeacherCourses';
 import CourseManagement from './pages/Teacher/CourseManagement';
 import MaterialView from './pages/Student/MaterialView';
@@ -185,6 +187,26 @@ const App: React.FC = () => {
         <Route path="terms" element={<div>Terms of Service - Coming Soon</div>} />
       </Route>
 
+      {/* Standalone Teacher Profile Completion Route */}
+      <Route 
+        path="/teacher/profile-completion" 
+        element={
+          <ProtectedRoute requiredRole={UserRole.TEACHER}>
+            <TeacherProfileCompletionPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Standalone Teacher Profile Complete Route */}
+      <Route 
+        path="/teacher/profile-complete" 
+        element={
+          <ProtectedRoute requiredRole={UserRole.TEACHER}>
+            <TeacherProfileComplete />
+          </ProtectedRoute>
+        } 
+      />
+
       {/* Exam routes with dedicated exam layout */}
       <Route path="past-papers/:id/take" element={<TakePastPaperPage />} />
 
@@ -230,7 +252,9 @@ const App: React.FC = () => {
           path="teacher"
           element={
             <ProtectedRoute requiredRole={UserRole.TEACHER}>
-              <Outlet />
+              <TeacherProfileGuard>
+                <Outlet />
+              </TeacherProfileGuard>
             </ProtectedRoute>
           }
         >
@@ -344,7 +368,9 @@ const App: React.FC = () => {
         path="/video-session/teacher/:sessionId"
         element={
           <ProtectedRoute requiredRole={UserRole.TEACHER}>
-            <LiveSessionRoom />
+            <TeacherProfileGuard>
+              <LiveSessionRoom />
+            </TeacherProfileGuard>
           </ProtectedRoute>
         }
       />
@@ -518,7 +544,9 @@ const App: React.FC = () => {
         path="/teacher/notes-preview/:noteId"
         element={
           <ProtectedRoute requiredRole={UserRole.TEACHER}>
-            <NotesPreviewPage />
+            <TeacherProfileGuard>
+              <NotesPreviewPage />
+            </TeacherProfileGuard>
           </ProtectedRoute>
         }
       />

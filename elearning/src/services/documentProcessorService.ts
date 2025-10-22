@@ -97,7 +97,7 @@ class DocumentProcessorService {
       });
 
       const formData = new FormData();
-      formData.append('document', file);
+      formData.append('file', file); // Changed from 'document' to 'file' to match backend expectation
       formData.append('title', title);
       
       if (description) {
@@ -116,7 +116,7 @@ class DocumentProcessorService {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 120000, // 2 minutes timeout for processing
+        timeout: 60000, // Reduced to 1 minute timeout for faster processing
       });
 
       console.log('✅ Document processed successfully:', response.data);

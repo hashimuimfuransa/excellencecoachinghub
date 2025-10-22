@@ -379,12 +379,12 @@ export class DocumentProcessorService {
    * Create structured notes from extracted text - preserving complete original content
    */
   private async createStructuredNotes(text: string, fileName: string): Promise<StructuredNotes> {
-    // First, try to create structured notes with complete content preservation
+    // Use faster processing without AI for better performance
     try {
       return await this.createStructuredNotesWithFullContent(text, fileName);
     } catch (error) {
-      console.error('Full content preservation failed, falling back to AI processing:', error);
-      return await this.createStructuredNotesWithAI(text, fileName);
+      console.error('Full content preservation failed, using fallback processing:', error);
+      return await this.createStructuredNotesFallback(text, fileName);
     }
   }
 
@@ -397,8 +397,8 @@ export class DocumentProcessorService {
     // Split text into logical sections based on common patterns
     const sections = this.splitTextIntoLogicalSections(text);
     
-    // Use AI to improve section titles
-    const improvedSections = await this.improveSectionTitlesWithAI(sections);
+    // Skip AI processing for faster performance - use original section titles
+    const improvedSections = sections; // Use original sections without AI improvement
     
     // Create title from filename
     const title = this.extractTitleFromFileName(fileName);
@@ -440,6 +440,117 @@ export class DocumentProcessorService {
     });
     
     return structuredNotes;
+  }
+
+  /**
+   * Create structured notes using fast fallback processing (no AI)
+   */
+  private async createStructuredNotesFallback(text: string, fileName: string): Promise<StructuredNotes> {
+    console.log('📝 Creating structured notes with fast fallback processing...');
+    
+    // Create title from filename
+    const title = this.extractTitleFromFileName(fileName);
+    
+    // Create a simple summary (first 200 characters)
+    const summary = text.substring(0, 200) + (text.length > 200 ? '...' : '');
+    
+    // Split text into simple sections
+    const sections = this.splitTextIntoSimpleSections(text);
+    
+    // Extract basic key points
+    const keyPoints = this.extractBasicKeyPoints(text);
+    
+    // Calculate metadata
+    const wordCount = text.split(/\s+/).length;
+    const estimatedReadingTime = Math.ceil(wordCount / 225);
+    const difficulty = this.assessDifficulty(text);
+    const topics = this.extractBasicTopics(text);
+    
+    const structuredNotes: StructuredNotes = {
+      title,
+      summary,
+      keyPoints,
+      sections: sections.map((section, index) => ({
+        title: section.title,
+        content: section.content,
+        keyPoints: this.extractBasicKeyPoints(section.content),
+        order: index + 1
+      })),
+      metadata: {
+        totalSections: sections.length,
+        estimatedReadingTime,
+        difficulty,
+        topics
+      }
+    };
+    
+    console.log(`✅ Fast fallback processing complete: ${sections.length} sections, ${keyPoints.length} key points`);
+    return structuredNotes;
+  }
+
+  /**
+   * Split text into simple sections (faster than logical splitting)
+   */
+  private splitTextIntoSimpleSections(text: string): Array<{title: string, content: string}> {
+    const sections: Array<{title: string, content: string}> = [];
+    
+    // Split by double line breaks or common section markers
+    const parts = text.split(/\n\s*\n/).filter(part => part.trim().length > 50);
+    
+    parts.forEach((part, index) => {
+      const lines = part.trim().split('\n');
+      const title = lines[0] || `Section ${index + 1}`;
+      const content = part.trim();
+      
+      sections.push({
+        title: title.length > 100 ? title.substring(0, 100) + '...' : title,
+        content
+      });
+    });
+    
+    return sections.length > 0 ? sections : [{
+      title: 'Document Content',
+      content: text
+    }];
+  }
+
+  /**
+   * Extract basic key points (faster than AI processing)
+   */
+  private extractBasicKeyPoints(text: string): string[] {
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    const keyPoints: string[] = [];
+    
+    // Take every 5th sentence as a key point, up to 10 points
+    for (let i = 0; i < sentences.length && keyPoints.length < 10; i += 5) {
+      const sentence = sentences[i]?.trim();
+      if (sentence && sentence.length > 20 && sentence.length < 200) {
+        keyPoints.push(sentence);
+      }
+    }
+    
+    return keyPoints.length > 0 ? keyPoints : ['Document contains important information that should be reviewed carefully.'];
+  }
+
+  /**
+   * Extract basic topics (faster than AI processing)
+   */
+  private extractBasicTopics(text: string): string[] {
+    const words = text.toLowerCase().split(/\s+/);
+    const wordCount: {[key: string]: number} = {};
+    
+    // Count common educational words
+    words.forEach(word => {
+      if (word.length > 4 && !['this', 'that', 'with', 'from', 'they', 'have', 'been', 'were', 'said', 'each', 'which', 'their', 'time', 'will', 'about', 'there', 'could', 'other', 'after', 'first', 'well', 'also', 'where', 'much', 'some', 'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many', 'over', 'such', 'take', 'than', 'them', 'these', 'think', 'through', 'being', 'before', 'below', 'between', 'during', 'follow', 'found', 'going', 'having', 'little', 'might', 'never', 'often', 'place', 'right', 'since', 'still', 'under', 'until', 'while', 'world', 'years'].includes(word)) {
+        wordCount[word] = (wordCount[word] || 0) + 1;
+      }
+    });
+    
+    // Return top 5 most frequent words as topics
+    return Object.entries(wordCount)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([word]) => word);
   }
 
   /**

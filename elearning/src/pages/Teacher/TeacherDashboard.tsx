@@ -16,7 +16,11 @@ import {
   ListItemText,
   ListItemAvatar,
   Avatar,
-  Divider
+  Divider,
+  IconButton,
+  LinearProgress,
+  Stack,
+  alpha
 } from '@mui/material';
 import {
   Person,
@@ -32,7 +36,17 @@ import {
   School,
   PendingActions,
   Settings,
-  Visibility
+  Visibility,
+  Add,
+  Analytics,
+  VideoCall,
+  Grade,
+  ManageAccounts,
+  Notifications,
+  MoreVert,
+  ArrowForward,
+  TrendingDown,
+  TrendingFlat
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService } from '../../services/courseService';
@@ -85,18 +99,40 @@ const TeacherDashboardContent: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress size={60} />
+      <Box 
+        display="flex" 
+        justifyContent="center" 
+        alignItems="center" 
+        minHeight="60vh"
+        sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: 3,
+          mx: 2
+        }}
+      >
+        <Box textAlign="center">
+          <CircularProgress size={60} sx={{ color: 'white', mb: 2 }} />
+          <Typography variant="h6" sx={{ color: 'white' }}>
+            Loading your dashboard...
+          </Typography>
         </Box>
-      </Container>
+      </Box>
     );
   }
 
   if (error) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: 2,
+            borderRadius: 2,
+            '& .MuiAlert-message': {
+              fontSize: '1rem'
+            }
+          }}
+        >
           {error}
         </Alert>
         <Button 
@@ -106,8 +142,9 @@ const TeacherDashboardContent: React.FC = () => {
             setRetryCount(0);
             setLoading(true);
           }}
+          sx={{ borderRadius: 2 }}
         >
-          Retry
+          Try Again
         </Button>
       </Container>
     );
@@ -130,37 +167,65 @@ const TeacherDashboardContent: React.FC = () => {
   const recentActivity = dashboardData?.recentActivity || [];
   const courses = dashboardData?.courses || [];
 
-  return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Welcome Section */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Welcome back, {user?.firstName}!
-        </Typography>
-        <Typography variant="h6" color="text.secondary">
-          Here's what's happening with your teaching journey
-        </Typography>
-      </Box>
+  // Calculate trend indicators
+  const getTrendIcon = (value: number, previousValue: number = 0) => {
+    if (value > previousValue) return <TrendingUp sx={{ color: 'success.main' }} />;
+    if (value < previousValue) return <TrendingDown sx={{ color: 'error.main' }} />;
+    return <TrendingFlat sx={{ color: 'text.secondary' }} />;
+  };
 
-      {/* Welcome Card */}
-      <Card elevation={2} sx={{ mb: 4 }}>
-        <CardContent sx={{ p: 3 }}>
+  return (
+    <Box sx={{ 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      py: 3
+    }}>
+      <Container maxWidth="xl">
+        {/* Modern Header */}
+      <Box sx={{ mb: 4 }}>
+          <Box sx={{ 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 3,
+            p: 4,
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '200px',
+              height: '200px',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '50%',
+              transform: 'translate(50%, -50%)'
+            }
+          }}>
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={8}>
-              <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <Person color="primary" sx={{ fontSize: 32 }} />
-                <Typography variant="h5" component="h2">
-                  Welcome to Your Teaching Dashboard
+                <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
+                  Welcome back, {user?.firstName}! 👋
                 </Typography>
-              </Box>
-              <Typography variant="body1" color="text.secondary" paragraph>
-                Manage your courses, students, and teaching activities from this central hub.
+                <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
+                  Ready to inspire and educate? Let's make today amazing.
               </Typography>
             </Grid>
             <Grid item xs={12} md={4} textAlign="right">
               <Button 
                 variant="contained" 
-                color="primary"
+                  sx={{ 
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1.5,
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                    }
+                  }}
                 component={Link}
                 to="/dashboard/teacher/profile"
                 startIcon={<Person />}
@@ -169,300 +234,233 @@ const TeacherDashboardContent: React.FC = () => {
               </Button>
             </Grid>
           </Grid>
-        </CardContent>
-      </Card>
+          </Box>
+        </Box>
 
-      {/* Quick Stats */}
+        {/* Key Metrics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={1}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <MenuBook color="primary" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h4" component="div" gutterBottom>
+          <Grid item xs={12} sm={6} lg={3}>
+            <Card sx={{ 
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: -20,
+                right: -20,
+                width: '80px',
+                height: '80px',
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '50%'
+              }
+            }}>
+              <CardContent sx={{ p: 3, position: 'relative' }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
                 {stats.activeCourses}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body1" sx={{ opacity: 0.9 }}>
                 Active Courses
               </Typography>
               {stats.pendingCourses > 0 && (
                 <Chip 
                   label={`${stats.pendingCourses} pending`} 
                   size="small" 
-                  color="warning" 
-                  sx={{ mt: 1 }}
-                />
-              )}
+                        sx={{ 
+                          mt: 1,
+                          backgroundColor: 'rgba(255,255,255,0.2)',
+                          color: 'white',
+                          fontWeight: 500
+                        }}
+                      />
+                    )}
+                  </Box>
+                  <School sx={{ fontSize: 48, opacity: 0.8 }} />
+                </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={1}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <People color="secondary" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h4" component="div" gutterBottom>
+
+          <Grid item xs={12} sm={6} lg={3}>
+            <Card sx={{ 
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: -20,
+                right: -20,
+                width: '80px',
+                height: '80px',
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '50%'
+              }
+            }}>
+              <CardContent sx={{ p: 3, position: 'relative' }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
                 {stats.totalStudents}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body1" sx={{ opacity: 0.9 }}>
                 Total Students
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
                 {stats.totalEnrollments} enrollments
               </Typography>
+                  </Box>
+                  <People sx={{ fontSize: 48, opacity: 0.8 }} />
+                </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={1}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <CalendarToday color="info" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h4" component="div" gutterBottom>
+
+          <Grid item xs={12} sm={6} lg={3}>
+            <Card sx={{ 
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: -20,
+                right: -20,
+                width: '80px',
+                height: '80px',
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '50%'
+              }
+            }}>
+              <CardContent sx={{ p: 3, position: 'relative' }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
                 {stats.liveSessionsCount}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body1" sx={{ opacity: 0.9 }}>
                 Live Sessions
               </Typography>
+                  </Box>
+                  <VideoCall sx={{ fontSize: 48, opacity: 0.8 }} />
+                </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={1}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <TrendingUp color="success" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h4" component="div" gutterBottom>
+
+          <Grid item xs={12} sm={6} lg={3}>
+            <Card sx={{ 
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: -20,
+                right: -20,
+                width: '80px',
+                height: '80px',
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '50%'
+              }
+            }}>
+              <CardContent sx={{ p: 3, position: 'relative' }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
                 {stats.averageCompletionRate}%
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body1" sx={{ opacity: 0.9 }}>
                 Completion Rate
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
                 {stats.completedCourses} completed
               </Typography>
+                  </Box>
+                  <TrendingUp sx={{ fontSize: 48, opacity: 0.8 }} />
+                </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Additional Stats Row */}
+        {/* Quick Actions Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={1}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <School color="primary" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h4" component="div" gutterBottom>
-                {stats.totalCourses}
+          <Grid item xs={12} md={8}>
+            <Card sx={{ borderRadius: 3, height: '100%' }}>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+                  Quick Actions
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total Courses
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={1}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <AttachMoney color="success" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h4" component="div" gutterBottom>
-                ${stats.totalEarnings}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total Earnings
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={1}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <PendingActions color="warning" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h4" component="div" gutterBottom>
-                {stats.recentEnrollments}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Recent Enrollments
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Last 30 days
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={1}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <CheckCircle color="info" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h4" component="div" gutterBottom>
-                {stats.completedCourses}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Completed Courses
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Quick Actions */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={6}>
-          <Card elevation={2} sx={{ height: '100%' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                🚀 Get Started
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Ready to start teaching? Create your first course and begin your teaching journey.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
                 <Button 
-                  variant="contained" 
-                  color="primary"
-                  component={Link}
-                  to="/dashboard/teacher/courses"
-                  startIcon={<School />}
-                >
-                  Manage Courses
-                </Button>
-                <Button 
-                  variant="outlined" 
                   component={Link}
                   to="/dashboard/teacher/courses/create"
-                  startIcon={<MenuBook />}
-                >
-                  Create Course
+                      variant="contained"
+                      fullWidth
+                      startIcon={<Add />}
+                      sx={{ 
+                        py: 2,
+                        borderRadius: 2,
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                        }
+                      }}
+                    >
+                      Create New Course
                 </Button>
-              </Box>
-            </CardContent>
-          </Card>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <Card elevation={2} sx={{ height: '100%' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                📚 Teaching Resources
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Access tools and resources to enhance your teaching experience.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Grid item xs={12} sm={6}>
                 <Button 
-                  variant="outlined" 
-                  color="secondary"
                   component={Link}
-                  to="/dashboard/teacher/live-sessions"
-                  startIcon={<CalendarToday />}
-                >
-                  Live Sessions
+                      to="/dashboard/teacher/live-sessions/create"
+                      variant="contained"
+                      fullWidth
+                      startIcon={<VideoCall />}
+                      sx={{ 
+                        py: 2,
+                        borderRadius: 2,
+                        background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #3d8bfe 0%, #00d4fe 100%)',
+                        }
+                      }}
+                    >
+                      Schedule Live Session
                 </Button>
-                <Button 
-                  variant="outlined" 
-                  color="secondary"
-                  component={Link}
-                  to="/dashboard/teacher/analytics"
-                  startIcon={<TrendingUp />}
-                >
-                  Analytics
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
         </Grid>
-      </Grid>
-
-      {/* Recent Activity */}
-      <Card elevation={2}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            📈 Recent Activity
-          </Typography>
-          {recentActivity.length > 0 ? (
-            <List>
-              {recentActivity.map((activity, index) => (
-                <React.Fragment key={index}>
-                  <ListItem alignItems="flex-start">
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'primary.main' }}>
-                        <Person />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={activity.message}
-                      secondary={
-                        <span>
-                          <Typography variant="caption" color="text.secondary" component="span">
-                            {new Date(activity.timestamp).toLocaleDateString()} at{' '}
-                            {new Date(activity.timestamp).toLocaleTimeString()}
-                          </Typography>
-                          <br />
-                          <Typography variant="caption" color="text.secondary" component="span">
-                            Course: {activity.course.title}
-                          </Typography>
-                        </span>
-                      }
-                    />
-                  </ListItem>
-                  {index < recentActivity.length - 1 && <Divider variant="inset" component="li" />}
-                </React.Fragment>
-              ))}
-            </List>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No recent activity yet. Start by creating your first course!
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <Card elevation={2} sx={{ mt: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            🚀 Quick Actions
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
+                  <Grid item xs={12} sm={6}>
               <Button
                 component={Link}
                 to="/dashboard/teacher/courses"
                 variant="outlined"
                 fullWidth
                 startIcon={<School />}
-                sx={{ py: 1.5 }}
+                      sx={{ py: 2, borderRadius: 2 }}
               >
                 Manage Courses
               </Button>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                component={Link}
-                to="/dashboard/teacher/courses/create"
-                variant="outlined"
-                fullWidth
-                startIcon={<Edit />}
-                sx={{ py: 1.5 }}
-              >
-                Create New Course
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                component={Link}
-                to="/dashboard/teacher/live-sessions"
-                variant="outlined"
-                fullWidth
-                startIcon={<Schedule />}
-                sx={{ py: 1.5 }}
-              >
-                Live Sessions
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+                  <Grid item xs={12} sm={6}>
               <Button
                 component={Link}
                 to="/dashboard/teacher/student-management"
                 variant="outlined"
                 fullWidth
-                startIcon={<People />}
-                sx={{ py: 1.5 }}
+                      startIcon={<ManageAccounts />}
+                      sx={{ py: 2, borderRadius: 2 }}
               >
                 Student Management
               </Button>
@@ -470,52 +468,241 @@ const TeacherDashboardContent: React.FC = () => {
           </Grid>
         </CardContent>
       </Card>
+          </Grid>
 
-      {/* Course Overview */}
-      {courses.length > 0 && (
-        <Card elevation={2} sx={{ mt: 3 }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              📚 Your Courses
+          <Grid item xs={12} md={4}>
+            <Card sx={{ borderRadius: 3, height: '100%' }}>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+                  Performance Overview
+                </Typography>
+                <Stack spacing={3}>
+                  <Box>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="body2" color="text.secondary">
+                        Course Completion Rate
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {stats.averageCompletionRate}%
+                      </Typography>
+                    </Box>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={stats.averageCompletionRate} 
+                      sx={{ 
+                        height: 8, 
+                        borderRadius: 4,
+                        backgroundColor: alpha('#667eea', 0.2),
+                        '& .MuiLinearProgress-bar': {
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          borderRadius: 4
+                        }
+                      }}
+                    />
+                  </Box>
+                  
+                  <Box>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Earnings
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        ${stats.totalEarnings}
+                      </Typography>
+                    </Box>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <AttachMoney sx={{ color: 'success.main', fontSize: 20 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        This month
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="body2" color="text.secondary">
+                        Recent Enrollments
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {stats.recentEnrollments}
+                      </Typography>
+                    </Box>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      {getTrendIcon(stats.recentEnrollments)}
+                      <Typography variant="body2" color="text.secondary">
+                        Last 30 days
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Recent Activity & Courses */}
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ borderRadius: 3 }}>
+              <CardContent sx={{ p: 4 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    Recent Activity
+                  </Typography>
+                  <IconButton size="small">
+                    <MoreVert />
+                  </IconButton>
+                </Box>
+                {recentActivity.length > 0 ? (
+                  <List sx={{ p: 0 }}>
+                    {recentActivity.slice(0, 5).map((activity, index) => (
+                      <React.Fragment key={index}>
+                        <ListItem sx={{ px: 0, py: 2 }}>
+                          <ListItemAvatar>
+                            <Avatar sx={{ 
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              width: 40,
+                              height: 40
+                            }}>
+                              <Notifications />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={
+                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                {activity.message}
+                              </Typography>
+                            }
+                            secondary={
+                              <Box>
+                                <Typography variant="caption" color="text.secondary">
+                                  {new Date(activity.timestamp).toLocaleDateString()} at{' '}
+                                  {new Date(activity.timestamp).toLocaleTimeString()}
             </Typography>
-            <Grid container spacing={2}>
-              {courses.map((course) => (
-                <Grid item xs={12} sm={6} md={4} key={course._id}>
-                  <Paper elevation={1} sx={{ p: 2, position: 'relative' }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      {course.title}
+                                <br />
+                                <Typography variant="caption" color="text.secondary">
+                                  Course: {activity.course?.title || 'N/A'}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Status: {course.status}
+                              </Box>
+                            }
+                          />
+                        </ListItem>
+                        {index < recentActivity.length - 1 && <Divider />}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                ) : (
+                  <Box textAlign="center" py={4}>
+                    <Notifications sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="body1" color="text.secondary">
+                      No recent activity yet
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Enrollments: {course.enrollmentCount}
+                      Start by creating your first course!
                     </Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Card sx={{ borderRadius: 3 }}>
+              <CardContent sx={{ p: 4 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    Your Courses
+                  </Typography>
+                  <Button
+                    component={Link}
+                    to="/dashboard/teacher/courses"
+                    endIcon={<ArrowForward />}
+                    size="small"
+                    sx={{ textTransform: 'none' }}
+                  >
+                    View All
+                  </Button>
+                </Box>
+                {courses.length > 0 ? (
+                  <Stack spacing={2}>
+                    {courses.slice(0, 4).map((course) => (
+                      <Paper 
+                        key={course._id} 
+                        elevation={0} 
+                        sx={{ 
+                          p: 2, 
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 2,
+                          '&:hover': {
+                            borderColor: 'primary.main',
+                            backgroundColor: alpha('#667eea', 0.05)
+                          }
+                        }}
+                      >
+                        <Box display="flex" justifyContent="space-between" alignItems="start">
+                          <Box flex={1}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                              {course.title}
+                            </Typography>
+                            <Box display="flex" gap={1} mb={1}>
+                              <Chip 
+                                label={course.status} 
+                                size="small" 
+                                color={course.status === 'active' ? 'success' : 'default'}
+                                sx={{ fontSize: '0.75rem' }}
+                              />
+                              <Chip 
+                                label={`${course.enrollmentCount} students`} 
+                                size="small" 
+                                variant="outlined"
+                                sx={{ fontSize: '0.75rem' }}
+                              />
+                            </Box>
                     <Typography variant="caption" color="text.secondary">
                       Created: {new Date(course.createdAt).toLocaleDateString()}
                     </Typography>
-                    
-                    {/* Quick Action Buttons */}
-                    <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          </Box>
                       <Button
                         component={Link}
-                        to={`/course/${course._id}/manage`}
+                            to={`/dashboard/teacher/courses/${course._id}/manage`}
                         size="small"
-                        variant="contained"
+                            variant="outlined"
                         startIcon={<Settings />}
-                        sx={{ flex: 1, minWidth: 'fit-content' }}
+                            sx={{ ml: 2, textTransform: 'none' }}
                       >
-                        Manage Course
+                            Manage
                       </Button>
                     </Box>
                   </Paper>
-                </Grid>
-              ))}
-            </Grid>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Box textAlign="center" py={4}>
+                    <School sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="body1" color="text.secondary">
+                      No courses yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Create your first course to get started!
+                    </Typography>
+                    <Button
+                      component={Link}
+                      to="/dashboard/teacher/courses/create"
+                      variant="contained"
+                      startIcon={<Add />}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      Create Course
+                    </Button>
+                  </Box>
+                )}
           </CardContent>
         </Card>
-      )}
+          </Grid>
+        </Grid>
     </Container>
+    </Box>
   );
 };
 

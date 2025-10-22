@@ -39,78 +39,40 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService } from '../../services/courseService';
 
-const steps = ['Basic Information', 'Course Details', 'Discoverability & Target Audience', 'Review & Submit'];
+const steps = ['Basic Information', 'Course Details', 'Learning Categories', 'Review & Submit'];
 
-const categories = [
-  // Programming Languages
-  'JavaScript', 'Python', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin', 'TypeScript',
-  
-  // Web Development
-  'Web Development', 'Frontend Development', 'Backend Development', 'Full Stack Development',
-  'HTML', 'CSS', 'React', 'Vue.js', 'Angular', 'Node.js', 'Express.js', 'Next.js', 'Nuxt.js',
-  
-  // Mobile Development
-  'Mobile Development', 'iOS Development', 'Android Development', 'React Native', 'Flutter',
-  'Xamarin', 'Ionic', 'Cordova',
-  
-  // Data Science & AI
-  'Data Science', 'Machine Learning', 'Artificial Intelligence', 'Deep Learning', 'Data Analysis',
-  'Data Visualization', 'Statistics', 'R Programming', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy',
-  
-  // Cloud & DevOps
-  'Cloud Computing', 'AWS', 'Azure', 'Google Cloud', 'DevOps', 'Docker', 'Kubernetes', 'CI/CD',
-  'Jenkins', 'GitLab', 'GitHub Actions', 'Terraform', 'Ansible',
-  
-  // Cybersecurity
-  'Cybersecurity', 'Ethical Hacking', 'Penetration Testing', 'Network Security', 'Information Security',
-  'Cryptography', 'Security Analysis', 'Risk Management',
-  
-  // Database
-  'Database', 'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Elasticsearch', 'Database Design',
-  'Data Modeling', 'Database Administration',
-  
-  // Design & UI/UX
-  'UI/UX Design', 'Graphic Design', 'Web Design', 'User Interface Design', 'User Experience Design',
-  'Adobe Photoshop', 'Adobe Illustrator', 'Figma', 'Sketch', 'Adobe XD', 'Prototyping',
-  
-  // Business & Marketing
-  'Digital Marketing', 'SEO', 'SEM', 'Social Media Marketing', 'Content Marketing', 'Email Marketing',
-  'Analytics', 'Google Analytics', 'Facebook Ads', 'Google Ads', 'Marketing Strategy',
-  
-  // Project Management
-  'Project Management', 'Agile', 'Scrum', 'Kanban', 'Jira', 'Trello', 'Asana', 'Product Management',
-  
-  // Finance & Accounting
-  'Finance', 'Accounting', 'Financial Analysis', 'Investment', 'Trading', 'Cryptocurrency',
-  'Blockchain', 'Personal Finance', 'Corporate Finance',
-  
-  // Language Learning
-  'English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Korean', 'Portuguese',
-  'Italian', 'Russian', 'Arabic', 'Hindi',
-  
-  // Creative Arts
-  'Photography', 'Video Editing', 'Music Production', 'Digital Art', 'Animation', '3D Modeling',
-  'Blender', 'After Effects', 'Premiere Pro', 'Final Cut Pro',
-  
-  // Health & Fitness
-  'Fitness', 'Yoga', 'Nutrition', 'Mental Health', 'Meditation', 'Weight Loss', 'Muscle Building',
-  'Cardio Training', 'Strength Training',
-  
-  // Academic Subjects
-  'Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Literature',
-  'Philosophy', 'Psychology', 'Sociology', 'Economics', 'Political Science',
-  
-  // Professional Skills
-  'Communication Skills', 'Leadership', 'Public Speaking', 'Writing', 'Presentation Skills',
-  'Time Management', 'Critical Thinking', 'Problem Solving', 'Negotiation', 'Team Building',
-  
-  // Technology Trends
-  'Blockchain Development', 'Web3', 'NFT', 'Metaverse', 'IoT', 'Edge Computing', 'Quantum Computing',
-  'AR/VR Development', 'Game Development', 'Unity', 'Unreal Engine',
-  
-  // Other Categories
-  'Entrepreneurship', 'Startup', 'E-commerce', 'Online Business', 'Freelancing', 'Remote Work',
-  'Career Development', 'Resume Writing', 'Interview Skills', 'Networking'
+// Target Audience Categories - Who the course is for
+const targetAudienceCategories = [
+  'Nursery Students (Ages 3-5)',
+  'Primary Students (Ages 6-12)',
+  'Secondary Students (Ages 13-18)',
+  'University Beginners (Ages 18-22)',
+  'University Advanced (Ages 22+)',
+  'Professional Development',
+  'Job Seekers',
+  'Career Changers',
+  'Entrepreneurs',
+  'Small Business Owners',
+  'Corporate Teams',
+  'Freelancers',
+  'Retirees',
+  'Parents',
+  'Teachers',
+  'Healthcare Workers',
+  'Government Employees',
+  'Non-profit Workers',
+  'Students (General)',
+  'Adults (General)',
+  'Seniors (Ages 65+)',
+  'International Students',
+  'Remote Workers',
+  'Stay-at-home Parents',
+  'Military Personnel',
+  'Veterans',
+  'Disabled Individuals',
+  'Low-income Individuals',
+  'Rural Communities',
+  'Urban Professionals'
 ];
 
 // Learning Categories for better course discoverability (curated)
@@ -350,17 +312,12 @@ const CreateCourse: React.FC = () => {
     title: '',
     description: '',
     category: '',
-    level: 'Beginner' as 'Beginner' | 'Intermediate' | 'Advanced',
+    level: '' as 'Beginner' | 'Intermediate' | 'Advanced' | '',
     duration: 0,
     prerequisites: [] as string[],
     learningObjectives: [] as string[],
     tags: [] as string[],
-    // New fields for better discoverability
-    careerGoal: '',
-    experienceLevel: '',
-    timeCommitment: '',
-    learningStyle: '',
-    specificInterests: [] as string[],
+    // Learning categories for course discoverability
     learningCategories: [] as string[],
     learningSubcategories: [] as string[]
   });
@@ -369,7 +326,6 @@ const CreateCourse: React.FC = () => {
   const [newPrerequisite, setNewPrerequisite] = useState('');
   const [newObjective, setNewObjective] = useState('');
   const [newTag, setNewTag] = useState('');
-  const [newSpecificInterest, setNewSpecificInterest] = useState('');
 
   // Handle form input changes
   const handleInputChange = (field: string, value: any) => {
@@ -444,9 +400,9 @@ const CreateCourse: React.FC = () => {
       case 0: // Basic Information
         return !!(formData.title && formData.description && formData.category);
       case 1: // Course Details
-        return !!(formData.level && formData.duration > 0);
-      case 2: // Discoverability & Target Audience
-        return !!(formData.careerGoal && formData.experienceLevel && formData.timeCommitment && formData.learningStyle && formData.learningCategories.length > 0 && formData.learningSubcategories.length > 0);
+        return !!(formData.duration > 0); // Difficulty level is now optional
+      case 2: // Learning Categories & Discoverability
+        return !!(formData.learningCategories.length > 0 && formData.learningSubcategories.length > 0);
       default:
         return true;
     }
@@ -474,13 +430,24 @@ const CreateCourse: React.FC = () => {
       setError(null);
 
       const courseData = {
-        ...formData,
-        price: 0 // Price will be set by admin during approval
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        level: formData.level || 'Beginner' as 'Beginner' | 'Intermediate' | 'Advanced', // Default to Beginner if not specified
+        duration: formData.duration,
+        prerequisites: formData.prerequisites,
+        learningObjectives: formData.learningObjectives,
+        tags: formData.tags,
+        learningCategories: formData.learningCategories,
+        learningSubcategories: formData.learningSubcategories,
+        price: 0, // Price will be set by admin when publishing
+        isPublished: false, // Course starts as unpublished - admin will publish after reviewing materials
+        status: 'draft' // Teacher can manage immediately
       };
 
       const response = await courseService.createCourse(courseData);
 
-      setSuccess('Course created successfully and submitted for approval!');
+      setSuccess('Course created successfully! You can now manage it and add materials. Admin will publish it after reviewing your content.');
 
       // Redirect to courses page after a delay
       setTimeout(() => {
@@ -643,7 +610,7 @@ const CreateCourse: React.FC = () => {
                   <Grid item xs={12} md={6}>
                     <Autocomplete
                       freeSolo
-                      options={categories}
+                      options={targetAudienceCategories}
                       value={formData.category}
                       onChange={(event, newValue) => {
                         handleInputChange('category', newValue || '');
@@ -654,9 +621,9 @@ const CreateCourse: React.FC = () => {
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          label="Category *"
-                          placeholder="Type or select a category..."
-                          helperText="Type to search or enter a custom category"
+                          label="Target Audience *"
+                          placeholder="Who is this course for?"
+                          helperText="Select the primary audience for your course"
                           required
                           size={isMobile ? "small" : "medium"}
                         />
@@ -686,24 +653,39 @@ const CreateCourse: React.FC = () => {
                         fontSize: { xs: '0.7rem', sm: '0.75rem' }
                       }}
                     >
-                      💡 You can type any category you want! Start typing to see suggestions or create your own.
+                      💡 Choose who your course is designed for - this helps students find courses that match their needs.
                     </Typography>
                   </Grid>
                   
                   <Grid item xs={12} md={6}>
                     <FormControl fullWidth>
-                      <InputLabel>Difficulty Level *</InputLabel>
+                      <InputLabel>Difficulty Level (Optional)</InputLabel>
                       <Select
                         value={formData.level}
-                        label="Difficulty Level *"
+                        label="Difficulty Level (Optional)"
                         onChange={(e) => handleInputChange('level', e.target.value)}
                         size={isMobile ? "small" : "medium"}
+                        displayEmpty
                       >
+                        <MenuItem value="">
+                          <em>Select difficulty level (optional)</em>
+                        </MenuItem>
                         <MenuItem value="Beginner">Beginner</MenuItem>
                         <MenuItem value="Intermediate">Intermediate</MenuItem>
                         <MenuItem value="Advanced">Advanced</MenuItem>
                       </Select>
                     </FormControl>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary" 
+                      sx={{ 
+                        mt: 1, 
+                        display: 'block',
+                        fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                      }}
+                    >
+                      💡 Difficulty level is optional - you can specify this later or let students determine the appropriate level.
+                    </Typography>
                   </Grid>
                 </Grid>
               </CardContent>
@@ -943,85 +925,13 @@ const CreateCourse: React.FC = () => {
                       fontSize: { xs: '1.1rem', sm: '1.25rem' }
                     }}
                   >
-                    Discoverability & Target Audience
+                    Learning Categories & Discoverability
                   </Typography>
                 </Box>
                 
                 <Grid container spacing={{ xs: 2, sm: 3 }}>
-                  {/* Career Goal */}
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth required>
-                      <InputLabel>Target Career Goal</InputLabel>
-                      <Select
-                        value={formData.careerGoal}
-                        label="Target Career Goal"
-                        onChange={(e) => handleInputChange('careerGoal', e.target.value)}
-                        size={isMobile ? "small" : "medium"}
-                      >
-                        <MenuItem value="employment">Looking for Employment</MenuItem>
-                        <MenuItem value="business_owner">Running a Business</MenuItem>
-                        <MenuItem value="student">Student</MenuItem>
-                        <MenuItem value="career_change">Career Change</MenuItem>
-                        <MenuItem value="skill_upgrade">Skill Upgrade</MenuItem>
-                        <MenuItem value="exploring">Just Exploring</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
 
-                  {/* Experience Level */}
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth required>
-                      <InputLabel>Target Experience Level</InputLabel>
-                      <Select
-                        value={formData.experienceLevel}
-                        label="Target Experience Level"
-                        onChange={(e) => handleInputChange('experienceLevel', e.target.value)}
-                        size={isMobile ? "small" : "medium"}
-                      >
-                        <MenuItem value="beginner">Beginner (New to the field)</MenuItem>
-                        <MenuItem value="intermediate">Intermediate (Some experience)</MenuItem>
-                        <MenuItem value="advanced">Advanced (Experienced professional)</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  {/* Time Commitment */}
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth required>
-                      <InputLabel>Expected Time Commitment</InputLabel>
-                      <Select
-                        value={formData.timeCommitment}
-                        label="Expected Time Commitment"
-                        onChange={(e) => handleInputChange('timeCommitment', e.target.value)}
-                        size={isMobile ? "small" : "medium"}
-                      >
-                        <MenuItem value="light">1-2 hours/week (Light learning)</MenuItem>
-                        <MenuItem value="moderate">3-5 hours/week (Moderate learning)</MenuItem>
-                        <MenuItem value="intensive">6-10 hours/week (Intensive learning)</MenuItem>
-                        <MenuItem value="full_time">10+ hours/week (Full-time learning)</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  {/* Learning Style */}
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth required>
-                      <InputLabel>Primary Learning Style</InputLabel>
-                      <Select
-                        value={formData.learningStyle}
-                        label="Primary Learning Style"
-                        onChange={(e) => handleInputChange('learningStyle', e.target.value)}
-                        size={isMobile ? "small" : "medium"}
-                      >
-                        <MenuItem value="visual">Visual Learning (Videos, diagrams, infographics)</MenuItem>
-                        <MenuItem value="hands_on">Hands-on Practice (Projects, exercises, labs)</MenuItem>
-                        <MenuItem value="theoretical">Theoretical Study (Reading, lectures, concepts)</MenuItem>
-                        <MenuItem value="interactive">Interactive Learning (Discussions, collaboration, Q&A)</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  {/* Learning Categories - Mobile Responsive */}
+                  {/* Learning Categories - Searchable Dropdown */}
                   <Grid item xs={12}>
                     <Typography 
                       variant="subtitle1" 
@@ -1041,49 +951,63 @@ const CreateCourse: React.FC = () => {
                         fontSize: { xs: '0.75rem', sm: '0.875rem' }
                       }}
                     >
-                      Select the learning categories that best match your course content. This helps students find your course based on their interests.
+                      Search and select the learning categories that best match your course content. This helps students find your course based on their interests.
                     </Typography>
-                    <Box display="flex" flexWrap="wrap" gap={{ xs: 1, sm: 1.5 }} mb={2}>
-                      {learningCategories.map((category) => (
-                        <Chip
-                          key={category.id}
-                          label={category.title}
-                          onClick={() => handleLearningCategoryToggle(category.id)}
-                          color={formData.learningCategories.includes(category.id) ? 'primary' : 'default'}
-                          variant={formData.learningCategories.includes(category.id) ? 'filled' : 'outlined'}
+                    
+                    <Autocomplete
+                      multiple
+                      options={learningCategories.map(cat => cat.title)}
+                      value={formData.learningCategories.map(id => 
+                        learningCategories.find(cat => cat.id === id)?.title || ''
+                      ).filter(Boolean)}
+                      onChange={(event, newValue) => {
+                        const categoryIds = newValue.map(title => 
+                          learningCategories.find(cat => cat.title === title)?.id || ''
+                        ).filter(Boolean);
+                        handleInputChange('learningCategories', categoryIds);
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Search Learning Categories"
+                          placeholder="Type to search categories..."
+                          helperText="Select categories that match your course content"
                           size={isMobile ? "small" : "medium"}
-                          sx={{ 
-                            fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                            cursor: 'pointer',
-                            '&:hover': {
-                              backgroundColor: formData.learningCategories.includes(category.id) 
-                                ? 'primary.dark' 
-                                : 'primary.light',
-                              color: formData.learningCategories.includes(category.id) 
-                                ? 'white' 
-                                : 'primary.main'
-                            }
-                          }}
                         />
-                      ))}
-                    </Box>
-                    {formData.learningCategories.length > 0 && (
-                      <Typography 
-                        variant="caption" 
-                        color="text.secondary"
-                        sx={{ 
-                          fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                          display: 'block',
-                          mb: 1
-                        }}
-                      >
-                        Selected Categories: {formData.learningCategories.map(id => 
-                          learningCategories.find(cat => cat.id === id)?.title
-                        ).join(', ')}
-                      </Typography>
-                    )}
+                      )}
+                      renderOption={(props, option) => (
+                        <Box component="li" {...props}>
+                          <Box>
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                              {option}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {learningCategories.find(cat => cat.title === option)?.description}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      )}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => (
+                          <Chip
+                            {...getTagProps({ index })}
+                            key={option}
+                            label={option}
+                            size={isMobile ? "small" : "medium"}
+                            sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                          />
+                        ))
+                      }
+                      filterOptions={(options, { inputValue }) => {
+                        return options.filter(option =>
+                          option.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          learningCategories.find(cat => cat.title === option)?.description
+                            ?.toLowerCase().includes(inputValue.toLowerCase())
+                        );
+                      }}
+                    />
 
-                    {/* Subcategories Selection */}
+                    {/* Subcategories Selection - Searchable Dropdown */}
                     {formData.learningCategories.length > 0 && (
                       <Box sx={{ mt: 2 }}>
                         <Typography 
@@ -1106,113 +1030,53 @@ const CreateCourse: React.FC = () => {
                             mb: 1.5
                           }}
                         >
-                          Choose specific subcategories to make your course more discoverable and targeted.
+                          Search and choose specific subcategories to make your course more discoverable and targeted.
                         </Typography>
-                        <Box display="flex" flexWrap="wrap" gap={{ xs: 0.5, sm: 1 }} mb={2}>
-                          {getAvailableSubcategories().map((subcategory) => (
-                            <Chip
-                              key={subcategory}
-                              label={subcategory}
-                              onClick={() => handleSubcategoryToggle(subcategory)}
-                              color={formData.learningSubcategories.includes(subcategory) ? 'secondary' : 'default'}
-                              variant={formData.learningSubcategories.includes(subcategory) ? 'filled' : 'outlined'}
-                              size="small"
-                              sx={{ 
-                                fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  backgroundColor: formData.learningSubcategories.includes(subcategory) 
-                                    ? 'secondary.dark' 
-                                    : 'secondary.light',
-                                  color: formData.learningSubcategories.includes(subcategory) 
-                                    ? 'white' 
-                                    : 'secondary.main'
-                                }
-                              }}
+                        
+                        <Autocomplete
+                          multiple
+                          options={getAvailableSubcategories()}
+                          value={formData.learningSubcategories}
+                          onChange={(event, newValue) => {
+                            handleInputChange('learningSubcategories', newValue);
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Search Subcategories"
+                              placeholder="Type to search subcategories..."
+                              helperText="Select specific subcategories for better targeting"
+                              size={isMobile ? "small" : "medium"}
                             />
-                          ))}
-                        </Box>
-                        {formData.learningSubcategories.length > 0 && (
-                          <Typography 
-                            variant="caption" 
-                            color="text.secondary"
-                            sx={{ 
-                              fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                              display: 'block',
-                              mb: 1
-                            }}
-                          >
-                            Selected Subcategories: {formData.learningSubcategories.join(', ')}
-                          </Typography>
-                        )}
+                          )}
+                          renderOption={(props, option) => (
+                            <Box component="li" {...props}>
+                              <Typography variant="body2">
+                                {option}
+                              </Typography>
+                            </Box>
+                          )}
+                          renderTags={(value, getTagProps) =>
+                            value.map((option, index) => (
+                              <Chip
+                                {...getTagProps({ index })}
+                                key={option}
+                                label={option}
+                                size="small"
+                                sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+                              />
+                            ))
+                          }
+                          filterOptions={(options, { inputValue }) => {
+                            return options.filter(option =>
+                              option.toLowerCase().includes(inputValue.toLowerCase())
+                            );
+                          }}
+                        />
                       </Box>
                     )}
                   </Grid>
 
-                  {/* Specific Interests/Skills - Mobile Responsive */}
-                  <Grid item xs={12}>
-                    <Typography 
-                      variant="subtitle1" 
-                      gutterBottom
-                      sx={{ 
-                        fontSize: { xs: '0.9rem', sm: '1rem' },
-                        fontWeight: 600
-                      }}
-                    >
-                      Specific Topics & Skills Covered
-                    </Typography>
-                    <Box 
-                      display="flex" 
-                      gap={{ xs: 0.5, sm: 1 }} 
-                      mb={2}
-                      flexDirection={{ xs: 'column', sm: 'row' }}
-                    >
-                      <TextField
-                        fullWidth
-                        label="Add Specific Topic/Skill"
-                        value={newSpecificInterest}
-                        onChange={(e) => setNewSpecificInterest(e.target.value)}
-                        placeholder="e.g., React Hooks, Digital Marketing Analytics, Financial Modeling"
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            addToArray('specificInterests', newSpecificInterest, setNewSpecificInterest);
-                          }
-                        }}
-                        size={isMobile ? "small" : "medium"}
-                      />
-                      <Button
-                        variant="outlined"
-                        onClick={() => addToArray('specificInterests', newSpecificInterest, setNewSpecificInterest)}
-                        disabled={!newSpecificInterest.trim()}
-                        size={isMobile ? "small" : "medium"}
-                        sx={{ minWidth: { xs: 'auto', sm: '80px' } }}
-                      >
-                        Add
-                      </Button>
-                    </Box>
-                    <Box display="flex" flexWrap="wrap" gap={{ xs: 0.5, sm: 1 }} mb={2}>
-                      {formData.specificInterests.map((interest, index) => (
-                        <Chip
-                          key={index}
-                          label={interest}
-                          onDelete={() => removeFromArray('specificInterests', index)}
-                          color="info"
-                          variant="outlined"
-                          size={isMobile ? "small" : "medium"}
-                          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                        />
-                      ))}
-                    </Box>
-                    <Typography 
-                      variant="caption" 
-                      color="text.secondary"
-                      sx={{ 
-                        fontSize: { xs: '0.7rem', sm: '0.75rem' }
-                      }}
-                    >
-                      💡 These specific topics will help students find your course when searching for particular skills or technologies.
-                    </Typography>
-                  </Grid>
                 </Grid>
               </CardContent>
             </Card>
@@ -1240,7 +1104,7 @@ const CreateCourse: React.FC = () => {
                     fontSize: { xs: '0.75rem', sm: '0.875rem' }
                   }}
                 >
-                  Please review your course information. Once submitted, your course will be reviewed by our admin team before being published.
+                  Please review your course information. Once submitted, you can immediately manage your course and add materials. Admin will publish it after reviewing your content.
                 </Alert>
 
                 {/* Course Summary - Mobile Responsive */}
@@ -1269,13 +1133,13 @@ const CreateCourse: React.FC = () => {
                             variant="body2" 
                             sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
                           >
-                            <strong>Category:</strong> {formData.category}
+                            <strong>Target Audience:</strong> {formData.category}
                           </Typography>
                           <Typography 
                             variant="body2" 
                             sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
                           >
-                            <strong>Level:</strong> {formData.level}
+                            <strong>Level:</strong> {formData.level || 'Not specified'}
                           </Typography>
                           <Typography 
                             variant="body2" 
@@ -1299,33 +1163,9 @@ const CreateCourse: React.FC = () => {
                             fontWeight: 600
                           }}
                         >
-                          Target Audience
+                          Learning Categories
                         </Typography>
                         <Stack spacing={0.5}>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                          >
-                            <strong>Career Goal:</strong> {formData.careerGoal}
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                          >
-                            <strong>Experience Level:</strong> {formData.experienceLevel}
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                          >
-                            <strong>Time Commitment:</strong> {formData.timeCommitment}
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                          >
-                            <strong>Learning Style:</strong> {formData.learningStyle}
-                          </Typography>
                           <Typography 
                             variant="body2" 
                             sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
@@ -1378,12 +1218,6 @@ const CreateCourse: React.FC = () => {
                             sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
                           >
                             <strong>Tags:</strong> {formData.tags.length}
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                          >
-                            <strong>Specific Topics:</strong> {formData.specificInterests.length}
                           </Typography>
                         </Stack>
                       </CardContent>

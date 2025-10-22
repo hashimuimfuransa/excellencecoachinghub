@@ -100,6 +100,7 @@ import communityRoutes from '@/routes/communityRoutes';
 import annotationRoutes from '@/routes/annotationRoutes';
 import pastPaperRoutes from '@/routes/pastPaperRoutes';
 import superAdminPastPaperRoutes from '@/routes/superAdminPastPaperRoutes';
+import documentProcessorRoutes from '@/routes/documentProcessorRoutes';
 
 // Social Network routes
 import postRoutes from '@/routes/postRoutes';
@@ -1005,6 +1006,9 @@ app.use('/api/annotations', annotationRoutes);
 // Past Papers routes
 app.use('/api/past-papers', pastPaperRoutes);
 app.use('/api/admin/past-papers', superAdminPastPaperRoutes);
+
+// Document Processor routes
+app.use('/api/documents', documentProcessorRoutes);
 
 // Placeholder image endpoint for avatar videos
 app.get('/api/placeholder/:width/:height', (req, res) => {

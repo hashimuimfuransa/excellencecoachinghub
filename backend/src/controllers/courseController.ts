@@ -140,7 +140,19 @@ export const getCourseById = async (req: Request, res: Response, next: NextFunct
     if (!course) {
       res.status(404).json({
         success: false,
-        error: 'Course not found'
+        error: 'Course not found',
+        courseId: id
+      });
+      return;
+    }
+
+    // Check if course has a valid instructor
+    if (!course.instructor) {
+      console.error(`⚠️ Course ${id} has no instructor assigned`);
+      res.status(500).json({
+        success: false,
+        error: 'Course data is corrupted - no instructor assigned',
+        courseId: id
       });
       return;
     }
@@ -148,7 +160,7 @@ export const getCourseById = async (req: Request, res: Response, next: NextFunct
     // Check access permissions for authenticated users
     if (!isPublicRequest) {
       const userId = req.user._id.toString();
-      const isInstructor = course.instructor._id.toString() === userId;
+      const isInstructor = course.instructor && course.instructor._id.toString() === userId;
       const isAdmin = req.user.role === 'admin';
       
       // Check if user is enrolled by looking at UserProgress
@@ -343,28 +355,30 @@ export const approveCourse = async (req: Request, res: Response, next: NextFunct
     // Notify instructor about course approval
     try {
       // Send in-app notification
-      await notificationService.notifyTeacherCourseStatus(
-        course.instructor.toString(),
-        course._id.toString(),
-        course.title,
-        CourseStatus.APPROVED,
-        (req.user?._id as any)?.toString() || '',
-        feedback
-      );
-      console.log(`✅ Sent in-app notification for course approval: ${course.title}`);
+      if (course.instructor) {
+        await notificationService.notifyTeacherCourseStatus(
+          course.instructor.toString(),
+          course._id.toString(),
+          course.title,
+          CourseStatus.APPROVED,
+          (req.user?._id as any)?.toString() || '',
+          feedback
+        );
+        console.log(`✅ Sent in-app notification for course approval: ${course.title}`);
 
-      // Send SendGrid email notification
-      const instructor = await User.findById(course.instructor);
-      if (instructor) {
-        await CourseNotificationService.sendCourseApprovalNotification({
-          teacherName: `${instructor.firstName} ${instructor.lastName}`,
-          teacherEmail: instructor.email,
-          courseTitle: course.title,
-          courseId: course._id.toString(),
-          adminName: req.user?.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Admin',
-          adminFeedback: feedback
-        });
-        console.log(`✅ Sent SendGrid email for course approval: ${course.title}`);
+        // Send SendGrid email notification
+        const instructor = await User.findById(course.instructor);
+        if (instructor) {
+          await CourseNotificationService.sendCourseApprovalNotification({
+            teacherName: `${instructor.firstName} ${instructor.lastName}`,
+            teacherEmail: instructor.email,
+            courseTitle: course.title,
+            courseId: course._id.toString(),
+            adminName: req.user?.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Admin',
+            adminFeedback: feedback
+          });
+          console.log(`✅ Sent SendGrid email for course approval: ${course.title}`);
+        }
       }
     } catch (notificationError) {
       console.error('❌ Failed to send course approval notification:', notificationError);
@@ -408,28 +422,30 @@ export const rejectCourse = async (req: Request, res: Response, next: NextFuncti
     // Notify instructor about course rejection
     try {
       // Send in-app notification
-      await notificationService.notifyTeacherCourseStatus(
-        course.instructor.toString(),
-        course._id.toString(),
-        course.title,
-        CourseStatus.REJECTED,
-        (req.user?._id as any)?.toString() || '',
-        feedback
-      );
-      console.log(`✅ Sent in-app notification for course rejection: ${course.title}`);
+      if (course.instructor) {
+        await notificationService.notifyTeacherCourseStatus(
+          course.instructor.toString(),
+          course._id.toString(),
+          course.title,
+          CourseStatus.REJECTED,
+          (req.user?._id as any)?.toString() || '',
+          feedback
+        );
+        console.log(`✅ Sent in-app notification for course rejection: ${course.title}`);
 
-      // Send SendGrid email notification
-      const instructor = await User.findById(course.instructor);
-      if (instructor) {
-        await CourseNotificationService.sendCourseRejectionNotification({
-          teacherName: `${instructor.firstName} ${instructor.lastName}`,
-          teacherEmail: instructor.email,
-          courseTitle: course.title,
-          courseId: course._id.toString(),
-          adminName: req.user?.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Admin',
-          adminFeedback: feedback
-        });
-        console.log(`✅ Sent SendGrid email for course rejection: ${course.title}`);
+        // Send SendGrid email notification
+        const instructor = await User.findById(course.instructor);
+        if (instructor) {
+          await CourseNotificationService.sendCourseRejectionNotification({
+            teacherName: `${instructor.firstName} ${instructor.lastName}`,
+            teacherEmail: instructor.email,
+            courseTitle: course.title,
+            courseId: course._id.toString(),
+            adminName: req.user?.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Admin',
+            adminFeedback: feedback
+          });
+          console.log(`✅ Sent SendGrid email for course rejection: ${course.title}`);
+        }
       }
     } catch (notificationError) {
       console.error('❌ Failed to send course rejection notification:', notificationError);
@@ -752,8 +768,8 @@ export const getCourseEnrolledStudents = async (req: Request, res: Response, nex
 
     // Check if the requesting user is the instructor or an admin
     const requestingUserId = req.user._id.toString();
-    const instructorId = course.instructor._id.toString();
-    const isInstructor = requestingUserId === instructorId;
+    const instructorId = course.instructor ? course.instructor._id.toString() : null;
+    const isInstructor = instructorId && requestingUserId === instructorId;
     const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
 
     if (!isInstructor && !isAdmin) {

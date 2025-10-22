@@ -1637,9 +1637,26 @@ const StudentCourses: React.FC = () => {
                                 variant="contained"
                                 size="small"
                                 startIcon={<School />}
-                                onClick={() => navigate(`/course/${course._id}/hub`)}
+                                onClick={() => handleEnroll(course._id)}
+                                disabled={loading}
+                                sx={{
+                                  background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                                  '&:hover': {
+                                    background: 'linear-gradient(45deg, #5a67d8, #6b46c1)',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                                  },
+                                  transition: 'all 0.3s ease'
+                                }}
                               >
-                                Go to Learning Hub
+                                {loading ? (
+                                  <>
+                                    <CircularProgress size={16} sx={{ mr: 1, color: 'white' }} />
+                                    Enrolling...
+                                  </>
+                                ) : (
+                                  '🚀 Enroll Now'
+                                )}
                               </ResponsiveButton>
                               <ResponsiveButton
                                 fullWidth

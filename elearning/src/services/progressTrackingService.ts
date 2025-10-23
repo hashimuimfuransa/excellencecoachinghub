@@ -301,16 +301,70 @@ class ProgressTrackingService {
     sessionStorage.removeItem(this.sessionStorageKey);
   }
 
-  // Sync with server
-  async syncWithServer(courseId: string) {
+  // Sync with server with retry logic
+  async syncWithServer(courseId: string, retries: number = 2): Promise<void> {
     try {
       const courseProgress = this.getCourseProgress(courseId);
+      
+      if (!courseProgress || Object.keys(courseProgress).length === 0) {
+        console.log('No progress data to sync');
+        return;
+      }
+      
+      console.log('🔄 Syncing progress data:', courseProgress);
+      
       await api.post(`/progress/courses/${courseId}/sync`, {
-        progress: courseProgress
+        progressData: courseProgress
       });
-    } catch (error) {
-      console.error('Failed to sync progress with server:', error);
+      
+      console.log('✅ Progress successfully synced with server');
+      
+    } catch (error: any) {
+      console.error('❌ Failed to sync progress with server:', error);
+      
+      // Retry logic for network errors
+      if (retries > 0 && (error.code === 'NETWORK_ERROR' || error.response?.status >= 500)) {
+        console.log(`🔄 Retrying sync... (${retries} attempts remaining)`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        return this.syncWithServer(courseId, retries - 1);
+      }
+      
+      // Store failed sync for later retry
+      const failedSyncs = JSON.parse(localStorage.getItem('failedProgressSyncs') || '[]');
+      failedSyncs.push({
+        courseId,
+        timestamp: new Date().toISOString(),
+        progressData: this.getCourseProgress(courseId)
+      });
+      localStorage.setItem('failedProgressSyncs', JSON.stringify(failedSyncs.slice(-10))); // Keep last 10
+      
+      throw error;
     }
+  }
+
+  // Retry failed syncs
+  async retryFailedSyncs() {
+    const failedSyncs = JSON.parse(localStorage.getItem('failedProgressSyncs') || '[]');
+    
+    if (failedSyncs.length === 0) return;
+    
+    console.log(`🔄 Retrying ${failedSyncs.length} failed syncs...`);
+    
+    const remainingFailures = [];
+    
+    for (const syncData of failedSyncs) {
+      try {
+        await api.post(`/progress/courses/${syncData.courseId}/sync`, {
+          progressData: syncData.progressData
+        });
+        console.log(`✅ Retry successful for course ${syncData.courseId}`);
+      } catch (error) {
+        console.error(`❌ Retry failed for course ${syncData.courseId}:`, error);
+        remainingFailures.push(syncData);
+      }
+    }
+    
+    localStorage.setItem('failedProgressSyncs', JSON.stringify(remainingFailures));
   }
 
   // Load progress from server

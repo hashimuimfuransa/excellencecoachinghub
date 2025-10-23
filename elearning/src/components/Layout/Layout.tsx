@@ -76,6 +76,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useNotifications } from '../../hooks/useNotifications';
 import { UserRole } from '../../shared/types';
+import { isLearnerRole } from '../../utils/roleUtils';
 import { SafeDialogTransition } from '../../utils/transitionFix';
 import EmailVerificationBanner from '../Auth/EmailVerificationBanner';
 import FloatingAIAssistant from '../FloatingAIAssistant';
@@ -256,7 +257,7 @@ const Layout: React.FC = () => {
         { text: 'Analytics', icon: <Analytics />, path: '/dashboard/teacher/analytics' },
         { text: 'Profile', icon: <Person />, path: '/dashboard/teacher/profile/complete' }
       );
-    } else if (user?.role === UserRole.STUDENT) {
+    } else if (isLearnerRole(user?.role)) {
       roleSpecificItems.push(
         { text: 'My Courses', icon: <School />, path: '/dashboard/student/courses' },
         { text: '🔴 Live Sessions', icon: <VideoCall />, path: '/live-sessions' },
@@ -1031,8 +1032,8 @@ const Layout: React.FC = () => {
             </Box>
           </Box>
 
-          {/* Floating AI Assistant - Available for students */}
-          {user?.role === UserRole.STUDENT && (
+          {/* Floating AI Assistant - Available for learners (students and job seekers) */}
+          {isLearnerRole(user?.role) && (
             <FloatingAIAssistant
               context={{
                 page: location.pathname,

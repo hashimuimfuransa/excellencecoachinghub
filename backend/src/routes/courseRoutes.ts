@@ -341,8 +341,8 @@ const assignModeratorValidation = [
     .withMessage('Invalid moderator ID')
 ];
 
-// Student routes
-router.get('/enrolled', authorize(UserRole.STUDENT), getEnrolledCourses);
+// Student and Professional routes (learners)
+router.get('/enrolled', authorize(UserRole.STUDENT, UserRole.PROFESSIONAL), getEnrolledCourses);
 
 // Routes accessible by teachers, admins, and super admins
 router.get('/', rateLimitMiddleware, authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getAllCourses);

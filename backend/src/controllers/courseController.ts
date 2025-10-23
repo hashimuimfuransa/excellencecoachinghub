@@ -660,7 +660,7 @@ export const assignModerator = async (req: Request, res: Response, next: NextFun
   }
 };
 
-// Get enrolled courses for a student
+// Get enrolled courses for learners (students and job seekers)
 export const getEnrolledCourses = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
@@ -671,8 +671,8 @@ export const getEnrolledCourses = async (req: Request, res: Response, next: Next
       return;
     }
 
-    // Only students should have enrolled courses
-    if (req.user.role !== 'student') {
+    // Only students and professionals (job seekers) should have enrolled courses
+    if (req.user.role !== 'student' && req.user.role !== 'professional') {
       res.status(200).json({
         success: true,
         data: {

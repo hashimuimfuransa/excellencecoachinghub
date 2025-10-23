@@ -182,10 +182,23 @@ const AdminCourseActions: React.FC<AdminCourseActionsProps> = ({ course, onCours
   };
 
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardContent>
-        <Box display="flex" alignItems="center" mb={3}>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+    <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box 
+          display="flex" 
+          alignItems="center" 
+          mb={{ xs: 2, sm: 3 }}
+          flexDirection={{ xs: 'column', sm: 'row' }}
+          gap={{ xs: 1, sm: 0 }}
+        >
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              flexGrow: 1,
+              fontSize: { xs: '1.1rem', sm: '1.25rem' },
+              textAlign: { xs: 'center', sm: 'left' }
+            }}
+          >
             Course Actions
           </Typography>
           <Chip
@@ -208,7 +221,7 @@ const AdminCourseActions: React.FC<AdminCourseActionsProps> = ({ course, onCours
         )}
 
         {/* Action Buttons */}
-        <Grid container spacing={2}>
+        <Grid container spacing={{ xs: 1.5, sm: 2 }}>
           {course.status === CourseStatus.PENDING_APPROVAL && (
             <>
               <Grid item xs={12} sm={6} md={3}>
@@ -219,6 +232,11 @@ const AdminCourseActions: React.FC<AdminCourseActionsProps> = ({ course, onCours
                   startIcon={<CheckCircle />}
                   onClick={() => setApproveDialogOpen(true)}
                   disabled={loading}
+                  size="small"
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    py: { xs: 1, sm: 1.5 }
+                  }}
                 >
                   Approve Course
                 </Button>
@@ -231,6 +249,11 @@ const AdminCourseActions: React.FC<AdminCourseActionsProps> = ({ course, onCours
                   startIcon={<Cancel />}
                   onClick={() => setRejectDialogOpen(true)}
                   disabled={loading}
+                  size="small"
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    py: { xs: 1, sm: 1.5 }
+                  }}
                 >
                   Reject Course
                 </Button>
@@ -245,6 +268,11 @@ const AdminCourseActions: React.FC<AdminCourseActionsProps> = ({ course, onCours
               startIcon={<Edit />}
               onClick={() => setEditDialogOpen(true)}
               disabled={loading}
+              size="small"
+              sx={{ 
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                py: { xs: 1, sm: 1.5 }
+              }}
             >
               Edit Course
             </Button>
@@ -258,6 +286,11 @@ const AdminCourseActions: React.FC<AdminCourseActionsProps> = ({ course, onCours
               startIcon={<Delete />}
               onClick={() => setDeleteDialogOpen(true)}
               disabled={loading}
+              size="small"
+              sx={{ 
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                py: { xs: 1, sm: 1.5 }
+              }}
             >
               Delete Course
             </Button>
@@ -265,28 +298,48 @@ const AdminCourseActions: React.FC<AdminCourseActionsProps> = ({ course, onCours
         </Grid>
 
         {/* Course Status Information */}
-        <Paper sx={{ p: 2, mt: 3, bgcolor: 'grey.50' }}>
-          <Typography variant="subtitle2" gutterBottom>
+        <Paper sx={{ p: { xs: 1.5, sm: 2 }, mt: { xs: 2, sm: 3 }, bgcolor: 'grey.50' }}>
+          <Typography 
+            variant="subtitle2" 
+            gutterBottom
+            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+          >
             Course Status Information
           </Typography>
-          <Grid container spacing={2}>
+          <Grid container spacing={{ xs: 1, sm: 2 }}>
             <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Current Status: <strong>{formatStatus(course.status)}</strong>
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Current Price: <strong>${course.price || 0}</strong>
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Enrollments: <strong>{course.enrollmentCount || 0}</strong>
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Created: <strong>{new Date(course.createdAt).toLocaleDateString()}</strong>
               </Typography>
             </Grid>

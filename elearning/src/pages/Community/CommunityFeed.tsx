@@ -72,6 +72,7 @@ import {
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { isLearnerRole } from '../../utils/roleUtils';
 import { communityService, IPost } from '../../services/communityService';
 
 // Styled Components
@@ -516,8 +517,8 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
         </Button>
       </Box>
 
-      {/* Opportunities Card - Shown for students with 40%+ profile completion */}
-      {user?.role === 'student' && (
+      {/* Opportunities Card - Shown for learners with 40%+ profile completion */}
+      {isLearnerRole(user?.role) && (
         <Card sx={{ mb: 2, borderRadius: 2, border: `1px solid ${theme.palette.success.light}`, background: alpha(theme.palette.success.main, 0.05) }}>
           <CardContent>
             <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>

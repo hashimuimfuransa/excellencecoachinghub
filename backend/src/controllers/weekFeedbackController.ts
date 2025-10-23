@@ -460,3 +460,152 @@ export const getUserFeedbackHistory = asyncHandler(async (req: Request, res: Res
     }
   });
 });
+
+// Get course feedback statistics (for admins)
+export const getCourseFeedbackStats = asyncHandler(async (req: Request, res: Response) => {
+  const { courseId } = req.params;
+  const userRole = req.user?.role;
+
+  if (!courseId) {
+    return res.status(400).json({
+      success: false,
+      message: 'Course ID is required'
+    });
+  }
+
+  // Only admins can view course feedback statistics
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Only admins can view course feedback statistics.'
+    });
+  }
+
+  const feedback = await WeekFeedback.find({ courseId })
+    .populate('weekId', 'title')
+    .populate('studentId', 'firstName lastName');
+
+  const totalFeedback = feedback.length;
+  
+  if (totalFeedback === 0) {
+    return res.status(200).json({
+      success: true,
+      data: {
+        courseId,
+        totalFeedback: 0,
+        averageRating: 0,
+        averageContentQuality: 0,
+        averageInstructorRating: 0,
+        averageMaterialsRating: 0,
+        averagePaceRating: 0,
+        difficultyDistribution: {
+          too_easy: 0,
+          just_right: 0,
+          too_hard: 0
+        },
+        recommendationRate: 0,
+        feedbackByWeek: [],
+        topChallenges: [],
+        topFavorites: [],
+        recentFeedback: []
+      }
+    });
+  }
+
+  const averageRating = feedback.reduce((sum, f) => sum + f.overallRating, 0) / totalFeedback;
+  const averageContentQuality = feedback.reduce((sum, f) => sum + f.contentQuality, 0) / totalFeedback;
+  const averageInstructorRating = feedback.reduce((sum, f) => sum + f.instructorRating, 0) / totalFeedback;
+  const averageMaterialsRating = feedback.reduce((sum, f) => sum + f.materialsRating, 0) / totalFeedback;
+  const averagePaceRating = feedback.reduce((sum, f) => sum + f.paceRating, 0) / totalFeedback;
+
+  const difficultyDistribution = {
+    too_easy: feedback.filter(f => f.difficultyLevel === 'too_easy').length,
+    just_right: feedback.filter(f => f.difficultyLevel === 'just_right').length,
+    too_hard: feedback.filter(f => f.difficultyLevel === 'too_hard').length
+  };
+
+  const recommendationRate = (feedback.filter(f => f.wouldRecommend).length / totalFeedback) * 100;
+
+  // Group feedback by week
+  const feedbackByWeek: { [key: string]: any[] } = {};
+  feedback.forEach(f => {
+    const weekId = f.weekId._id.toString();
+    const weekTitle = f.weekId.title;
+    if (!feedbackByWeek[weekId]) {
+      feedbackByWeek[weekId] = [];
+    }
+    feedbackByWeek[weekId].push({
+      ...f.toObject(),
+      weekTitle,
+      studentName: `${f.studentId.firstName} ${f.studentId.lastName}`
+    });
+  });
+
+  const weekStats = Object.entries(feedbackByWeek).map(([weekId, weekFeedback]) => {
+    const avgRating = weekFeedback.reduce((sum, f) => sum + f.overallRating, 0) / weekFeedback.length;
+    return {
+      weekId,
+      weekTitle: weekFeedback[0].weekTitle,
+      feedbackCount: weekFeedback.length,
+      averageRating: Math.round(avgRating * 100) / 100,
+      feedback: weekFeedback
+    };
+  });
+
+  // Count common challenges across all weeks
+  const challengeCounts: { [key: string]: number } = {};
+  feedback.forEach(f => {
+    f.challenges.forEach(challenge => {
+      challengeCounts[challenge] = (challengeCounts[challenge] || 0) + 1;
+    });
+  });
+
+  const topChallenges = Object.entries(challengeCounts)
+    .map(([challenge, count]) => ({ challenge, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  // Count common favorites across all weeks
+  const favoriteCounts: { [key: string]: number } = {};
+  feedback.forEach(f => {
+    f.favoriteAspects.forEach(aspect => {
+      favoriteCounts[aspect] = (favoriteCounts[aspect] || 0) + 1;
+    });
+  });
+
+  const topFavorites = Object.entries(favoriteCounts)
+    .map(([aspect, count]) => ({ aspect, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const recentFeedback = feedback
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 10)
+    .map(f => ({
+      id: f._id,
+      studentName: `${f.studentId.firstName} ${f.studentId.lastName}`,
+      weekTitle: f.weekId.title,
+      overallRating: f.overallRating,
+      comments: f.comments.substring(0, 150) + (f.comments.length > 150 ? '...' : ''),
+      submittedAt: f.createdAt
+    }));
+
+  res.status(200).json({
+    success: true,
+    data: {
+      courseId,
+      totalFeedback,
+      averageRating: Math.round(averageRating * 100) / 100,
+      averageContentQuality: Math.round(averageContentQuality * 100) / 100,
+      averageInstructorRating: Math.round(averageInstructorRating * 100) / 100,
+      averageMaterialsRating: Math.round(averageMaterialsRating * 100) / 100,
+      averagePaceRating: Math.round(averagePaceRating * 100) / 100,
+      difficultyDistribution,
+      recommendationRate: Math.round(recommendationRate * 100) / 100,
+      feedbackByWeek: weekStats,
+      topChallenges,
+      topFavorites,
+      recentFeedback
+    }
+  });
+});

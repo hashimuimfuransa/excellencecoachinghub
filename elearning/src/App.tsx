@@ -7,6 +7,7 @@ import Layout from './components/Layout/Layout';
 import PublicLayout from './components/Layout/PublicLayout';
 import CourseManagementLayout from './components/Layout/CourseManagementLayout';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
+import LearnerProtectedRoute from './components/Auth/LearnerProtectedRoute';
 import TeacherProfileGuard from './components/Auth/TeacherProfileGuard';
 import RouteHandler from './components/Router/RouteHandler';
 import StudentDashboardRedirect from './components/Auth/StudentDashboardRedirect';
@@ -284,13 +285,13 @@ const App: React.FC = () => {
           <Route path="test" element={<TestPage />} />
         </Route>
 
-        {/* Student Dashboard Routes */}
+        {/* Student and Job Seeker Dashboard Routes */}
         <Route
           path="student"
           element={
-            <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <LearnerProtectedRoute>
               <Outlet />
-            </ProtectedRoute>
+            </LearnerProtectedRoute>
           }
         >
           <Route index element={<StudentDashboard />} />
@@ -342,26 +343,26 @@ const App: React.FC = () => {
       <Route
         path="/material/:courseId/:materialId"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <MaterialView />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       {/* Live Sessions Page (outside dashboard) */}
       <Route
         path="/live-sessions"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <StudentLiveSessions />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/video-session/student/:sessionId"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <StudentLiveSessionRoom />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
@@ -377,53 +378,53 @@ const App: React.FC = () => {
       <Route
         path="/enhanced-notes/:id"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <CourseMaterialPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       {/* Course Enrollment Page (outside dashboard) */}
       <Route
         path="/courses"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <CourseEnrollmentPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       {/* Course Enrollment Page (outside dashboard) */}
       <Route
         path="/course/:id/enroll"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <CourseEnrollmentPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       {/* Enhanced Course View (outside dashboard) */}
       <Route
         path="/course/:id"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <EnhancedCourseViewPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       {/* Enhanced Video Sessions (outside dashboard) */}
       <Route
         path="/video-sessions/:courseId"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <EnhancedVideoSessionPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/video-sessions/:courseId/:sessionId"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <EnhancedVideoSessionPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       
@@ -431,73 +432,73 @@ const App: React.FC = () => {
       <Route
         path="/course/:id/assignments"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <CourseAssignmentsPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/course/:id/assessments"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <CourseAssessmentsPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/assessments"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <Assessments />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/enhanced-assessments"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <EnhancedAssessments />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/assessment/:assessmentId"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <EnhancedProctoredAssessment />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/assessment/:assessmentId/take"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <EnhancedTakeAssessment />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/enhanced-assessment/:assessmentId"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <EnhancedTakeAssessmentStudent />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/assessments/:assessmentId/take"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <TakeAssessment />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/proctored-assessment/:id/take"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <EnhancedTakeAssessmentWithProctoring />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
@@ -511,33 +512,33 @@ const App: React.FC = () => {
       <Route
         path="/assessment/:assessmentId/results"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <AssessmentResults />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/assignment/:assignmentId/work"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <TakeExamNew />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/assignment/:assignmentId/take"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <TakeExamNew />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
         path="/assignment/:assignmentId/results"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <AssignmentResults />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       <Route
@@ -555,9 +556,9 @@ const App: React.FC = () => {
       <Route
         path="/courses"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <StudentCourses />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       
@@ -565,27 +566,27 @@ const App: React.FC = () => {
       <Route
         path="/course/:id/learn"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <UnifiedLearningPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       {/* Standalone Personalized Path - Outside Dashboard Layout */}
       <Route
         path="/course/:id/personalized"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <UnifiedLearningPage />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       {/* New Learning Hub selector */}
       <Route
         path="/course/:id/hub"
         element={
-          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+          <LearnerProtectedRoute>
             <LearningHub />
-          </ProtectedRoute>
+          </LearnerProtectedRoute>
         }
       />
       

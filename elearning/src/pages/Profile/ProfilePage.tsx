@@ -86,6 +86,7 @@ import { studentProfileService, IUpdateStudentProfileData } from '../../services
 import { IUser, IStudentProfile, UserRole } from '../../shared/types';
 import ResponsiveDashboard from '../../components/Layout/ResponsiveDashboard';
 import { useResponsive } from '../../utils/responsive';
+import { isLearnerRole } from '../../utils/roleUtils';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -181,7 +182,7 @@ const ProfilePage: React.FC = () => {
       if (user) {
         const loadStudentProfile = async () => {
           const userRoleString = String(user?.role).toLowerCase();
-          const userIsStudent = user?.role === UserRole.STUDENT || userRoleString === 'student';
+          const userIsStudent = isLearnerRole(user?.role);
           
           if (userIsStudent) {
             try {
@@ -212,7 +213,7 @@ const ProfilePage: React.FC = () => {
     const loadStudentProfile = async () => {
       console.log('🔍 Loading student profile - User role:', user?.role);
       const userRoleString = String(user?.role).toLowerCase();
-      const userIsStudent = user?.role === UserRole.STUDENT || userRoleString === 'student';
+      const userIsStudent = isLearnerRole(user?.role);
       
       if (userIsStudent) {
         try {
@@ -494,7 +495,7 @@ const ProfilePage: React.FC = () => {
   const userRoleString = String(user.role || '').toLowerCase();
   
   // Proper role detection logic - NO FALLBACK
-  const isStudent = user.role === UserRole.STUDENT || userRoleString === 'student';
+  const isStudent = isLearnerRole(user.role);
   const isTeacher = user.role === UserRole.TEACHER || userRoleString === 'teacher';
   const isAdmin = user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || userRoleString === 'admin' || userRoleString === 'super_admin';
   

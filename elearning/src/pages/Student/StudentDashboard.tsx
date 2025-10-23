@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material';
 
 import { useAuth } from '../../store/AuthContext';
+import { isLearnerRole } from '../../utils/roleUtils';
 import { courseService, ICourse } from '../../services/courseService';
 import { assessmentService, IAssessment } from '../../services/assessmentService';
 import { enhancedAssessmentService, IEnhancedAssessment } from '../../services/enhancedAssessmentService';
@@ -178,7 +179,7 @@ const StudentDashboard: React.FC = () => {
 
   // Fetch dashboard data with rate limiting protection
   const fetchDashboardData = async () => {
-    if (!user || user.role !== 'student') return;
+    if (!user || !isLearnerRole(user.role)) return;
 
     try {
       setLoading(true);

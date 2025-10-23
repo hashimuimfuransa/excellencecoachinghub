@@ -536,12 +536,65 @@ const MaterialView: React.FC = () => {
           const progressPercentage = Math.min((newTimeSpent / estimatedDuration) * 100, 100);
           
           console.log(`📊 Page time progress: ${progressPercentage.toFixed(1)}% (${newTimeSpent}/${estimatedDuration} min)`);
+          
+          // Sync with server every 2 minutes (4 intervals of 30s) and at progress milestones
+          const shouldSync = (
+            (newTimeSpent > 0 && newTimeSpent % 2 === 0) || // Every 2 minutes
+            (progressPercentage >= 25 && !sessionStorage.getItem(`sync_25_${materialId}`)) || // 25% milestone
+            (progressPercentage >= 50 && !sessionStorage.getItem(`sync_50_${materialId}`)) || // 50% milestone
+            (progressPercentage >= 75 && !sessionStorage.getItem(`sync_75_${materialId}`))    // 75% milestone
+          );
+          
+          if (shouldSync) {
+            console.log(`🔄 Syncing progress with server... (${progressPercentage.toFixed(1)}% complete)`);
+            progressTrackingService.syncWithServer(courseId).catch(err => {
+              console.warn('⚠️ Background sync failed:', err);
+            });
+            
+            // Mark milestones as synced
+            if (progressPercentage >= 25) sessionStorage.setItem(`sync_25_${materialId}`, 'true');
+            if (progressPercentage >= 50) sessionStorage.setItem(`sync_50_${materialId}`, 'true');
+            if (progressPercentage >= 75) sessionStorage.setItem(`sync_75_${materialId}`, 'true');
+          }
         }
       }, 30000); // Update every 30 seconds
 
       return () => clearInterval(interval);
     }
   }, [material, isCompleted, startTime, timeSpent, courseId, week, materialId]);
+
+  // Save progress when user leaves the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (courseId && week && materialId && timeSpent > 0) {
+        console.log('💾 Saving progress before page unload...');
+        // Force sync progress to local storage before leaving
+        progressTrackingService.updateTimeSpent(courseId, week._id, materialId, timeSpent);
+        // Try to sync with server (may not complete if page closes quickly)
+        progressTrackingService.syncWithServer(courseId).catch(() => {
+          console.warn('⚠️ Final sync failed - progress saved locally');
+        });
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && courseId && week && materialId && timeSpent > 0) {
+        console.log('👁️ Page hidden - saving progress...');
+        progressTrackingService.updateTimeSpent(courseId, week._id, materialId, timeSpent);
+        progressTrackingService.syncWithServer(courseId).catch(() => {
+          console.warn('⚠️ Hidden sync failed - progress saved locally');
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [courseId, week, materialId, timeSpent]);
 
   // Handle PDF loading timeout
   useEffect(() => {
@@ -1046,25 +1099,39 @@ Respond as a knowledgeable tutor who has access to the course material.`;
     if (!courseId || !week || !materialId || !sessionId) return;
 
     try {
-      // Mark as completed in progress tracking
-      await progressTrackingService.markMaterialCompleted(courseId, week._id, materialId, timeSpent);
+      setLoading(true);
       
-      // End session
-      progressTrackingService.endSession(sessionId);
-      
-      // Add completion action
-      progressTrackingService.addAction(sessionId, {
-        type: 'section_read',
-        data: { completed: true, timeSpent }
-      });
-
+      // Mark as completed in progress tracking with optimistic UI update
       setIsCompleted(true);
       
-      // Sync with server
-      await progressTrackingService.syncWithServer(courseId);
+      // Use actual time spent (no minimum requirement) - user can complete anytime
+      const actualTimeSpent = Math.max(timeSpent, 0.1); // Just ensure non-zero value
+      
+      // Update progress immediately in local storage with 100% completion
+      progressTrackingService.markMaterialCompleted(courseId, week._id, materialId, actualTimeSpent);
+      
+      // End session and add completion action
+      progressTrackingService.endSession(sessionId);
+      progressTrackingService.addAction(sessionId, {
+        type: 'section_read',
+        data: { completed: true, timeSpent: actualTimeSpent }
+      });
+
+      console.log(`✅ Material marked as complete (Time spent: ${actualTimeSpent} minutes)`);
+      
+      // Sync with server in background - don't wait for it
+      progressTrackingService.syncWithServer(courseId).then(() => {
+        console.log('✅ Progress synced with server');
+      }).catch((err) => {
+        console.error('❌ Server sync failed, will retry later:', err);
+      });
+      
     } catch (err: any) {
       console.error('Error marking material complete:', err);
       setError(err.message || 'Failed to mark material complete');
+      setIsCompleted(false); // Revert optimistic update
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1807,7 +1874,7 @@ Respond as a knowledgeable tutor who has access to the course material.`;
                           <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen for Better Viewing"}>
                             <Button
                               variant="contained"
-                              onClick={() => setIsFullscreen(!isFullscreen)}
+                              onClick={toggleFullscreen}
                               startIcon={isFullscreen ? <FullscreenExit /> : <Fullscreen />}
                               sx={{
                                 backgroundColor: isFullscreen ? 'error.main' : 'primary.main',
@@ -2338,20 +2405,47 @@ Respond as a knowledgeable tutor who has access to the course material.`;
                     }
                   }
                 }}>
-                  {!isCompleted && (
+                  {!isCompleted ? (
                     <Button 
                       variant="contained" 
                       fullWidth
-                      startIcon={<CheckCircle />}
+                      disabled={loading}
+                      startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CheckCircle />}
                       onClick={handleMarkComplete}
                       sx={{
                         // Mobile button styling
                         '@media (max-width: 480px)': {
                           py: 1.5
+                        },
+                        backgroundColor: loading ? 'action.disabled' : 'success.main',
+                        '&:hover': {
+                          backgroundColor: loading ? 'action.disabled' : 'success.dark',
                         }
                       }}
                     >
-                      Mark as Complete
+                      {loading ? 'Marking Complete...' : 'Mark as Complete'}
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="contained" 
+                      fullWidth
+                      disabled
+                      startIcon={<CheckCircle />}
+                      sx={{
+                        // Mobile button styling
+                        '@media (max-width: 480px)': {
+                          py: 1.5
+                        },
+                        backgroundColor: 'success.main',
+                        color: 'white',
+                        '&.Mui-disabled': {
+                          backgroundColor: 'success.main',
+                          color: 'white',
+                          opacity: 0.8
+                        }
+                      }}
+                    >
+                      ✅ Completed
                     </Button>
                   )}
                   

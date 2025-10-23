@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
 import { studentProfileService } from '../../services/studentProfileService';
+import { isLearnerRole } from '../../utils/roleUtils';
 // Define interface for user with extended properties
 interface ExtendedUser {
   _id: string;
@@ -113,7 +114,7 @@ const StudentOpportunitiesPage: React.FC = () => {
 
   // Load profile completion
   const loadProfileCompletion = async () => {
-    if (user?.role === 'student') {
+    if (isLearnerRole(user?.role)) {
       try {
         console.log('🔍 Loading student profile completion for opportunities page...');
         const response = await studentProfileService.getMyProfile();

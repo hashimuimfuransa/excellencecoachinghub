@@ -14,7 +14,7 @@ import {
   Avatar,
   CircularProgress
 } from '@mui/material';
-import { School, Person } from '@mui/icons-material';
+import { School, Person, Work } from '@mui/icons-material';
 import { UserRole } from '../../shared/types';
 
 interface GoogleUserData {
@@ -117,6 +117,40 @@ const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         I want to learn and take courses
+                      </Typography>
+                    </Box>
+                  </Box>
+                }
+                sx={{ margin: 0, width: '100%' }}
+              />
+            </Box>
+
+            <Box 
+              sx={{
+                border: selectedRole === UserRole.JOB_SEEKER ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                borderRadius: 2,
+                p: 2,
+                mb: 2,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5'
+                }
+              }}
+              onClick={() => setSelectedRole(UserRole.JOB_SEEKER)}
+            >
+              <FormControlLabel
+                value={UserRole.JOB_SEEKER}
+                control={<Radio />}
+                label={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Work color={selectedRole === UserRole.JOB_SEEKER ? 'primary' : 'action'} />
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="medium">
+                        Job Seeker
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        I want to enhance my skills for career opportunities
                       </Typography>
                     </Box>
                   </Box>

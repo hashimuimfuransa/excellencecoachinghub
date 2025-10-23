@@ -216,7 +216,7 @@ export const getStudentDetails = async (req: Request, res: Response, next: NextF
 
     // Get student basic info
     const student = await User.findById(id).select('-password -emailVerificationToken -passwordResetToken');
-    if (!student || student.role !== UserRole.STUDENT) {
+    if (!student || (student.role !== UserRole.STUDENT && student.role !== UserRole.PROFESSIONAL)) {
       res.status(404).json({
         success: false,
         error: 'Student not found'
@@ -347,7 +347,7 @@ export const markAttendance = async (req: Request, res: Response, next: NextFunc
 
     // Verify student exists and is enrolled in course
     const student = await User.findById(studentId);
-    if (!student || student.role !== UserRole.STUDENT) {
+    if (!student || (student.role !== UserRole.STUDENT && student.role !== UserRole.PROFESSIONAL)) {
       res.status(404).json({
         success: false,
         error: 'Student not found'
@@ -573,7 +573,7 @@ export const updateStudentStatus = async (req: Request, res: Response, next: Nex
     const { isActive } = req.body;
 
     const student = await User.findById(id);
-    if (!student || student.role !== UserRole.STUDENT) {
+    if (!student || (student.role !== UserRole.STUDENT && student.role !== UserRole.PROFESSIONAL)) {
       res.status(404).json({
         success: false,
         error: 'Student not found'

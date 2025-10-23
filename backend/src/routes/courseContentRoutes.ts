@@ -84,7 +84,7 @@ router.post(
 router.get(
   '/:courseId/content',
   protect,
-  authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.STUDENT),
+  authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.STUDENT, UserRole.PROFESSIONAL),
   getCourseContent
 );
 

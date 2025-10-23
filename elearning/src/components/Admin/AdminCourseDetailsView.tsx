@@ -20,7 +20,8 @@ import {
   CalendarToday,
   Psychology,
   Quiz,
-  Settings
+  Settings,
+  Feedback
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { courseService, ICourse } from '../../services/courseService';
@@ -32,6 +33,7 @@ import AdminCourseWeeks from './AdminCourseWeeks';
 import AdminCourseNotes from './AdminCourseNotes';
 import AdminCourseQuizzes from './AdminCourseQuizzes';
 import AdminCourseActions from './AdminCourseActions';
+import AdminCourseStudentFeedback from './AdminCourseStudentFeedback';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -50,7 +52,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`course-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ py: { xs: 2, sm: 3 }, px: { xs: 1, sm: 0 } }}>{children}</Box>}
     </div>
   );
 }
@@ -156,10 +158,10 @@ const AdminCourseDetailsView: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="lg" sx={{ px: { xs: 1, sm: 2 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Breadcrumbs sx={{ mb: 2 }}>
+      <Box sx={{ mb: { xs: 2, sm: 4 } }}>
+        <Breadcrumbs sx={{ mb: 2, display: { xs: 'none', sm: 'flex' } }}>
           <Link
             component="button"
             variant="body1"
@@ -171,23 +173,52 @@ const AdminCourseDetailsView: React.FC = () => {
           <Typography color="text.primary">Course Details</Typography>
         </Breadcrumbs>
 
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box display="flex" alignItems="center">
+        <Box 
+          display="flex" 
+          alignItems={{ xs: 'flex-start', sm: 'center' }} 
+          justifyContent="space-between"
+          flexDirection={{ xs: 'column', sm: 'row' }}
+          gap={{ xs: 2, sm: 0 }}
+        >
+          <Box display="flex" alignItems={{ xs: 'flex-start', sm: 'center' }} flexDirection={{ xs: 'column', sm: 'row' }}>
             <Button
               variant="outlined"
               startIcon={<ArrowBack />}
               onClick={() => navigate('/dashboard/admin/courses')}
-              sx={{ mr: 2 }}
+              sx={{ 
+                mr: { xs: 0, sm: 2 }, 
+                mb: { xs: 1, sm: 0 },
+                minWidth: 'auto',
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                py: { xs: 0.5, sm: 1 },
+                px: { xs: 1, sm: 2 }
+              }}
+              size="small"
             >
               Back
             </Button>
-            <Typography variant="h4" component="h1">
+            <Typography 
+              variant="h4" 
+              component="h1"
+              sx={{ 
+                wordBreak: 'break-word',
+                lineHeight: { xs: 1.2, sm: 1.167 },
+                fontSize: { xs: '1.5rem', sm: '2.125rem' }
+              }}
+            >
               {course.title}
             </Typography>
           </Box>
         </Box>
         
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+        <Typography 
+          variant="body1" 
+          color="text.secondary" 
+          sx={{ 
+            mt: 1,
+            fontSize: { xs: '0.875rem', sm: '1rem' }
+          }}
+        >
           Comprehensive course details and management
         </Typography>
       </Box>
@@ -199,7 +230,7 @@ const AdminCourseDetailsView: React.FC = () => {
       />
 
       {/* Tabbed Content */}
-      <Paper sx={{ mb: 3 }}>
+      <Paper sx={{ mb: { xs: 2, sm: 3 } }}>
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
@@ -207,36 +238,54 @@ const AdminCourseDetailsView: React.FC = () => {
           textColor="primary"
           variant="scrollable"
           scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{
+            '& .MuiTab-root': {
+              minWidth: { xs: 'auto', sm: 160 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              padding: { xs: '8px 12px', sm: '12px 16px' }
+            },
+            '& .MuiTab-iconWrapper': {
+              display: { xs: 'none', sm: 'inline-block' },
+              marginBottom: { xs: 0, sm: '4px' }
+            }
+          }}
         >
           <Tab
             icon={<School />}
             label="Overview"
-            iconPosition="start"
+            iconPosition={{ xs: 'top', sm: 'start' }}
             {...a11yProps(0)}
           />
           <Tab
             icon={<Folder />}
             label="Materials"
-            iconPosition="start"
+            iconPosition={{ xs: 'top', sm: 'start' }}
             {...a11yProps(1)}
           />
           <Tab
             icon={<CalendarToday />}
             label="Weeks"
-            iconPosition="start"
+            iconPosition={{ xs: 'top', sm: 'start' }}
             {...a11yProps(2)}
           />
           <Tab
             icon={<Psychology />}
             label="Notes"
-            iconPosition="start"
+            iconPosition={{ xs: 'top', sm: 'start' }}
             {...a11yProps(3)}
           />
           <Tab
             icon={<Quiz />}
             label="Quizzes"
-            iconPosition="start"
+            iconPosition={{ xs: 'top', sm: 'start' }}
             {...a11yProps(4)}
+          />
+          <Tab
+            icon={<Feedback />}
+            label="Feedback"
+            iconPosition={{ xs: 'top', sm: 'start' }}
+            {...a11yProps(5)}
           />
         </Tabs>
       </Paper>
@@ -262,48 +311,84 @@ const AdminCourseDetailsView: React.FC = () => {
         <AdminCourseQuizzes courseId={courseId!} />
       </TabPanel>
 
+      <TabPanel value={activeTab} index={5}>
+        <AdminCourseStudentFeedback courseId={courseId!} />
+      </TabPanel>
+
       {/* Quick Stats Footer */}
-      <Paper sx={{ p: 3, mt: 3, bgcolor: 'grey.50' }}>
-        <Typography variant="h6" gutterBottom>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mt: { xs: 2, sm: 3 }, bgcolor: 'grey.50' }}>
+        <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
           Course Quick Stats
         </Typography>
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
           <Grid item xs={6} sm={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="primary">
+              <Typography 
+                variant="h4" 
+                color="primary"
+                sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}
+              >
                 {course.enrollmentCount || 0}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Enrollments
               </Typography>
             </Box>
           </Grid>
           <Grid item xs={6} sm={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="success">
+              <Typography 
+                variant="h4" 
+                color="success"
+                sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}
+              >
                 {course.duration}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Hours Duration
               </Typography>
             </Box>
           </Grid>
           <Grid item xs={6} sm={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="info">
+              <Typography 
+                variant="h4" 
+                color="info"
+                sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}
+              >
                 {course.price || 0}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Price ($)
               </Typography>
             </Box>
           </Grid>
           <Grid item xs={6} sm={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="warning">
+              <Typography 
+                variant="h4" 
+                color="warning"
+                sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}
+              >
                 {new Date(course.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Created Date
               </Typography>
             </Box>

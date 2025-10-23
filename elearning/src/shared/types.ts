@@ -4,7 +4,9 @@ export enum UserRole {
   ADMIN = 'admin',
   SUPER_ADMIN = 'super_admin',
   TEACHER = 'teacher',
-  STUDENT = 'student'
+  STUDENT = 'student',
+  JOB_SEEKER = 'job_seeker',
+  PROFESSIONAL = 'professional'
 }
 
 export enum CourseStatus {

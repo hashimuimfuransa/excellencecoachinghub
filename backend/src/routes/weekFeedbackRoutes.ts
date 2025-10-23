@@ -4,6 +4,7 @@ import {
   getWeekFeedback,
   getWeekFeedbackStats,
   getCourseFeedback,
+  getCourseFeedbackStats,
   hasSubmittedFeedback,
   getUserFeedbackHistory
 } from '../controllers/weekFeedbackController';
@@ -23,6 +24,9 @@ router.get('/week/:weekId/stats', auth, authorizeRoles(['teacher', 'admin', 'sup
 
 // Get all feedback for a course (admins only)
 router.get('/course/:courseId', auth, authorizeRoles(['admin', 'super_admin']), getCourseFeedback);
+
+// Get course feedback statistics (admins only)
+router.get('/course/:courseId/stats', auth, authorizeRoles(['admin', 'super_admin']), getCourseFeedbackStats);
 
 // Check if user has already submitted feedback for a week
 router.get('/week/:weekId/user/:userId/exists', auth, hasSubmittedFeedback);

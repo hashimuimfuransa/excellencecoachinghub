@@ -457,7 +457,7 @@ export const getStudentDetailedPerformance = asyncHandler(async (req: Request, r
   try {
     // Verify student exists
     const student = await User.findById(studentId);
-    if (!student || student.role !== UserRole.STUDENT) {
+    if (!student || (student.role !== UserRole.STUDENT && student.role !== UserRole.PROFESSIONAL)) {
       res.status(404).json({
         success: false,
         error: 'Student not found'

@@ -39,11 +39,11 @@ router.get(
   getAdminRecordedSessions
 );
 
-// Student routes - MUST come before /:id routes to avoid conflicts
+// Student and Professional routes - MUST come before /:id routes to avoid conflicts
 router.get(
   '/course/:courseId/student',
   auth,
-  requireRole(UserRole.STUDENT),
+  requireRole(UserRole.STUDENT, UserRole.PROFESSIONAL),
   getRecordedSessionsForStudents
 );
 
@@ -51,7 +51,7 @@ router.get(
 router.get(
   '/student',
   auth,
-  requireRole(UserRole.STUDENT),
+  requireRole(UserRole.STUDENT, UserRole.PROFESSIONAL),
   getAllRecordedSessionsForStudent
 );
 
@@ -59,7 +59,7 @@ router.get(
 router.get(
   '/:id',
   auth,
-  requireRole(UserRole.TEACHER, UserRole.STUDENT, UserRole.ADMIN),
+  requireRole(UserRole.TEACHER, UserRole.STUDENT, UserRole.PROFESSIONAL, UserRole.ADMIN),
   getRecordedSession
 );
 

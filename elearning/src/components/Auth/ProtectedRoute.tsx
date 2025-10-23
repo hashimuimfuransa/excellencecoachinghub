@@ -40,7 +40,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Handle super admin as admin for elearning
     const isSuperAdminAsAdmin = user.role === UserRole.SUPER_ADMIN && requiredRole === UserRole.ADMIN;
     
-    if (!isSuperAdminAsAdmin) {
+    // Allow job seekers and professionals to access student routes
+    const isJobSeekerAccessingStudent = user.role === UserRole.JOB_SEEKER && requiredRole === UserRole.STUDENT;
+    const isProfessionalAccessingStudent = user.role === UserRole.PROFESSIONAL && requiredRole === UserRole.STUDENT;
+    
+    // Allow students to access job seeker routes (for backward compatibility)
+    const isStudentAccessingJobSeeker = user.role === UserRole.STUDENT && requiredRole === UserRole.JOB_SEEKER;
+    
+    if (!isSuperAdminAsAdmin && !isJobSeekerAccessingStudent && !isProfessionalAccessingStudent && !isStudentAccessingJobSeeker) {
       // Redirect to appropriate dashboard based on user role
       const redirectPath = user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN
         ? '/dashboard/admin'

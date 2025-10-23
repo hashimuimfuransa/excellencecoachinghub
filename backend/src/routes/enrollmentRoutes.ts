@@ -77,42 +77,42 @@ const accessCheckValidation = [
     .withMessage('Invalid access type')
 ];
 
-// Student routes
+// Student and Professional routes
 router.post('/courses/:courseId/enroll', 
-  authorize(UserRole.STUDENT), 
+  authorize(UserRole.STUDENT, UserRole.PROFESSIONAL), 
   enrollmentValidation, 
   validateRequest, 
   enrollInCourse
 );
 
 router.put('/enrollments/:enrollmentId/complete-payment', 
-  authorize(UserRole.STUDENT), 
+  authorize(UserRole.STUDENT, UserRole.PROFESSIONAL), 
   paymentValidation, 
   validateRequest, 
   completePayment
 );
 
 router.get('/my-enrollments', 
-  authorize(UserRole.STUDENT), 
+  authorize(UserRole.STUDENT, UserRole.PROFESSIONAL), 
   getMyEnrollments
 );
 
 router.get('/:courseId', 
-  authorize(UserRole.STUDENT), 
+  authorize(UserRole.STUDENT, UserRole.PROFESSIONAL), 
   [param('courseId').isMongoId().withMessage('Invalid course ID')],
   validateRequest,
   getEnrollmentDetails
 );
 
 router.get('/courses/:courseId/access', 
-  authorize(UserRole.STUDENT), 
+  authorize(UserRole.STUDENT, UserRole.PROFESSIONAL), 
   accessCheckValidation, 
   validateRequest, 
   checkCourseAccess
 );
 
 router.put('/courses/:courseId/progress', 
-  authorize(UserRole.STUDENT), 
+  authorize(UserRole.STUDENT, UserRole.PROFESSIONAL), 
   progressValidation, 
   validateRequest, 
   updateProgress

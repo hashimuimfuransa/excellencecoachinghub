@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { loginRedirectService } from '../../services/loginRedirectService';
 import { UserRole } from '../../shared/types';
+import { isLearnerRole } from '../../utils/roleUtils';
 
 interface StudentDashboardRedirectProps {
   userRole: UserRole;

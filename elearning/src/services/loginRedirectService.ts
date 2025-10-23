@@ -1,5 +1,6 @@
 import { enrollmentService, IEnrollment } from './enrollmentService';
 import { UserRole } from '../shared/types';
+import { isLearnerRole } from '../utils/roleUtils';
 
 export interface LoginRedirectOptions {
   userRole: UserRole;
@@ -16,15 +17,15 @@ export const loginRedirectService = {
     
     console.log('🔍 LoginRedirectService - Getting redirect path for:', { userRole, interests, from });
 
-    // For non-student users, use existing logic
-    if (userRole !== UserRole.STUDENT) {
-      console.log('🔍 Non-student user, redirecting to dashboard');
+    // For non-learner users, use existing logic
+    if (!isLearnerRole(userRole)) {
+      console.log('🔍 Non-learner user, redirecting to dashboard');
       return from || '/dashboard';
     }
 
-    // For students, check if they have any active enrollments
+    // For learners (students and job seekers), check if they have any active enrollments
     try {
-      console.log('🔍 Checking student enrollments...');
+      console.log('🔍 Checking learner enrollments...');
       const enrollmentsResponse = await enrollmentService.getMyEnrollments({ limit: 1 });
       const activeEnrollments = enrollmentsResponse.enrollments.filter(
         enrollment => enrollment.isActive && enrollment.paymentStatus === 'completed'
@@ -32,7 +33,7 @@ export const loginRedirectService = {
 
       console.log('🔍 Active enrollments found:', activeEnrollments.length);
 
-      // If student has active enrollments, redirect to the first course hub
+      // If learner has active enrollments, redirect to the first course hub
       if (activeEnrollments.length > 0) {
         const firstEnrollment = activeEnrollments[0];
         const hubPath = `/course/${firstEnrollment.course._id}/hub`;
@@ -48,9 +49,9 @@ export const loginRedirectService = {
         return coursesPath;
       }
 
-      // Default redirect for students without enrollments
+      // Default redirect for learners without enrollments
       const defaultPath = from || '/dashboard/student/courses';
-      console.log('🔍 Default redirect for students:', defaultPath);
+      console.log('🔍 Default redirect for learners:', defaultPath);
       return defaultPath;
     } catch (error) {
       console.warn('🔍 Error checking enrollments for redirect:', error);

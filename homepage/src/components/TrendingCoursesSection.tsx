@@ -6,7 +6,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CardMedia,
   Chip,
   Button,
   Rating,
@@ -19,7 +18,6 @@ import {
   School,
   People,
   AccessTime,
-  Star,
   ArrowForward,
   TrendingUp,
 } from '@mui/icons-material';

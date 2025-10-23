@@ -565,6 +565,10 @@ const CourseManagement: React.FC = () => {
           <Visibility sx={{ mr: 1 }} />
           View Details
         </MenuItem>
+        <MenuItem onClick={() => navigate(`/dashboard/admin/courses/${selectedCourse._id}/details`)}>
+          <Visibility sx={{ mr: 1 }} />
+          Comprehensive View
+        </MenuItem>
         {selectedCourse?.status === CourseStatus.PENDING_APPROVAL && (
           <>
             <MenuItem onClick={handleApproveCourse}>

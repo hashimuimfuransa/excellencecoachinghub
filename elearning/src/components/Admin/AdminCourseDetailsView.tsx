@@ -82,10 +82,13 @@ const AdminCourseDetailsView: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const courseData = await courseService.getCourseById(courseId!);
+      // Use the admin-specific method with fallback approaches
+      const courseData = await courseService.getCourseByIdForAdmin(courseId!);
       setCourse(courseData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load course details');
+      console.error('Failed to load course details:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load course details';
+      setError(`${errorMessage}. This may be due to insufficient permissions or the course may not exist.`);
     } finally {
       setLoading(false);
     }
@@ -114,6 +117,15 @@ const AdminCourseDetailsView: React.FC = () => {
       <Container maxWidth="lg">
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
+        </Alert>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            <strong>Troubleshooting:</strong>
+            <br />• Ensure you have super admin permissions
+            <br />• Check if the course ID is correct
+            <br />• Verify the course exists in the system
+            <br />• Contact system administrator if the issue persists
+          </Typography>
         </Alert>
         <Button
           variant="outlined"

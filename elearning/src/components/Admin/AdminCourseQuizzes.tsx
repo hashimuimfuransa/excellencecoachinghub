@@ -24,7 +24,7 @@ import {
 } from '@mui/material';
 import {
   Quiz,
-  Assignment,
+  Assignment as AssignmentIcon,
   ExpandMore,
   Visibility,
   Edit,
@@ -38,7 +38,9 @@ import {
   Cancel
 } from '@mui/icons-material';
 import { assessmentService, IAssessment } from '../../services/assessmentService';
-import { assignmentService, Assignment } from '../../services/assignmentService';
+import { assignmentService } from '../../services/assignmentService';
+import type { Assignment } from '../../services/assignmentService';
+import { courseService } from '../../services/courseService';
 
 interface AdminCourseQuizzesProps {
   courseId: string;
@@ -59,6 +61,10 @@ const AdminCourseQuizzes: React.FC<AdminCourseQuizzesProps> = ({ courseId }) => 
       setLoading(true);
       setError(null);
       
+      // Use admin-specific method to avoid 403 errors
+      const course = await courseService.getCourseByIdForAdmin(courseId);
+      
+      // Try to load assessments and assignments
       const [assessmentsData, assignmentsData] = await Promise.all([
         assessmentService.getCourseAssessments(courseId).catch(() => []),
         assignmentService.getCourseAssignments(courseId).catch(() => [])
@@ -67,7 +73,8 @@ const AdminCourseQuizzes: React.FC<AdminCourseQuizzesProps> = ({ courseId }) => 
       setAssessments(assessmentsData);
       setAssignments(assignmentsData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load quizzes and assignments');
+      console.error('Failed to load quizzes and assignments:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load quizzes and assignments. This may be due to insufficient permissions.');
     } finally {
       setLoading(false);
     }
@@ -97,7 +104,7 @@ const AdminCourseQuizzes: React.FC<AdminCourseQuizzesProps> = ({ courseId }) => 
   };
 
   const getAssignmentIcon = (assignment: Assignment) => {
-    return <Assignment color="secondary" />;
+    return <AssignmentIcon color="secondary" />;
   };
 
   const formatDate = (dateString: string) => {
@@ -316,7 +323,7 @@ const AdminCourseQuizzes: React.FC<AdminCourseQuizzesProps> = ({ courseId }) => 
               <Accordion defaultExpanded={assessments.length === 0}>
                 <AccordionSummary expandIcon={<ExpandMore />}>
                   <Box display="flex" alignItems="center" width="100%">
-                    <Assignment sx={{ mr: 2 }} />
+                    <AssignmentIcon sx={{ mr: 2 }} />
                     <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
                       Assignments ({assignments.length})
                     </Typography>

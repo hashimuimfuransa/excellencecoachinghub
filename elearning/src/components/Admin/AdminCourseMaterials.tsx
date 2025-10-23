@@ -65,7 +65,8 @@ const AdminCourseMaterials: React.FC<AdminCourseMaterialsProps> = ({ courseId })
       setLoading(true);
       setError(null);
       
-      const course = await courseService.getCourseById(courseId);
+      // Use admin-specific method to avoid 403 errors
+      const course = await courseService.getCourseByIdForAdmin(courseId);
       const courseMaterials = course.content || [];
       
       // Sort materials by order
@@ -75,7 +76,8 @@ const AdminCourseMaterials: React.FC<AdminCourseMaterialsProps> = ({ courseId })
       
       setMaterials(sortedMaterials);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load materials');
+      console.error('Failed to load materials:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load materials. This may be due to insufficient permissions.');
     } finally {
       setLoading(false);
     }

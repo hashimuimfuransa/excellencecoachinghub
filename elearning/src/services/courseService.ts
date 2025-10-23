@@ -208,6 +208,36 @@ export const courseService = {
     throw new Error(response.error || 'Failed to fetch course');
   },
 
+  // Get course by ID for admin access (with fallback methods)
+  getCourseByIdForAdmin: async (id: string): Promise<ICourse> => {
+    try {
+      // First try the regular endpoint
+      return await courseService.getCourseById(id);
+    } catch (regularError) {
+      console.warn('Regular course access failed for admin, trying alternative methods:', regularError);
+      
+      try {
+        // Try to get course from admin course list
+        const coursesResponse = await courseService.getAllCourses({
+          page: 1,
+          limit: 1000
+        });
+        
+        const foundCourse = coursesResponse.courses.find(c => c._id === id);
+        
+        if (foundCourse) {
+          return foundCourse;
+        }
+        
+        // If not found in list, try public endpoint as last resort
+        return await courseService.getPublicCourseById(id);
+      } catch (fallbackError) {
+        console.error('All course access methods failed:', fallbackError);
+        throw new Error('Unable to access course details. This course may not exist or you may not have proper admin permissions.');
+      }
+    }
+  },
+
   // Update course
   updateCourse: async (id: string, courseData: UpdateCourseData): Promise<ICourse> => {
     const response = await apiService.put<{ course: ICourse }>(`/courses/${id}`, courseData);

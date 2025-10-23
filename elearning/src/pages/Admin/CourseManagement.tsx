@@ -54,8 +54,10 @@ import {
 
 import { courseService, ICourse, CourseStats } from '../../services/courseService';
 import { CourseStatus } from '../../shared/types';
+import { useNavigate } from 'react-router-dom';
 
 const CourseManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<ICourse[]>([]);
   const [courseStats, setCourseStats] = useState<CourseStats | null>(null);
   const [loading, setLoading] = useState(true);

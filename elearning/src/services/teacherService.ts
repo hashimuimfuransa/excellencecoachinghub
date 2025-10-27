@@ -90,7 +90,6 @@ export const teacherService = {
     throw new Error(response.error || 'Failed to fetch teacher details');
   },
 
-  // Update teacher information
   updateTeacher: async (id: string, teacherData: UpdateTeacherData): Promise<ITeacher> => {
     const response = await apiService.put<{ user: ITeacher }>(`/users/${id}`, teacherData);
     
@@ -101,12 +100,18 @@ export const teacherService = {
     throw new Error(response.error || 'Failed to update teacher');
   },
 
-  // Activate teacher
+  deleteTeacher: async (id: string): Promise<void> => {
+    const response = await apiService.delete(`/users/${id}`);
+
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to delete teacher');
+    }
+  },
+
   activateTeacher: async (id: string): Promise<ITeacher> => {
     return teacherService.updateTeacher(id, { isActive: true });
   },
 
-  // Deactivate teacher
   deactivateTeacher: async (id: string): Promise<ITeacher> => {
     return teacherService.updateTeacher(id, { isActive: false });
   },

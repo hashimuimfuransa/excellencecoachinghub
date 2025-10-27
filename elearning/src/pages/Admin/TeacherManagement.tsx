@@ -52,6 +52,7 @@ import {
   Download,
   Visibility,
   Close,
+  Delete,
   CloudUpload,
   Description,
   Email,
@@ -95,14 +96,14 @@ const TeacherManagement: React.FC = () => {
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [cvUploadDialogOpen, setCvUploadDialogOpen] = useState(false);
   
-  // CV upload state
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvUploading, setCvUploading] = useState(false);
   
-  // Approval state
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
   const [approvalFeedback, setApprovalFeedback] = useState('');
   const [approvalReason, setApprovalReason] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Teacher profile state
   const [selectedTeacherProfile, setSelectedTeacherProfile] = useState<ITeacherProfile | null>(null);
@@ -131,7 +132,6 @@ const TeacherManagement: React.FC = () => {
       setError(null);
 
       if (currentTab === 1) {
-        // Load pending approvals
         const [profilesResponse, statsResponse] = await Promise.all([
           teacherProfileService.getAllProfiles({
             page: page + 1,
@@ -147,7 +147,6 @@ const TeacherManagement: React.FC = () => {
         setTotalTeachersCount(profilesResponse.pagination.totalProfiles);
         setPendingCount(profilesResponse.pagination.totalProfiles);
       } else {
-        // Load teachers based on tab
         let profileStatusFilter: string | undefined;
         if (currentTab === 2) profileStatusFilter = 'approved';
         else if (currentTab === 3) profileStatusFilter = 'rejected';
@@ -161,10 +160,9 @@ const TeacherManagement: React.FC = () => {
             profileStatus: profileStatusFilter
           }),
           teacherService.getTeacherStats(),
-          teacherProfileService.getAllProfiles({ status: 'pending', limit: 1 }) // Just to get count
+          teacherProfileService.getAllProfiles({ status: 'pending', limit: 1 })
         ]);
 
-        console.log('Loaded teachers:', teachersResponse.teachers);
         setTeachers(teachersResponse.teachers);
         setTeacherStats(statsResponse);
         setTotalTeachersCount(teachersResponse.pagination.totalTeachers);
@@ -472,13 +470,22 @@ const TeacherManagement: React.FC = () => {
         if (selectedTeacher.profileId) {
           profile = await teacherProfileService.getProfileById(selectedTeacher.profileId);
         } else {
-          // Search for profile by teacher ID
-          const profiles = await teacherProfileService.getAllProfiles({
-            search: selectedTeacher._id,
+          const profilesByUser = await teacherProfileService.getAllProfiles({
+            userId: selectedTeacher._id,
             limit: 1
           });
-          if (profiles.profiles.length > 0) {
-            profile = profiles.profiles[0];
+
+          if (profilesByUser.profiles.length > 0) {
+            profile = profilesByUser.profiles[0];
+          } else {
+            const profilesBySearch = await teacherProfileService.getAllProfiles({
+              search: selectedTeacher._id,
+              limit: 1
+            });
+
+            if (profilesBySearch.profiles.length > 0) {
+              profile = profilesBySearch.profiles[0];
+            }
           }
         }
         
@@ -565,9 +572,7 @@ const TeacherManagement: React.FC = () => {
 
   const handleEditTeacher = () => {
     if (selectedTeacher) {
-      handleMenuClose(); // Close menu first
-      
-      // Initialize edit form with current teacher data
+      handleMenuClose();
       setEditData({
         firstName: selectedTeacher.firstName || '',
         lastName: selectedTeacher.lastName || '',
@@ -576,11 +581,20 @@ const TeacherManagement: React.FC = () => {
         bio: selectedTeacher.bio || '',
         isActive: selectedTeacher.isActive || true
       });
-      
       setEditDialogOpen(true);
     } else {
       handleMenuClose();
       setError('No teacher selected for editing');
+    }
+  };
+
+  const handleDeleteTeacher = () => {
+    if (selectedTeacher) {
+      handleMenuClose();
+      setDeleteDialogOpen(true);
+    } else {
+      handleMenuClose();
+      setError('No teacher selected for deletion');
     }
   };
 
@@ -626,13 +640,34 @@ const TeacherManagement: React.FC = () => {
       setLoading(true);
       await teacherService.deactivateTeacher(selectedTeacher._id);
       setSuccess(`${selectedTeacher.firstName} ${selectedTeacher.lastName} has been deactivated successfully`);
-      loadTeachers(); // Refresh the list
+      loadTeachers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to deactivate teacher');
     } finally {
       setLoading(false);
     }
     setDeactivateDialogOpen(false);
+    clearTeacherSelection();
+  };
+
+  const confirmDeleteTeacher = async () => {
+    if (!selectedTeacher) {
+      setError('No teacher selected');
+      setDeleteDialogOpen(false);
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      await teacherService.deleteTeacher(selectedTeacher._id);
+      setSuccess(`${selectedTeacher.firstName} ${selectedTeacher.lastName} has been deleted successfully`);
+      loadTeachers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete teacher');
+    } finally {
+      setDeleteLoading(false);
+    }
+    setDeleteDialogOpen(false);
     clearTeacherSelection();
   };
 
@@ -1100,6 +1135,10 @@ const TeacherManagement: React.FC = () => {
               Activate
             </>
           )}
+        </MenuItem>
+        <MenuItem onClick={handleDeleteTeacher}>
+          <Delete sx={{ mr: 1 }} />
+          Delete Teacher
         </MenuItem>
       </Menu>
 
@@ -1939,7 +1978,46 @@ const TeacherManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Approval Action Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          clearTeacherSelection();
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Delete Teacher</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Are you sure you want to permanently delete <strong>"{selectedTeacher?.firstName} {selectedTeacher?.lastName}"</strong>?
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              This action cannot be undone and will remove the teacher's account, associated courses, and data.
+            </Typography>
+            <Typography variant="body2" color="warning.main" sx={{ mt: 2 }}>
+              Removing a teacher may impact linked courses and student enrollments.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setDeleteDialogOpen(false);
+            clearTeacherSelection();
+          }}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={confirmDeleteTeacher}
+            disabled={deleteLoading}
+            startIcon={deleteLoading ? <CircularProgress size={20} /> : <Delete />}
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete Teacher'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={approvalAction !== null && selectedTeacherProfile !== null}
         onClose={() => {

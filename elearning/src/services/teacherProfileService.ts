@@ -152,6 +152,7 @@ export interface ITeacherProfileFilters {
   limit?: number;
   status?: string;
   search?: string;
+  userId?: string;
 }
 
 export interface IUpdateTeacherProfileData {

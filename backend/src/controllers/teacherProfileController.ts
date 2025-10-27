@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
+import { Types } from 'mongoose';
 import { TeacherProfile } from '../models/TeacherProfile';
 import { User } from '../models/User';
 import { UserRole } from '../../../shared/types';
@@ -235,14 +236,16 @@ export const getAllProfiles = async (req: Request, res: Response, next: NextFunc
     const limit = parseInt(req.query.limit as string) || 10;
     const status = req.query.status as string;
     const search = req.query.search as string || '';
+    const userId = req.query.userId as string;
 
-    // Build filter
     const filter: any = {};
     if (status && status !== 'all') {
       filter.profileStatus = status;
     }
+    if (userId && Types.ObjectId.isValid(userId)) {
+      filter.userId = new Types.ObjectId(userId);
+    }
 
-    // Build search query
     let profiles;
     if (search) {
       profiles = await TeacherProfile.aggregate([

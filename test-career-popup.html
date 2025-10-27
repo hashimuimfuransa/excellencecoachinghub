@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Career Popup Storage - Testing Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+            font-size: 16px;
+            width: 100%;
+            max-width: 400px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .danger {
+            background: #f44336;
+        }
+        .danger:hover {
+            background: #da190b;
+        }
+        .info {
+            background: #2196F3;
+        }
+        .info:hover {
+            background: #1976D2;
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background: #e8f5e8;
+            border-left: 4px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Career Popup Testing Tool</h1>
+        <p>Use this tool to clear the career popup dismissal storage for testing purposes.</p>
+        
+        <div class="status" id="status">
+            Ready to test career popups!
+        </div>
+
+        <h3>🗑️ Clear Storage</h3>
+        <button onclick="clearJobPortalStorage()">Clear Job Portal Dismissal</button>
+        <button onclick="clearElearningStorage()">Clear E-Learning Dismissal</button>
+        <button onclick="clearAllStorage()" class="danger">Clear All Career Popup Storage</button>
+
+        <h3>📊 Check Storage Status</h3>
+        <button onclick="checkStorage()" class="info">Check Current Storage</button>
+        
+        <h3>🔧 Storage Details</h3>
+        <pre id="storageDetails">Click "Check Current Storage" to see details...</pre>
+
+        <h3>📝 Instructions</h3>
+        <ol>
+            <li><strong>To test the popup:</strong> Click "Clear All Career Popup Storage" then refresh your app</li>
+            <li><strong>Job Portal users:</strong> Navigate to <code>/app</code> or <code>/app/dashboard</code></li>
+            <li><strong>E-Learning students:</strong> Navigate to <code>/dashboard</code> or <code>/dashboard/student</code></li>
+            <li><strong>Check console logs:</strong> Open browser DevTools to see detailed popup logic</li>
+            <li><strong>Popup should show:</strong> After 3 seconds if no career test completed</li>
+            <li><strong>Dismissal period:</strong> 2 hours (popup won't show again for 2 hours after dismissing)</li>
+        </ol>
+
+        <h3>🐛 Troubleshooting</h3>
+        <ul>
+            <li>Make sure you're logged in as a <strong>Student</strong> or <strong>Job Seeker</strong> (not Employer/Teacher)</li>
+            <li>Make sure you're on the correct dashboard page</li>
+            <li>Check browser console for detailed logs (look for 🔍, ✅, ❌, 🎯 emojis)</li>
+            <li>Clear storage and refresh if popup isn't showing</li>
+            <li>Career test completion is checked via API - mock incomplete status for testing</li>
+        </ul>
+    </div>
+
+    <script>
+        function clearJobPortalStorage() {
+            localStorage.removeItem('jobCareerPopupLastDismissed');
+            sessionStorage.removeItem('jobCareerPopupDismissed');
+            updateStatus('✅ Job Portal career popup storage cleared!');
+            checkStorage();
+        }
+
+        function clearElearningStorage() {
+            localStorage.removeItem('careerPopupLastDismissed');
+            sessionStorage.removeItem('careerPopupDismissed');
+            updateStatus('✅ E-Learning career popup storage cleared!');
+            checkStorage();
+        }
+
+        function clearAllStorage() {
+            // Job Portal keys
+            localStorage.removeItem('jobCareerPopupLastDismissed');
+            sessionStorage.removeItem('jobCareerPopupDismissed');
+            
+            // E-Learning keys  
+            localStorage.removeItem('careerPopupLastDismissed');
+            sessionStorage.removeItem('careerPopupDismissed');
+            
+            updateStatus('✅ ALL career popup storage cleared! You should see the popup on next dashboard visit.');
+            checkStorage();
+        }
+
+        function checkStorage() {
+            const storage = {
+                localStorage: {
+                    jobCareerPopupLastDismissed: localStorage.getItem('jobCareerPopupLastDismissed'),
+                    careerPopupLastDismissed: localStorage.getItem('careerPopupLastDismissed')
+                },
+                sessionStorage: {
+                    jobCareerPopupDismissed: sessionStorage.getItem('jobCareerPopupDismissed'),
+                    careerPopupDismissed: sessionStorage.getItem('careerPopupDismissed')
+                }
+            };
+
+            document.getElementById('storageDetails').textContent = JSON.stringify(storage, null, 2);
+            
+            const hasAnyDismissal = storage.localStorage.jobCareerPopupLastDismissed || 
+                                  storage.localStorage.careerPopupLastDismissed ||
+                                  storage.sessionStorage.jobCareerPopupDismissed || 
+                                  storage.sessionStorage.careerPopupDismissed;
+            
+            if (hasAnyDismissal) {
+                updateStatus('⏰ Career popup dismissal found - may not show until dismissed time expires');
+            } else {
+                updateStatus('🆓 No dismissal storage found - popup should show on dashboard visit!');
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        // Check storage on page load
+        checkStorage();
+    </script>
+</body>
+</html>

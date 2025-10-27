@@ -1,0 +1,62 @@
+# Robots.txt for ExJobNet - Excellence Coaching Hub Job Portal
+# https://exjobnet.com/
+
+User-agent: *
+Allow: /
+
+# High-value pages for search engines
+Allow: /
+Allow: /jobs
+Allow: /companies  
+Allow: /interviews
+Allow: /ai-interviews
+Allow: /career-guidance
+Allow: /career-assessment
+Allow: /certificates
+Allow: /courses
+Allow: /login
+Allow: /register
+
+# Static assets
+Allow: /assets/
+Allow: *.css
+Allow: *.js
+Allow: *.webp
+Allow: *.jpg
+Allow: *.png
+Allow: *.svg
+Allow: *.gif
+
+# Prevent crawling of user-specific pages
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /applications
+Disallow: /saved-jobs
+Disallow: /profile-settings
+Disallow: /employer/
+Disallow: /admin/
+Disallow: /api/
+
+# Prevent crawling of test pages
+Disallow: /*?test*
+Disallow: /*?debug*
+Disallow: /test-*
+
+# Important files
+Sitemap: https://exjobnet.com/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Special directives for major search engines
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0.5
+
+User-agent: Bingbot  
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1

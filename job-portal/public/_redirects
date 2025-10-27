@@ -1,0 +1,13 @@
+# Serve important static files directly
+/robots.txt   /robots.txt   200
+/sitemap.xml  /sitemap.xml  200
+/manifest.json  /manifest.json  200
+/favicon.ico    /favicon.ico    200
+/assets/*       /assets/:splat  200
+
+# Canonical host and HTTPS (prevent redirect chains)
+www.exjobnet.com/*   https://exjobnet.com/:splat   301
+http://exjobnet.com/*  https://exjobnet.com/:splat  301
+
+# SPA fallback for all other routes
+/*   /index.html   200

@@ -1,0 +1,45 @@
+{
+  "name": "excellence-coaching-hub-homepage",
+  "version": "1.0.0",
+  "description": "Homepage for Excellence Coaching Hub - Africa's leading career development platform",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "start": "vite"
+  },
+  "dependencies": {
+
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.5",
+    "@fontsource/inter": "^5.0.18",
+    "@google-cloud/local-auth": "^3.0.1",
+    "@hookform/resolvers": "^3.3.4",
+    "@mui/icons-material": "^5.15.15",
+    "@mui/material": "^5.15.15",
+    "@types/react-beautiful-dnd": "^13.1.8",
+    "@types/react-facebook-login": "^4.1.11",
+    "axios": "^1.6.8",
+    "framer-motion": "^11.1.7",
+    "google-auth-library": "^10.2.1",
+    "react": "^18.2.0",
+    "react-beautiful-dnd": "^13.1.1",
+    "react-dom": "^18.2.0",
+    "react-facebook-login": "^4.1.1",
+    "react-google-login": "^5.2.2",
+    "react-hook-form": "^7.51.3",
+    "react-intersection-observer": "^9.16.0",
+    "react-router-dom": "^6.22.3",
+    "react-toastify": "^10.0.5",
+    "yup": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
+  }
+}

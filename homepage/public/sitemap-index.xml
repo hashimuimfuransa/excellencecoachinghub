@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Main Homepage Sitemap -->
+  <sitemap>
+    <loc>https://excellencecoachinghub.com/sitemap.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+  <!-- E-Learning Platform Sitemap -->
+  <sitemap>
+    <loc>https://elearning.excellencecoachinghub.com/sitemap.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+  <!-- Job Portal Sitemap -->
+  <sitemap>
+    <loc>https://exjobnet.com/sitemap.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+  <!-- Courses Sitemap -->
+  <sitemap>
+    <loc>https://excellencecoachinghub.com/sitemap-courses.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+  <!-- Services Sitemap -->
+  <sitemap>
+    <loc>https://excellencecoachinghub.com/sitemap-services.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+  <!-- Geographic Pages Sitemap -->
+  <sitemap>
+    <loc>https://excellencecoachinghub.com/sitemap-locations.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+  <!-- Blog and Content Sitemap -->
+  <sitemap>
+    <loc>https://excellencecoachinghub.com/sitemap-content.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+  <!-- Success Stories and Testimonials Sitemap -->
+  <sitemap>
+    <loc>https://excellencecoachinghub.com/sitemap-testimonials.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+  <!-- Resources and Guides Sitemap -->
+  <sitemap>
+    <loc>https://excellencecoachinghub.com/sitemap-resources.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+  <!-- Legal and Support Pages Sitemap -->
+  <sitemap>
+    <loc>https://excellencecoachinghub.com/sitemap-support.xml</loc>
+    <lastmod>2024-12-18T00:00:00+00:00</lastmod>
+  </sitemap>
+
+</sitemapindex>

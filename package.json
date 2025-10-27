@@ -1,0 +1,26 @@
+{
+  "name": "excellencecoachinghub-main",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hashimuimfuransa/excellencecoachinghub.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hashimuimfuransa/excellencecoachinghub/issues"
+  },
+  "homepage": "https://github.com/hashimuimfuransa/excellencecoachinghub#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}

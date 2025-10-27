@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Favicon</title>
+</head>
+<body>
+    <canvas id="canvas" width="32" height="32" style="border: 1px solid #ccc; image-rendering: pixelated; width: 320px; height: 320px;"></canvas>
+    <br><br>
+    <button onclick="downloadFavicon()">Download as ICO</button>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Create favicon design
+        function createFavicon() {
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, 32, 32);
+            gradient.addColorStop(0, '#3f51b5');
+            gradient.addColorStop(1, '#1976d2');
+            
+            // Background
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 32, 32);
+            
+            // Book shape
+            ctx.fillStyle = 'white';
+            ctx.fillRect(6, 10, 8, 12);
+            ctx.fillRect(18, 10, 8, 12);
+            
+            // Book spine
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.fillRect(14, 10, 4, 12);
+            
+            // Star
+            ctx.fillStyle = '#ffd700';
+            ctx.beginPath();
+            const centerX = 16, centerY = 6;
+            const spikes = 5;
+            const outerRadius = 4;
+            const innerRadius = 2;
+            
+            for (let i = 0; i < spikes * 2; i++) {
+                const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                const angle = (i * Math.PI) / spikes;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // ECH text (very small)
+            ctx.fillStyle = 'white';
+            ctx.font = '6px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('ECH', 16, 28);
+        }
+        
+        createFavicon();
+        
+        function downloadFavicon() {
+            // Convert canvas to blob and download
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'favicon.ico';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+    </script>
+</body>
+</html>

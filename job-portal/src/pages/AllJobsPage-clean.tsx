@@ -1,0 +1,1 @@
+// Get the first 1027 lines from the current file

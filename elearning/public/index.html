@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="icon" type="image/png" href="%PUBLIC_URL%/icon.png" />
+<link rel="apple-touch-icon" href="%PUBLIC_URL%/icon.png" />
+<link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#000000" />
+<meta name="description" content="Excellence Coaching Hub - Your premier e-learning platform for professional development and coaching" />
+<!-- Security headers for Google OAuth -->
+<meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups" />
+<meta http-equiv="Cross-Origin-Embedder-Policy" content="credentialless" />
+<!-- Referrer policy for secure OAuth flow -->
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<title>Excellence Coaching Hub</title>
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+  // Single Page App routing support
+  (function(l) {
+    if (l.search[1] === '/' ) {
+      var decoded = l.search.slice(1).split('&').map(function(s) { 
+        return s.replace(/~and~/g, '&')
+      }).join('?');
+      window.history.replaceState(null, null,
+          l.pathname.slice(0, -1) + decoded + l.hash
+      );
+    }
+  }(window.location))
+
+  // Register service worker for better caching and offline support
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function(registration) {
+          console.log('SW registered: ', registration);
+        })
+        .catch(function(registrationError) {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
+  }
+</script>
+    <script>
+      // Make Uploadcare key available at runtime for the widget
+      window.UPLOADCARE_PUBLIC_KEY = window.UPLOADCARE_PUBLIC_KEY || "%REACT_APP_UPLOADCARE_PUBLIC_KEY%" || "%VITE_UPLOADCARE_PUBLIC_KEY%";
+    </script>
+</head>
+<body>
+<noscript>You need to enable JavaScript to run this app.</noscript>
+<div id="root"></div>
+</body>
+</html>

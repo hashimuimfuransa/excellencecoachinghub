@@ -1,0 +1,111 @@
+{
+  "name": "ExJobNet - Dynamic Career Platform",
+  "short_name": "ExJobNet",
+  "description": "ExJobNet is a dynamic career platform combining the best of professional networking and job readiness—offering features like personalized profiles, interactive job preparation tools, live coaching, and secure certifications to empower both individuals and organizations in Africa's job ecosystem.",
+  "lang": "en-US",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#4caf50",
+  "background_color": "#ffffff",
+  "categories": [
+    "business",
+    "productivity",
+    "education",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "/exjobnetlogo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/exjobnetlogo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/exjobnetlogo.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/exjobnetlogo.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/career-growth_graph_trending_chart-100747018-orig.webp",
+      "sizes": "1200x800",
+      "type": "image/webp",
+      "platform": "wide",
+      "label": "ExJobNet - Dynamic Career Platform Dashboard"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "dir": "ltr",
+  "iarc_rating_id": "",
+  "shortcuts": [
+    {
+      "name": "Find Jobs",
+      "short_name": "Jobs",
+      "description": "Browse and search for job opportunities",
+      "url": "/jobs",
+      "icons": [
+        {
+          "src": "/exjobnetlogo.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "AI Interview Coach",
+      "short_name": "Interview",
+      "description": "Practice interviews with AI coaching",
+      "url": "/interviews",
+      "icons": [
+        {
+          "src": "/app-icon.svg",
+          "sizes": "96x96", 
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Career Guidance",
+      "short_name": "Guidance",
+      "description": "Get personalized career advice",
+      "url": "/career-guidance",
+      "icons": [
+        {
+          "src": "/exjobnetlogo.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "My Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your career progress and applications",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/exjobnetlogo.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

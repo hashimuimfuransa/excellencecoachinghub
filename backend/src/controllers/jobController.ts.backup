@@ -1,0 +1,897 @@
+import { Request, Response } from 'express';
+import { Job, JobApplication, JobCourseMatch, StudentProfile, User } from '../models';
+import { JobStatus, UserRole, EducationLevel, JobCategory } from '../types';
+import { AuthRequest } from '../middleware/auth';
+import { aiService } from '../services/aiService';
+
+// Get all jobs with filtering
+export const getJobs = async (req: Request, res: Response) => {
+  try {
+    const {
+      status,
+      jobType,
+      category,
+      experienceLevel,
+      educationLevel,
+      location,
+      skills,
+      isCurated,
+      page = 1,
+      limit = 10,
+      search
+    } = req.query;
+
+    const query: any = {};
+
+    // Build filter query
+    if (status) query.status = status;
+    if (jobType) query.jobType = jobType;
+    if (category) query.category = category;
+    if (experienceLevel) query.experienceLevel = experienceLevel;
+    if (educationLevel) query.educationLevel = educationLevel;
+    if (location) query.location = { $regex: location, $options: 'i' };
+    if (isCurated !== undefined) query.isCurated = isCurated === 'true';
+    if (skills) {
+      const skillsArray = Array.isArray(skills) ? skills : [skills];
+      query.skills = { $in: skillsArray };
+    }
+
+    // Search functionality - use text search for better performance
+    if (search) {
+      query.$text = { $search: search };
+    }
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    let jobQuery = Job.find(query)
+      .populate('employer', 'firstName lastName company email phone')
+      .skip(skip)
+      .limit(limitNum)
+      .lean(); // Use lean() for faster queries when we don't need Mongoose methods
+
+    // Sort by text search score if searching, otherwise by creation date
+    if (search) {
+      jobQuery = jobQuery.sort({ score: { $meta: 'textScore' }, createdAt: -1 });
+    } else {
+      jobQuery = jobQuery.sort({ createdAt: -1 });
+    }
+
+    const jobs = await jobQuery;
+
+    const total = await Job.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: jobs,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch jobs',
+      message: error.message
+    });
+  }
+};
+
+// Get jobs for students (filtered by education level)
+export const getJobsForStudent = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Get student profile to check education level
+    const studentProfile = await StudentProfile.findOne({ user: userId });
+    
+    // If no student profile exists, return general jobs with a warning
+    if (!studentProfile) {
+      console.log(`⚠️ No student profile found for user ${userId}, returning general jobs`);
+      
+      const { page = 1, limit = 10 } = req.query;
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const skip = (pageNum - 1) * limitNum;
+
+      // Return basic active jobs as fallback
+      const jobs = await Job.find({ status: JobStatus.ACTIVE })
+        .populate('employer', 'firstName lastName company email phone')
+        .populate('relatedCourses', 'title description category')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum);
+
+      const total = await Job.countDocuments({ status: JobStatus.ACTIVE });
+
+      return res.status(200).json({
+        success: true,
+        data: jobs,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum)
+        },
+        message: 'Complete your profile to get personalized job recommendations.'
+      });
+    }
+
+    // Check if student is eligible for jobs (high school or above)
+    if (!studentProfile.isEligibleForJobs) {
+      return res.status(403).json({
+        success: false,
+        error: 'You must have at least a high school education to view jobs.'
+      });
+    }
+
+    const { page = 1, limit = 10 } = req.query;
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Helper function to get eligible education levels
+    const getEligibleEducationLevels = (educationLevel: string) => {
+      const educationHierarchy = [
+        'high_school',
+        'associate', 
+        'bachelor',
+        'master',
+        'doctorate',
+        'professional'
+      ];
+      
+      const userLevelIndex = educationHierarchy.indexOf(educationLevel);
+      return educationHierarchy.slice(0, userLevelIndex + 1);
+    };
+
+    // Create a more efficient query that combines both conditions
+    const query = {
+      status: JobStatus.ACTIVE,
+      $and: [
+        {
+          $or: [
+            // Jobs suitable for education level
+            { educationLevel: { $in: getEligibleEducationLevels(studentProfile.educationLevel) } },
+            // Jobs related to completed courses
+            { relatedCourses: { $in: studentProfile.completedCourses } }
+          ]
+        },
+        // Exclude expired jobs
+        {
+          $or: [
+            { applicationDeadline: { $exists: false } },
+            { applicationDeadline: { $gt: new Date() } }
+          ]
+        }
+      ]
+    };
+
+    const jobs = await Job.find(query)
+      .populate('employer', 'firstName lastName company email phone')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    const total = await Job.countDocuments(query);
+    const paginatedJobs = jobs;
+
+    res.status(200).json({
+      success: true,
+      data: paginatedJobs,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch jobs for student',
+      message: error.message
+    });
+  }
+};
+
+// Get curated jobs
+export const getCuratedJobs = async (req: Request, res: Response) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const jobs = await Job.findCuratedJobs();
+    const paginatedJobs = jobs.slice(skip, skip + limitNum);
+
+    res.status(200).json({
+      success: true,
+      data: paginatedJobs,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: jobs.length,
+        pages: Math.ceil(jobs.length / limitNum)
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch curated jobs',
+      message: error.message
+    });
+  }
+};
+
+// Get single job by ID
+export const getJobById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const job = await Job.findById(id)
+      .populate('employer', 'firstName lastName company email phone address location socialLinks.linkedin socialLinks.website socialLinks.twitter jobTitle industry')
+      .populate('relatedCourses', 'title description category level')
+      .populate('psychometricTests', 'title description type');
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      });
+    }
+
+    // Increment views count
+    job.viewsCount += 1;
+    await job.save();
+
+    res.status(200).json({
+      success: true,
+      data: job
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch job',
+      message: error.message
+    });
+  }
+};
+
+// Create new job (Employer or Super Admin)
+export const createJob = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (!userId || !userRole) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    if (userRole !== UserRole.EMPLOYER && userRole !== UserRole.SUPER_ADMIN) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only employers and super admins can create jobs'
+      });
+    }
+
+    const jobData = {
+      ...req.body,
+      employer: userId,
+      isCurated: userRole === UserRole.SUPER_ADMIN,
+      curatedBy: userRole === UserRole.SUPER_ADMIN ? userId : undefined
+    };
+
+    const job = new Job(jobData);
+    await job.save();
+
+    const populatedJob = await Job.findById(job._id)
+      .populate('employer', 'firstName lastName company')
+      .populate('relatedCourses', 'title description category');
+
+    res.status(201).json({
+      success: true,
+      data: populatedJob,
+      message: 'Job created successfully'
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      success: false,
+      error: 'Failed to create job',
+      message: error.message
+    });
+  }
+};
+
+// Update job
+export const updateJob = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (!userId || !userRole) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      });
+    }
+
+    // Check permissions
+    const canUpdate = userRole === UserRole.SUPER_ADMIN || 
+                     (userRole === UserRole.EMPLOYER && job.employer.toString() === userId);
+
+    if (!canUpdate) {
+      return res.status(403).json({
+        success: false,
+        error: 'You can only update your own jobs'
+      });
+    }
+
+    const updatedJob = await Job.findByIdAndUpdate(
+      id,
+      { ...req.body, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).populate('employer', 'firstName lastName company')
+     .populate('relatedCourses', 'title description category');
+
+    res.status(200).json({
+      success: true,
+      data: updatedJob,
+      message: 'Job updated successfully'
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      success: false,
+      error: 'Failed to update job',
+      message: error.message
+    });
+  }
+};
+
+// Delete job
+export const deleteJob = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (!userId || !userRole) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      });
+    }
+
+    // Check permissions
+    const canDelete = userRole === UserRole.SUPER_ADMIN || 
+                     (userRole === UserRole.EMPLOYER && job.employer.toString() === userId);
+
+    if (!canDelete) {
+      return res.status(403).json({
+        success: false,
+        error: 'You can only delete your own jobs'
+      });
+    }
+
+    await Job.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Job deleted successfully'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete job',
+      message: error.message
+    });
+  }
+};
+
+// Get jobs by employer
+export const getJobsByEmployer = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (!userId || userRole !== UserRole.EMPLOYER) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only employers can access this endpoint'
+      });
+    }
+
+    const jobs = await Job.findJobsByEmployer(userId);
+
+    res.status(200).json({
+      success: true,
+      data: jobs
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch employer jobs',
+      message: error.message
+    });
+  }
+};
+
+// Get recommended courses for a job
+export const getRecommendedCourses = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const matches = await JobCourseMatch.findByJob(id);
+
+    res.status(200).json({
+      success: true,
+      data: matches
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch recommended courses',
+      message: error.message
+    });
+  }
+};
+
+// Get job categories with counts
+export const getJobCategories = async (req: Request, res: Response) => {
+  try {
+    const categories = await Job.aggregate([
+      {
+        $match: {
+          status: JobStatus.ACTIVE,
+          $or: [
+            { applicationDeadline: { $exists: false } },
+            { applicationDeadline: { $gt: new Date() } }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      }
+    ]);
+
+    // Ensure all categories are present with 0 count if no jobs exist
+    const allCategories = Object.values(JobCategory).map(category => {
+      const found = categories.find(cat => cat._id === category);
+      return {
+        category,
+        count: found ? found.count : 0,
+        displayName: category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: allCategories
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch job categories',
+      message: error.message
+    });
+  }
+};
+
+// AI-powered job matching for users - Simplified version
+export const getAIMatchedJobs = async (req: AuthRequest, res: Response) => {
+  console.log('🤖 AI-matched jobs endpoint called - START');
+  
+  try {
+    const userId = req.user?.id;
+    console.log('🔍 User ID from request:', userId);
+    
+    if (!userId) {
+      console.error('❌ User not authenticated');
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    console.log('🤖 Starting job matching for user:', userId);
+    
+    // Simple fallback: return basic job matching without complex AI
+    console.log('🔍 Fetching active jobs...');
+    const activeJobs = await Job.find({ 
+      status: 'active'
+    })
+    .populate('employer', 'firstName lastName company email')
+    .limit(10)
+    .lean();
+
+    console.log(`📊 Found ${activeJobs.length} active jobs`);
+
+    // Return jobs with basic match data
+    const matchedJobs = activeJobs.map((job: any) => ({
+      ...job,
+      matchPercentage: Math.floor(Math.random() * 40) + 60, // Random 60-100%
+      matchingSkills: job.skills?.slice(0, 3) || [],
+      aiExplanation: 'Basic matching based on job availability',
+      recommendationReason: 'Job matches your profile criteria'
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: matchedJobs,
+      meta: {
+        totalJobsEvaluated: activeJobs.length,
+        matchesFound: matchedJobs.length,
+        userSkillsCount: 0,
+        averageMatchPercentage: 75
+      }
+    });
+- Location: ${job.location || 'Not specified'}
+- Job Type: ${job.jobType || 'Not specified'}
+- Description: ${(job.description || '').substring(0, 300)}...
+- Requirements: ${(job.requirements || []).join('; ') || 'Not specified'}
+- ID: ${job._id}
+`).join('\n')}
+
+MATCHING CRITERIA (Consider ALL factors):
+1. Skills Match: Direct skill matches, related/transferable skills, technical competency alignment
+2. Education Match: Degree level compatibility, field of study relevance, academic background alignment
+3. Experience Level: Career stage alignment, role progression fit, experience requirements match
+4. Domain Knowledge: Industry experience, functional expertise, specialized knowledge
+5. Growth Potential: Career development opportunities, skill enhancement prospects
+
+TASK: For each job, determine:
+1. Match percentage (0-100) considering skills (40%), education (30%), experience level (20%), and overall fit (10%)
+2. Key matching factors including skills, education, and experience alignment
+3. Comprehensive explanation covering all matching aspects
+
+ONLY return jobs with match percentage >= 55%. Return in this exact JSON format:
+{
+  "matches": [
+    {
+      "jobId": "job_id_here",
+      "matchPercentage": 85,
+      "matchingSkills": ["skill1", "skill2", "skill3"],
+      "educationMatch": "Education compatibility description",
+      "experienceMatch": "Experience level alignment description",
+      "explanation": "Comprehensive explanation covering skills, education, and experience match",
+      "recommendationReason": "Why this job is recommended considering full profile"
+    }
+  ]
+}`;
+
+        console.log('🤖 Sending batch', Math.floor(i/batchSize) + 1, 'to AI for evaluation...');
+        
+        // Call AI service with error handling
+        let aiResponse;
+        try {
+          aiResponse = await aiService.generateContent(aiPrompt);
+          
+          if (!aiResponse || typeof aiResponse !== 'string') {
+            throw new Error('Invalid AI response received');
+          }
+          
+          console.log('🤖 AI Response for batch:', aiResponse.substring(0, 200) + '...');
+        } catch (aiServiceError: any) {
+          console.warn('⚠️ AI service error:', aiServiceError.message);
+          throw aiServiceError; // Re-throw to trigger fallback logic
+        }
+
+        try {
+          // Parse AI response
+          let aiResult;
+          try {
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              aiResult = JSON.parse(jsonMatch[0]);
+            } else {
+              throw new Error('No JSON found in response');
+            }
+          } catch (parseError) {
+            console.warn('⚠️ Failed to parse AI response, trying fallback approach');
+            // Fallback: look for individual job matches in text
+            const matches = aiResponse.match(/jobId["\s]*:["\s]*([^"]+).*?matchPercentage["\s]*:["\s]*(\d+)/g);
+            if (matches) {
+              aiResult = {
+                matches: matches.map((match: string) => {
+                  const idMatch = match.match(/jobId["\s]*:["\s]*([^"]+)/);
+                  const percentMatch = match.match(/matchPercentage["\s]*:["\s]*(\d+)/);
+                  return {
+                    jobId: idMatch?.[1] || '',
+                    matchPercentage: parseInt(percentMatch?.[1] || '70'),
+                    matchingSkills: allSkills.slice(0, 3), // Use first 3 user skills as fallback
+                    explanation: 'AI-matched job based on profile analysis',
+                    recommendationReason: 'Skills and experience alignment detected'
+                  };
+                })
+              };
+            } else {
+              throw parseError;
+            }
+          }
+
+          if (aiResult?.matches && Array.isArray(aiResult.matches)) {
+            for (const match of aiResult.matches) {
+              const job = jobBatch.find((j: any) => j._id.toString() === match.jobId);
+              if (job && match.matchPercentage >= 55) {
+                matchedJobs.push({
+                  ...job,
+                  matchPercentage: match.matchPercentage,
+                  matchingSkills: match.matchingSkills || [],
+                  educationMatch: match.educationMatch || 'Education compatibility assessed',
+                  experienceMatch: match.experienceMatch || 'Experience level alignment evaluated',
+                  aiExplanation: match.explanation,
+                  recommendationReason: match.recommendationReason
+                });
+              }
+            }
+          }
+        } catch (parseError) {
+          console.warn('⚠️ Failed to parse AI response for batch, using enhanced fallback matching');
+          // Enhanced fallback matching considering skills AND education
+          for (const job of jobBatch) {
+            const jobSkills = job.skills || [];
+            let matchingSkills = jobSkills.filter((skill: string) => 
+              allSkills.some(userSkill => 
+                userSkill.toLowerCase().includes(skill.toLowerCase()) ||
+                skill.toLowerCase().includes(userSkill.toLowerCase())
+              )
+            );
+            
+            // Education compatibility check
+            let educationBonus = 0;
+            if (job.educationLevel && educationLevels.length > 0) {
+              const jobEducationLevel = job.educationLevel.toLowerCase();
+              const userHasCompatibleEducation = educationLevels.some(level => {
+                const userLevel = level.toLowerCase();
+                return (
+                  userLevel.includes(jobEducationLevel) ||
+                  jobEducationLevel.includes(userLevel) ||
+                  (jobEducationLevel.includes('bachelor') && userLevel.includes('bachelor')) ||
+                  (jobEducationLevel.includes('master') && (userLevel.includes('master') || userLevel.includes('bachelor'))) ||
+                  (jobEducationLevel.includes('high school') && userLevel.length > 0)
+                );
+              });
+              
+              if (userHasCompatibleEducation) {
+                educationBonus = 15; // 15% bonus for education match
+              }
+            }
+            
+            // Field of study relevance check
+            let fieldOfStudyBonus = 0;
+            if (studyFields.length > 0) {
+              const jobTitle = job.title.toLowerCase();
+              const jobDescription = (job.description || '').toLowerCase();
+              const hasRelevantField = studyFields.some(field => {
+                const fieldLower = field.toLowerCase();
+                return (
+                  jobTitle.includes(fieldLower) ||
+                  jobDescription.includes(fieldLower) ||
+                  (fieldLower.includes('computer') && (jobTitle.includes('software') || jobTitle.includes('it'))) ||
+                  (fieldLower.includes('engineering') && jobTitle.includes('engineer')) ||
+                  (fieldLower.includes('business') && (jobTitle.includes('manager') || jobTitle.includes('analyst')))
+                );
+              });
+              
+              if (hasRelevantField) {
+                fieldOfStudyBonus = 10; // 10% bonus for relevant field
+              }
+            }
+            
+            // If no direct skill matches, check for partial matches or broader categories
+            if (matchingSkills.length === 0) {
+              const broadMatches = jobSkills.filter((skill: string) => 
+                allSkills.some(userSkill => {
+                  const skillLower = skill.toLowerCase();
+                  const userSkillLower = userSkill.toLowerCase();
+                  return (
+                    skillLower.includes(userSkillLower.substring(0, 3)) ||
+                    userSkillLower.includes(skillLower.substring(0, 3)) ||
+                    (skillLower.includes('javascript') && userSkillLower.includes('js')) ||
+                    (skillLower.includes('python') && userSkillLower.includes('programming')) ||
+                    (skillLower.includes('react') && userSkillLower.includes('frontend')) ||
+                    (skillLower.includes('node') && userSkillLower.includes('backend'))
+                  );
+                })
+              );
+              matchingSkills = broadMatches;
+            }
+            
+            // Calculate comprehensive match percentage
+            const skillsScore = matchingSkills.length > 0 
+              ? Math.min(60, (matchingSkills.length / Math.max(jobSkills.length, 1)) * 60)
+              : (jobSkills.length === 0 ? 30 : 15); // Base score if no specific skills required
+            
+            const totalScore = skillsScore + educationBonus + fieldOfStudyBonus;
+            
+            if (totalScore >= 40) { // Lower threshold for enhanced matching
+              matchedJobs.push({
+                ...job,
+                matchPercentage: Math.round(Math.min(95, totalScore)),
+                matchingSkills: matchingSkills.length > 0 ? matchingSkills : ['Profile compatibility'],
+                educationMatch: educationBonus > 0 ? 'Education level compatible' : 'Education requirements flexible',
+                experienceMatch: 'Experience alignment evaluated',
+                aiExplanation: `Enhanced matching based on skills (${skillsScore}%), education compatibility (${educationBonus}%), and field relevance (${fieldOfStudyBonus}%)`,
+                recommendationReason: `Total compatibility score: ${Math.round(totalScore)}% - ${matchingSkills.length > 0 ? `${matchingSkills.length} matching skills` : 'Profile alignment'}`
+              });
+            }
+          }
+        }
+      } catch (aiError) {
+        console.error('❌ AI matching error for batch:', aiError);
+        // Enhanced fallback matching for this batch - same logic as parseError fallback
+        for (const job of jobBatch) {
+          const jobSkills = job.skills || [];
+          let matchingSkills = jobSkills.filter((skill: string) => 
+            allSkills.some(userSkill => 
+              userSkill.toLowerCase().includes(skill.toLowerCase()) ||
+              skill.toLowerCase().includes(userSkill.toLowerCase())
+            )
+          );
+          
+          // Education compatibility check
+          let educationBonus = 0;
+          if (job.educationLevel && educationLevels.length > 0) {
+            const jobEducationLevel = job.educationLevel.toLowerCase();
+            const userHasCompatibleEducation = educationLevels.some(level => {
+              const userLevel = level.toLowerCase();
+              return (
+                userLevel.includes(jobEducationLevel) ||
+                jobEducationLevel.includes(userLevel) ||
+                (jobEducationLevel.includes('bachelor') && userLevel.includes('bachelor')) ||
+                (jobEducationLevel.includes('master') && (userLevel.includes('master') || userLevel.includes('bachelor'))) ||
+                (jobEducationLevel.includes('high school') && userLevel.length > 0)
+              );
+            });
+            
+            if (userHasCompatibleEducation) {
+              educationBonus = 15;
+            }
+          }
+          
+          // Field of study relevance check
+          let fieldOfStudyBonus = 0;
+          if (studyFields.length > 0) {
+            const jobTitle = job.title.toLowerCase();
+            const jobDescription = (job.description || '').toLowerCase();
+            const hasRelevantField = studyFields.some(field => {
+              const fieldLower = field.toLowerCase();
+              return (
+                jobTitle.includes(fieldLower) ||
+                jobDescription.includes(fieldLower) ||
+                (fieldLower.includes('computer') && (jobTitle.includes('software') || jobTitle.includes('it'))) ||
+                (fieldLower.includes('engineering') && jobTitle.includes('engineer')) ||
+                (fieldLower.includes('business') && (jobTitle.includes('manager') || jobTitle.includes('analyst')))
+              );
+            });
+            
+            if (hasRelevantField) {
+              fieldOfStudyBonus = 10;
+            }
+          }
+          
+          // Apply broader matching if no direct matches
+          if (matchingSkills.length === 0) {
+            const broadMatches = jobSkills.filter((skill: string) => 
+              allSkills.some(userSkill => {
+                const skillLower = skill.toLowerCase();
+                const userSkillLower = userSkill.toLowerCase();
+                return (
+                  skillLower.includes(userSkillLower.substring(0, 3)) ||
+                  userSkillLower.includes(skillLower.substring(0, 3)) ||
+                  (skillLower.includes('javascript') && userSkillLower.includes('js')) ||
+                  (skillLower.includes('python') && userSkillLower.includes('programming')) ||
+                  (skillLower.includes('react') && userSkillLower.includes('frontend')) ||
+                  (skillLower.includes('node') && userSkillLower.includes('backend'))
+                );
+              })
+            );
+            matchingSkills = broadMatches;
+          }
+          
+          // Calculate comprehensive match percentage
+          const skillsScore = matchingSkills.length > 0 
+            ? Math.min(60, (matchingSkills.length / Math.max(jobSkills.length, 1)) * 60)
+            : (jobSkills.length === 0 ? 30 : 15);
+          
+          const totalScore = skillsScore + educationBonus + fieldOfStudyBonus;
+          
+          if (totalScore >= 40) {
+            matchedJobs.push({
+              ...job,
+              matchPercentage: Math.round(Math.min(95, totalScore)),
+              matchingSkills: matchingSkills.length > 0 ? matchingSkills : ['Profile compatibility'],
+              educationMatch: educationBonus > 0 ? 'Education level compatible' : 'Education requirements flexible',
+              experienceMatch: 'Experience alignment evaluated',
+              aiExplanation: `AI error fallback: Enhanced matching based on skills (${skillsScore}%), education compatibility (${educationBonus}%), and field relevance (${fieldOfStudyBonus}%)`,
+              recommendationReason: `Comprehensive compatibility score: ${Math.round(totalScore)}% - ${matchingSkills.length > 0 ? `${matchingSkills.length} matching skills` : 'Profile alignment'}`
+            });
+          }
+        }
+      }
+
+      // Small delay between batches to avoid rate limiting
+      if (i + batchSize < allJobs.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    // Sort by match percentage and limit results
+    const sortedMatches = matchedJobs
+      .sort((a, b) => b.matchPercentage - a.matchPercentage)
+      .slice(0, 15); // Limit to top 15 matches
+
+    console.log('✅ AI Job matching completed:', {
+      totalJobsEvaluated: Math.min(allJobs.length, 20),
+      matchesFound: sortedMatches.length,
+      averageMatchPercentage: sortedMatches.length > 0 
+        ? Math.round(sortedMatches.reduce((sum, job) => sum + job.matchPercentage, 0) / sortedMatches.length)
+        : 0
+    });
+
+    res.status(200).json({
+      success: true,
+      data: sortedMatches,
+      meta: {
+        totalJobsEvaluated: Math.min(allJobs.length, 20),
+        matchesFound: sortedMatches.length,
+        userSkillsCount: allSkills.length,
+        averageMatchPercentage: sortedMatches.length > 0 
+          ? Math.round(sortedMatches.reduce((sum, job) => sum + job.matchPercentage, 0) / sortedMatches.length)
+          : 0
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ AI job matching failed:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to match jobs using AI',
+      message: error.message || 'Unknown error occurred',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};

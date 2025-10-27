@@ -1,0 +1,17 @@
+# Static assets should not be redirected
+/static/*  /static/:splat  200
+/manifest.json  /manifest.json  200
+/favicon.ico  /favicon.ico  200
+/*.js  /:splat.js  200
+/*.css  /:splat.css  200
+/*.png  /:splat.png  200
+/*.jpg  /:splat.jpg  200
+/*.svg  /:splat.svg  200
+/*.woff  /:splat.woff  200
+/*.woff2  /:splat.woff2  200
+
+# Preserve API routes (do not rewrite to index.html)
+/api/*  /api/:splat  200
+
+# Fallback for client-side routing (everything else)
+/*    /index.html   200

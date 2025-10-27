@@ -1,0 +1,232 @@
+# Excellence Coaching Hub - Robots.txt Configuration
+# Africa's Premier Career Transformation Platform
+# Last Updated: December 18, 2024
+
+# GLOBAL PERMISSIONS
+User-agent: *
+Allow: /
+
+# MAIN SITEMAPS
+Sitemap: https://excellencecoachinghub.com/sitemap-index.xml
+Sitemap: https://excellencecoachinghub.com/sitemap.xml
+Sitemap: https://elearning.excellencecoachinghub.com/sitemap.xml
+Sitemap: https://exjobnet.com/sitemap.xml
+
+# SEARCH ENGINE SPECIFIC CONFIGURATIONS
+
+# Google Bot - Primary search engine
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+# Bing Bot - Microsoft search engine
+User-agent: Bingbot  
+Allow: /
+Crawl-delay: 1
+
+# Yahoo Search
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+# DuckDuckGo
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+# Baidu - Chinese search engine (Africa has growing Chinese business ties)
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 2
+
+# Yandex - Russian search engine
+User-agent: YandexBot
+Allow: /
+Crawl-delay: 2
+
+# SOCIAL MEDIA CRAWLERS
+
+# Facebook crawler for Open Graph data
+User-agent: facebookexternalhit
+Allow: /
+Crawl-delay: 1
+
+# Twitter crawler for Twitter Cards
+User-agent: Twitterbot
+Allow: /
+Crawl-delay: 1
+
+# LinkedIn crawler for professional sharing
+User-agent: LinkedInBot
+Allow: /
+Crawl-delay: 1
+
+# WhatsApp link preview
+User-agent: WhatsApp
+Allow: /
+Crawl-delay: 1
+
+# SECURITY & PRIVACY RESTRICTIONS
+
+# Block admin and private areas
+Disallow: /admin/
+Disallow: /private/
+Disallow: /internal/
+Disallow: /_next/
+Disallow: /api/internal/
+Disallow: /api/admin/
+Disallow: /dashboard/admin/
+Disallow: /super-admin/
+Disallow: /.env
+Disallow: /.git/
+Disallow: /config/
+Disallow: /logs/
+Disallow: /temp/
+Disallow: /tmp/
+Disallow: /backup/
+Disallow: /test/
+Disallow: /testing/
+
+# Block sensitive API endpoints
+Disallow: /api/auth/
+Disallow: /api/users/
+Disallow: /api/payments/
+Disallow: /api/notifications/private/
+
+# Block file types that shouldn't be indexed
+Disallow: /*.pdf$
+Disallow: /*.doc$
+Disallow: /*.docx$
+Disallow: /*.xls$
+Disallow: /*.xlsx$
+Disallow: /*.zip$
+Disallow: /*.rar$
+Disallow: /*.tar$
+Disallow: /*.gz$
+
+# EXPLICITLY ALLOWED IMPORTANT SECTIONS
+
+# Main platforms
+Allow: /elearning
+Allow: /jobs
+Allow: /
+
+# Authentication pages
+Allow: /login
+Allow: /register
+Allow: /dashboard
+Allow: /select-role
+
+# Company information
+Allow: /about
+Allow: /contact
+Allow: /careers
+Allow: /partners
+
+# Services and offerings
+Allow: /services/
+Allow: /courses/
+Allow: /programs/
+Allow: /assessments
+Allow: /certifications
+
+# Geographic pages for Africa coverage
+Allow: /africa
+Allow: /rwanda
+Allow: /kigali
+Allow: /kenya
+Allow: /nigeria
+Allow: /south-africa
+Allow: /ghana
+Allow: /uganda
+Allow: /tanzania
+
+# Marketing and social proof
+Allow: /success-stories
+Allow: /testimonials
+Allow: /case-studies
+Allow: /alumni
+
+# Resources and content
+Allow: /blog
+Allow: /resources
+Allow: /guides
+Allow: /webinars
+Allow: /events
+
+# Specific services
+Allow: /career-coaching
+Allow: /psychometric-tests
+Allow: /mock-interviews
+Allow: /ai-assessments
+Allow: /live-interviews
+Allow: /resume-building
+
+# Support and help
+Allow: /help
+Allow: /faq
+Allow: /support
+Allow: /pricing
+Allow: /plans
+
+# Mobile app pages
+Allow: /mobile-app
+Allow: /download
+
+# Employer services
+Allow: /employers
+Allow: /hire-talent
+Allow: /recruitment-solutions
+
+# Legal pages (important for compliance)
+Allow: /privacy-policy
+Allow: /terms-of-service
+Allow: /cookie-policy
+Allow: /refund-policy
+
+# Developer resources
+Allow: /api-docs
+Allow: /developers
+
+# CRAWL RATE OPTIMIZATION
+# Default crawl delay for respectful crawling
+Crawl-delay: 1
+
+# SPECIFIC BOT RESTRICTIONS
+
+# Block aggressive or unwanted bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+# Allow educational and research bots
+User-agent: ia_archiver
+Allow: /
+
+User-agent: Wayback
+Allow: /
+
+# REQUEST RATE LIMITING
+# This helps prevent server overload from aggressive crawlers
+Request-rate: 1/10s
+
+# HOST DIRECTIVE (helps with canonical URLs)
+Host: https://excellencecoachinghub.com
+
+# NOTES FOR SEARCH ENGINES:
+# - This is Africa's leading career transformation platform
+# - We serve all African countries with headquarters in Kigali, Rwanda
+# - Our primary focus is e-learning, job preparation, and career coaching
+# - We maintain high-quality, professional content suitable for indexing
+# - Contact: info@excellencecoachinghub.com for any crawler-related queries

@@ -999,7 +999,7 @@ Respond as a knowledgeable tutor who has access to the course material.`;
 
   // Handle back to course navigation
   const handleBackToCourse = () => {
-    navigate(`/course/${courseId}/hub`);
+    navigate(`/dashboard/student/course/${courseId}`);
   };
 
   // PDF navigation functions

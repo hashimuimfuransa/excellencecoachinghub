@@ -36,7 +36,7 @@ export const loginRedirectService = {
       // If learner has active enrollments, redirect to the first course hub
       if (activeEnrollments.length > 0) {
         const firstEnrollment = activeEnrollments[0];
-        const hubPath = `/course/${firstEnrollment.course._id}/hub`;
+        const hubPath = `/dashboard/student/course/${firstEnrollment.course._id}`;
         console.log('🔍 Redirecting to course hub:', hubPath);
         return hubPath;
       }
@@ -91,7 +91,7 @@ export const loginRedirectService = {
         return new Date(bDate).getTime() - new Date(aDate).getTime();
       });
 
-      return `/course/${sortedEnrollments[0].course._id}/hub`;
+      return `/dashboard/student/course/${sortedEnrollments[0].course._id}`;
     } catch (error) {
       console.warn('Error getting most recent course hub:', error);
       return null;

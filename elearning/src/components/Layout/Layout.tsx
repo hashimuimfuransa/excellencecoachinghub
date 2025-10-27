@@ -61,6 +61,8 @@ import {
   TrendingUp,
   Explore,
   ExpandMore,
+  ChevronLeft,
+  ChevronRight,
   Computer,
   Business,
   Science,
@@ -80,21 +82,26 @@ import { isLearnerRole } from '../../utils/roleUtils';
 import { SafeDialogTransition } from '../../utils/transitionFix';
 import EmailVerificationBanner from '../Auth/EmailVerificationBanner';
 import FloatingAIAssistant from '../FloatingAIAssistant';
-import { useResponsive, getDrawerWidth } from '../../utils/responsive';
+import { getDrawerWidth, useResponsive } from '../../utils/responsive';
 import ProfilePage from '../../pages/Profile/ProfilePage';
 import BottomNavigationBar from '../BottomNavigationBar';
 
 // Ultra-Modern Responsive styled components
-const ResponsiveAppBar = styled(AppBar)(({ theme }) => ({
+const ResponsiveAppBar = styled(AppBar, {
+  shouldForwardProp: (prop) => prop !== 'collapsed'
+})<{ collapsed: boolean }>(({ theme, collapsed }) => ({
   [theme.breakpoints.up('md')]: {
-    width: `calc(100% - 280px)`, // Fixed width for desktop
-    marginLeft: 280,
+    width: `calc(100% - ${collapsed ? COLLAPSED_DRAWER_WIDTH : EXPANDED_DRAWER_WIDTH}px)`,
+    marginLeft: collapsed ? COLLAPSED_DRAWER_WIDTH : EXPANDED_DRAWER_WIDTH,
+    transition: theme.transitions.create(['width', 'margin'], {
+      duration: theme.transitions.duration.enteringScreen,
+      easing: theme.transitions.easing.sharp,
+    }),
   },
   [theme.breakpoints.down('md')]: {
     width: '100%',
     marginLeft: 0,
   },
-  // Ultra-modern gradient navbar with glassmorphism
   background: `
     linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%),
     linear-gradient(45deg, rgba(0,0,0,0.1) 0%, rgba(255,255,255,0.05) 100%)
@@ -122,12 +129,22 @@ const ResponsiveAppBar = styled(AppBar)(({ theme }) => ({
   }
 }));
 
-const ResponsiveDrawer = styled(Box)(({ theme }) => ({
+const COLLAPSED_DRAWER_WIDTH = 0;
+const EXPANDED_DRAWER_WIDTH = 280;
+
+const ResponsiveDrawer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'collapsed'
+})<{ collapsed: boolean }>(({ theme, collapsed }) => ({
   [theme.breakpoints.up('md')]: {
-    width: 280, // Fixed width for desktop
+    width: collapsed ? COLLAPSED_DRAWER_WIDTH : EXPANDED_DRAWER_WIDTH,
     flexShrink: 0,
+    transition: theme.transitions.create(['width'], {
+      duration: theme.transitions.duration.enteringScreen,
+      easing: theme.transitions.easing.sharp,
+    }),
+    overflow: 'hidden',
     '& .MuiDrawer-paper': {
-      width: 280, // Fixed width for desktop
+      width: EXPANDED_DRAWER_WIDTH,
       boxSizing: 'border-box',
       background: `
         linear-gradient(180deg, #ffffff 0%, #f8fafc 100%),
@@ -135,29 +152,41 @@ const ResponsiveDrawer = styled(Box)(({ theme }) => ({
       `,
       backdropFilter: 'blur(10px)',
       borderRight: '1px solid rgba(102, 126, 234, 0.1)',
-      boxShadow: '4px 0 24px rgba(102, 126, 234, 0.08)'
+      boxShadow: '4px 0 24px rgba(102, 126, 234, 0.08)',
+      overflowX: 'hidden',
+      transition: theme.transitions.create(['transform', 'opacity'], {
+        duration: theme.transitions.duration.enteringScreen,
+        easing: theme.transitions.easing.sharp,
+      }),
+      transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
+      opacity: collapsed ? 0 : 1,
+      visibility: collapsed ? 'hidden' : 'visible',
+      pointerEvents: collapsed ? 'none' : 'auto'
     },
   },
 }));
 
-const ResponsiveMain = styled(Box)(({ theme }) => ({
+const ResponsiveMain = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'collapsed'
+})<{ collapsed: boolean }>(({ theme, collapsed }) => ({
   flexGrow: 1,
   minHeight: '100vh',
   backgroundColor: '#f8fafc',
-  // Improved padding for better content display
-  padding: theme.spacing(0, 1, 2, 1), // Better padding for mobile
-  paddingTop: theme.spacing(1), // Reduced padding since AppBar is now properly positioned
-  [theme.breakpoints.up('sm')]: {
-    padding: theme.spacing(0, 2, 3, 2), // Better padding for tablet
-    paddingTop: theme.spacing(1), // Reduced padding for tablet
-  },
+  padding: theme.spacing(0, 1, 2, 1),
+  paddingTop: theme.spacing(1),
+  marginLeft: 0,
+  transition: theme.transitions.create(['margin', 'padding'], {
+    duration: theme.transitions.duration.enteringScreen,
+    easing: theme.transitions.easing.sharp,
+  }),
   [theme.breakpoints.up('md')]: {
-    padding: theme.spacing(0, 3, 4, 3), // Better padding for desktop
-    paddingTop: theme.spacing(2), // Reduced padding for desktop
+    marginLeft: collapsed ? COLLAPSED_DRAWER_WIDTH : EXPANDED_DRAWER_WIDTH,
+    padding: theme.spacing(0, 3, 4, 3),
+    paddingTop: theme.spacing(2),
   },
   [theme.breakpoints.up('lg')]: {
-    padding: theme.spacing(0, 4, 6, 4), // Generous padding for large screens
-    paddingTop: theme.spacing(3), // Reduced padding for large screens
+    padding: theme.spacing(0, 4, 6, 4),
+    paddingTop: theme.spacing(3),
   },
 }));
 
@@ -197,6 +226,7 @@ const Layout: React.FC = () => {
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [collapsed, setCollapsed] = useState(true);
   
   // Explore categories state
   const [exploreAnchorEl, setExploreAnchorEl] = useState<null | HTMLElement>(null);
@@ -427,7 +457,7 @@ const Layout: React.FC = () => {
 
   // Enhanced drawer content
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', alignItems: collapsed ? 'center' : 'stretch' }}>
       {/* Enhanced Logo/Brand Section */}
       <Box 
         sx={{ 
@@ -437,7 +467,8 @@ const Layout: React.FC = () => {
           background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(240, 147, 251, 0.05) 100%)',
           position: 'relative',
           overflow: 'hidden',
-          flexShrink: 0
+          flexShrink: 0,
+          width: '100%'
         }}
       >
         {/* Background Glow */}
@@ -771,6 +802,7 @@ const Layout: React.FC = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* App Bar */}
       <ResponsiveAppBar
+        collapsed={collapsed}
         position="fixed"
         sx={{ zIndex: theme.zIndex.drawer + 1 }}
       >
@@ -783,6 +815,14 @@ const Layout: React.FC = () => {
             sx={{ mr: 2, display: { md: 'none' } }}
           >
             <MenuIcon />
+          </IconButton>
+
+          <IconButton
+            color="inherit"
+            onClick={() => setCollapsed(prev => !prev)}
+            sx={{ mr: 2, display: { xs: 'none', md: 'inline-flex' } }}
+          >
+            {collapsed ? <ChevronRight /> : <ChevronLeft />}
           </IconButton>
 
           <Typography 
@@ -957,18 +997,14 @@ const Layout: React.FC = () => {
       {/* Main Layout Container */}
       <Box sx={{ display: 'flex', flexGrow: 1, mt: { xs: '48px', sm: '56px' } }}>
         {/* Navigation Drawer */}
-        <Box
-          component="nav"
-          sx={{ width: { md: 280 }, flexShrink: { md: 0 } }}
-          aria-label="navigation"
-        >
+        <ResponsiveDrawer collapsed={collapsed} component="nav" aria-label="navigation">
           {/* Mobile drawer */}
           <Drawer
             variant="temporary"
             open={mobileOpen}
             onClose={handleDrawerToggle}
             ModalProps={{
-              keepMounted: true, // Better open performance on mobile.
+              keepMounted: true,
             }}
             sx={{
               display: { xs: 'block', md: 'none' },
@@ -983,16 +1019,15 @@ const Layout: React.FC = () => {
             variant="permanent"
             sx={{
               display: { xs: 'none', md: 'block' },
-              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 },
             }}
             open
           >
             {drawer}
           </Drawer>
-        </Box>
+        </ResponsiveDrawer>
 
         {/* Main content */}
-        <ResponsiveMain>
+        <ResponsiveMain collapsed={collapsed}>
           {/* Email Verification Banner */}
           {user && (
             <EmailVerificationBanner

@@ -56,7 +56,6 @@ import Assessments from './pages/Student/Assessments';
 import TakeAssessment from './pages/Student/TakeAssessment';
 import EnhancedAssessments from './pages/Student/EnhancedAssessments';
 import UnifiedLearningPage from './pages/Student/UnifiedLearningPage';
-import LearningHub from './pages/Student/LearningHub';
 import EventsAndAnnouncementsPage from './pages/Student/EventsAndAnnouncementsPage';
 import TeacherCourseDashboard from './pages/Teacher/TeacherCourseDashboard';
 import ContentStructureEditor from './pages/Teacher/ContentStructureEditor';
@@ -580,16 +579,6 @@ const App: React.FC = () => {
           </LearnerProtectedRoute>
         }
       />
-      {/* New Learning Hub selector */}
-      <Route
-        path="/course/:id/hub"
-        element={
-          <LearnerProtectedRoute>
-            <LearningHub />
-          </LearnerProtectedRoute>
-        }
-      />
-      
       {/* Standalone Course Management - Outside Dashboard Layout */}
       <Route
         path="/course/:courseId/manage"

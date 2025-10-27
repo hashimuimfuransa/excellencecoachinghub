@@ -246,7 +246,7 @@ const CourseViewPage: React.FC = () => {
 
   // Navigation handlers
   const handleNotesView = () => {
-    navigate(`/course/${id}/hub`);
+    navigate(`/course/${id}/learn`);
   };
 
   const handleLiveSessionsView = () => {

@@ -153,8 +153,8 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
     loadPosts();
   }, [user]);
 
-  const goToLearningHub = () => {
-    navigate('/courses');
+  const goToDashboard = () => {
+    navigate('/dashboard/student');
   };
 
   // Handle post actions
@@ -512,8 +512,8 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
             Connect with fellow learners and share your journey
           </Typography>
         </Box>
-        <Button variant="outlined" startIcon={<School />} onClick={goToLearningHub}>
-          Back to Learning Hub
+        <Button variant="outlined" startIcon={<School />} onClick={goToDashboard}>
+          Back to Dashboard
         </Button>
       </Box>
 

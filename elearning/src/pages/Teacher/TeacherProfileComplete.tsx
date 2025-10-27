@@ -1345,7 +1345,19 @@ const TeacherProfileComplete: React.FC = () => {
                                   onClick={() => {
                                     const url = profile?.profilePicture;
                                     if (url) {
-                                      window.open(url, '_blank');
+                                      try {
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.target = '_blank';
+                                        link.rel = 'noopener noreferrer';
+                                        link.download = 'profile-picture';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                      } catch (err) {
+                                        console.error('Error opening profile picture:', err);
+                                        window.open(url, '_blank');
+                                      }
                                     } else {
                                       console.error('Profile picture URL not available');
                                       setError('Profile picture URL not available.');
@@ -1853,8 +1865,21 @@ const TeacherProfileComplete: React.FC = () => {
                                     startIcon={<CloudDownload />}
                                     onClick={() => {
                                       const url = edu.diploma?.url;
+                                      const filename = edu.diploma?.originalName;
                                       if (url) {
-                                        window.open(url, '_blank');
+                                        try {
+                                          const link = document.createElement('a');
+                                          link.href = url;
+                                          link.target = '_blank';
+                                          link.rel = 'noopener noreferrer';
+                                          link.download = filename || 'diploma';
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
+                                        } catch (err) {
+                                          console.error('Error opening diploma:', err);
+                                          window.open(url, '_blank');
+                                        }
                                       } else {
                                         console.error('Diploma URL not available:', edu.diploma);
                                         setError('Diploma URL not available. Please try uploading again.');
@@ -1934,8 +1959,21 @@ const TeacherProfileComplete: React.FC = () => {
                                     startIcon={<CloudDownload />}
                                     onClick={() => {
                                       const url = edu.certificate?.url;
+                                      const filename = edu.certificate?.originalName;
                                       if (url) {
-                                        window.open(url, '_blank');
+                                        try {
+                                          const link = document.createElement('a');
+                                          link.href = url;
+                                          link.target = '_blank';
+                                          link.rel = 'noopener noreferrer';
+                                          link.download = filename || 'certificate';
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
+                                        } catch (err) {
+                                          console.error('Error opening certificate:', err);
+                                          window.open(url, '_blank');
+                                        }
                                       } else {
                                         console.error('Certificate URL not available:', edu.certificate);
                                         setError('Certificate URL not available. Please try uploading again.');
@@ -2177,25 +2215,6 @@ const TeacherProfileComplete: React.FC = () => {
                             </Typography>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="primary"
-                              startIcon={<CloudDownload />}
-                              onClick={() => {
-                                const url = profile?.cvDocument?.url;
-                                if (url) {
-                                  window.open(url, '_blank');
-                                } else {
-                                  console.error('CV URL not available:', profile?.cvDocument);
-                                  setError('CV URL not available. Please try uploading again.');
-                                }
-                              }}
-                              sx={{ minWidth: 'auto' }}
-                              disabled={!profile?.cvDocument?.url}
-                            >
-                              View
-                            </Button>
                             <Button
                               size="small"
                               variant="outlined"

@@ -532,6 +532,12 @@ export const uploadCV = async (req: Request, res: Response, next: NextFunction):
       `excellence-coaching-hub/teacher-profiles/${userId}/cv`
     );
 
+    console.log('📄 Cloudinary upload result:', {
+      url: uploadResult.url,
+      publicId: uploadResult.publicId,
+      size: uploadResult.size
+    });
+
     // Update profile with CV info
     profile.cvDocument = {
       filename: uploadResult.publicId,
@@ -540,7 +546,11 @@ export const uploadCV = async (req: Request, res: Response, next: NextFunction):
       uploadedAt: new Date()
     };
 
+    console.log('📄 Profile cvDocument updated:', profile.cvDocument);
+
     await profile.save();
+
+    console.log('📄 Profile saved with CV document');
 
     res.status(200).json({
       success: true,

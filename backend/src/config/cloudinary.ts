@@ -523,13 +523,27 @@ export const uploadDocumentToCloudinary = async (
     console.log('Public ID:', publicId);
 
     return new Promise((resolve, reject) => {
-      // First try with 'raw' resource type
+      // Detect file type to set appropriate resource type
+      const isPDF = originalName.toLowerCase().endsWith('.pdf');
+      const isWord = originalName.toLowerCase().match(/\.(doc|docx)$/i);
+      const isImage = originalName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/i);
+      
+      const resourceType = isPDF || isWord ? 'raw' : isImage ? 'image' : 'auto';
+      
+      console.log(`📄 Document upload details:`, {
+        filename: originalName,
+        resourceType,
+        isPDF,
+        isWord,
+        isImage
+      });
+      
+      // First try with appropriate resource type
       cloudinary.uploader.upload_stream(
         {
           public_id: publicId,
           folder: folder,
-          resource_type: 'raw',
-          // Remove upload_preset to use signed uploads with API credentials
+          resource_type: resourceType,
           use_filename: true,
           unique_filename: true,
         },
@@ -543,7 +557,6 @@ export const uploadDocumentToCloudinary = async (
                 public_id: publicId + '_auto',
                 folder: folder,
                 resource_type: 'auto',
-                // Remove upload_preset to use signed uploads with API credentials
                 use_filename: true,
                 unique_filename: true,
               },
@@ -551,13 +564,12 @@ export const uploadDocumentToCloudinary = async (
                 if (error2) {
                   console.error('Second attempt also failed:', error2.message);
                   
-                  // Final fallback: try as image (for image files)
+                  // Final fallback: try as raw
                   cloudinary.uploader.upload_stream(
                     {
-                      public_id: publicId + '_image',
+                      public_id: publicId + '_raw',
                       folder: folder,
-                      resource_type: 'image',
-                      // Remove upload_preset to use signed uploads with API credentials
+                      resource_type: 'raw',
                       use_filename: true,
                       unique_filename: true,
                     },
@@ -566,7 +578,8 @@ export const uploadDocumentToCloudinary = async (
                         console.error('All upload attempts failed');
                         reject(new Error(`Cloudinary document upload failed: ${error.message}`));
                       } else if (result3) {
-                        console.log('✅ Cloudinary document upload successful (as image):', result3.public_id);
+                        console.log('✅ Cloudinary document upload successful (raw fallback):', result3.public_id);
+                        console.log('📄 URL:', result3.secure_url);
                         resolve({
                           url: result3.secure_url,
                           publicId: result3.public_id,
@@ -579,6 +592,7 @@ export const uploadDocumentToCloudinary = async (
                   ).end(fileBuffer);
                 } else if (result2) {
                   console.log('✅ Cloudinary document upload successful (auto):', result2.public_id);
+                  console.log('📄 URL:', result2.secure_url);
                   resolve({
                     url: result2.secure_url,
                     publicId: result2.public_id,
@@ -590,9 +604,10 @@ export const uploadDocumentToCloudinary = async (
               }
             ).end(fileBuffer);
           } else if (result) {
-            console.log('✅ Cloudinary document upload successful (raw):', result.public_id);
-            console.log('Document URL:', result.secure_url);
-            console.log('Size:', result.bytes);
+            console.log('✅ Cloudinary document upload successful:', result.public_id);
+            console.log('📄 Resource type used:', resourceType);
+            console.log('📄 Full URL:', result.secure_url);
+            console.log('📄 Size:', result.bytes);
             resolve({
               url: result.secure_url,
               publicId: result.public_id,
@@ -607,6 +622,34 @@ export const uploadDocumentToCloudinary = async (
   } catch (error) {
     console.error('Error in uploadDocumentToCloudinary:', error);
     throw error instanceof Error ? error : new Error('Failed to upload document');
+  }
+};
+
+// Helper function to generate a proper Cloudinary URL for document download
+export const getDocumentDownloadUrl = (publicId: string, originalName: string): string => {
+  try {
+    // Detect file type to set appropriate resource type
+    const isPDF = originalName.toLowerCase().endsWith('.pdf');
+    const isWord = originalName.toLowerCase().match(/\.(doc|docx)$/i);
+    const isImage = originalName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/i);
+    
+    const resourceType = isPDF || isWord ? 'raw' : isImage ? 'image' : 'auto';
+    
+    // Generate URL using Cloudinary's url builder for proper formatting
+    const url = cloudinary.url(publicId, {
+      secure: true,
+      resource_type: resourceType,
+      type: 'upload',
+      fetch_format: 'auto',
+      fl_attachment: true, // Force download
+    });
+    
+    console.log(`📄 Generated download URL for ${originalName}:`, url);
+    return url;
+  } catch (error) {
+    console.error('Error generating download URL:', error);
+    // Fallback to basic secure_url format
+    return `https://res.cloudinary.com/${cloudinary.config().cloud_name}/raw/upload/${publicId}`;
   }
 };
 

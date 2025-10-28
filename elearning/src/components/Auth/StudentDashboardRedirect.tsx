@@ -18,7 +18,7 @@ const StudentDashboardRedirect: React.FC<StudentDashboardRedirectProps> = ({ use
       try {
         const path = await loginRedirectService.getRedirectPath({
           userRole,
-          from: '/dashboard/student'
+          from: '/dashboard/student/courses'
         });
         setRedirectPath(path);
       } catch (error) {

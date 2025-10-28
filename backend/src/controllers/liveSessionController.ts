@@ -734,15 +734,19 @@ export const getStudentAvailableSessions = async (req: Request, res: Response, n
       .populate('course', '_id title')
       .select('course');
 
-    const enrolledCourseIds = enrollments.map(enrollment => enrollment.course._id);
+    const enrolledCourseIds = enrollments
+      .filter(enrollment => enrollment.course != null)
+      .map(enrollment => enrollment.course._id);
 
     console.log('📚 Student enrolled courses:', {
       totalEnrollments: enrollments.length,
       enrolledCourseIds,
-      enrollmentDetails: enrollments.map(e => ({
-        courseId: e.course._id,
-        courseTitle: e.course.title
-      }))
+      enrollmentDetails: enrollments
+        .filter(e => e.course != null)
+        .map(e => ({
+          courseId: e.course._id,
+          courseTitle: e.course.title
+        }))
     });
 
     // Build filter - only show sessions from enrolled courses

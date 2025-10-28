@@ -424,30 +424,32 @@ export const getAllRecordedSessionsForStudent = async (req: AuthRequest, res: Re
       .skip((Number(page) - 1) * Number(limit));
 
     // Transform data to match the frontend interface
-    const transformedRecordings = recordings.map((recording: any) => ({
-      _id: recording._id,
-      title: recording.title,
-      description: recording.description,
-      scheduledTime: recording.uploadDate, // Use uploadDate as scheduledTime
-      actualStartTime: recording.uploadDate,
-      actualEndTime: recording.uploadDate,
-      duration: recording.duration ? parseInt(recording.duration.split(':')[0]) * 60 + parseInt(recording.duration.split(':')[1]) : 0, // Convert MM:SS to minutes
-      recordingUrl: recording.videoUrl,
-      recordingSize: recording.videoSize,
-      course: {
-        _id: recording.course._id,
-        title: recording.course.title,
-        description: recording.course.description,
-        thumbnail: recording.course.thumbnail
-      },
-      instructor: {
-        _id: recording.teacher._id,
-        firstName: recording.teacher.firstName,
-        lastName: recording.teacher.lastName
-      },
-      createdAt: recording.createdAt,
-      views: recording.views
-    }));
+    const transformedRecordings = recordings
+      .filter((recording: any) => recording.course != null && recording.teacher != null)
+      .map((recording: any) => ({
+        _id: recording._id,
+        title: recording.title,
+        description: recording.description,
+        scheduledTime: recording.uploadDate,
+        actualStartTime: recording.uploadDate,
+        actualEndTime: recording.uploadDate,
+        duration: recording.duration ? parseInt(recording.duration.split(':')[0]) * 60 + parseInt(recording.duration.split(':')[1]) : 0,
+        recordingUrl: recording.videoUrl,
+        recordingSize: recording.videoSize,
+        course: {
+          _id: recording.course._id,
+          title: recording.course.title,
+          description: recording.course.description,
+          thumbnail: recording.course.thumbnail
+        },
+        instructor: {
+          _id: recording.teacher._id,
+          firstName: recording.teacher.firstName,
+          lastName: recording.teacher.lastName
+        },
+        createdAt: recording.createdAt,
+        views: recording.views
+      }));
 
     res.json({
       success: true,

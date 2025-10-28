@@ -33,12 +33,11 @@ export const loginRedirectService = {
 
       console.log('🔍 Active enrollments found:', activeEnrollments.length);
 
-      // If learner has active enrollments, redirect to the first course hub
+      // If learner has active enrollments, redirect to student dashboard
       if (activeEnrollments.length > 0) {
-        const firstEnrollment = activeEnrollments[0];
-        const hubPath = `/dashboard/student/course/${firstEnrollment.course._id}`;
-        console.log('🔍 Redirecting to course hub:', hubPath);
-        return hubPath;
+        const dashboardPath = `/dashboard/student`;
+        console.log('🔍 Redirecting to student dashboard:', dashboardPath);
+        return dashboardPath;
       }
 
       // If interests were provided, redirect to courses with interests

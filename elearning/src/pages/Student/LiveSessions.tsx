@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -74,8 +74,14 @@ const HeroCard = styled(Paper)(({ theme }) => ({
   background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
   color: theme.palette.primary.contrastText,
   borderRadius: theme.spacing(3),
-  padding: theme.spacing(4),
-  marginBottom: theme.spacing(4),
+  padding: theme.spacing(3, 2.5),
+  [theme.breakpoints.up('sm')]: {
+    padding: theme.spacing(4),
+  },
+  marginBottom: theme.spacing(3),
+  [theme.breakpoints.up('sm')]: {
+    marginBottom: theme.spacing(4),
+  },
   position: 'relative',
   overflow: 'hidden',
   '&::before': {
@@ -153,10 +159,16 @@ const StudentLiveSessions: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   // Parse courseId from query string if provided
   const params = new URLSearchParams(location.search);
   const courseIdFilter = params.get('courseId') || '';
+
+  // Scroll to tabs section
+  const scrollToTabs = () => {
+    tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   // State management
   const [sessions, setSessions] = useState<ILiveSession[]>([]);
@@ -321,115 +333,167 @@ const StudentLiveSessions: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
-      <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>
-        <Button variant="text" startIcon={<ArrowBack />} onClick={() => navigate(-1)} sx={{ color: 'text.primary' }}>
-          Back
-        </Button>
-      </Box>
+    <Box sx={{ width: '100%', bgcolor: 'background.default', minHeight: '100vh', pb: { xs: 2, sm: 3 }, overflowX: 'hidden' }}>
+      <Box sx={{ width: '100%', maxWidth: { xs: '360px', sm: '540px', md: '900px', lg: '1240px' }, mx: 'auto', py: { xs: 1, sm: 2, md: 3 }, px: { xs: 2, sm: 2, md: 3 } }}>
+        <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>
+          <Button 
+            variant="text" 
+            startIcon={<ArrowBack />} 
+            onClick={() => navigate(-1)} 
+            sx={{ 
+              color: 'text.primary',
+              textTransform: 'none',
+              fontSize: { xs: '0.85rem', sm: '0.95rem' },
+              pl: 0,
+              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) }
+            }}
+          >
+            Back
+          </Button>
+        </Box>
       {/* Hero Section */}
       <Fade in={true}>
         <HeroCard elevation={0}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" gap={{ xs: 2, sm: 0 }}>
-            <Box sx={{ zIndex: 1 }}>
-              <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.5rem' } }}>
-                🎥 Live Learning Sessions
-              </Typography>
-              <Typography variant="h6" sx={{ opacity: 0.9, mb: 2, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
-                Join interactive sessions with your instructors and fellow students! You can also access study materials and learn at your own pace.
-              </Typography>
-              <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ gap: 1 }}>
-                <ActionButton 
-                  variant="contained" 
-                  size={isMobile ? 'small' : 'medium'}
+          <Stack 
+            direction="column" 
+            alignItems="stretch" 
+            justifyContent="space-between" 
+            gap={{ xs: 2.5, sm: 3 }}
+            sx={{ position: 'relative', zIndex: 2 }}
+          >
+            {/* Header with title and refresh button */}
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="h3" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.4rem', sm: '2rem', md: '2.5rem' }, lineHeight: 1.15 }}>
+                  🎥 Live Sessions
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9, fontSize: { xs: '0.8rem', sm: '0.9rem' }, lineHeight: 1.4 }}>
+                  Join live classes or stream recordings
+                </Typography>
+              </Box>
+              <Tooltip title="Refresh">
+                <IconButton 
+                  onClick={() => window.location.reload()}
                   sx={{ 
-                    bgcolor: 'white', 
-                    color: 'primary.main',
-                    '&:hover': { bgcolor: 'grey.100' }
+                    color: 'white', 
+                    opacity: 0.8,
+                    '&:hover': { opacity: 1, transform: 'rotate(180deg)' },
+                    transition: 'all 0.3s ease',
+                    flexShrink: 0,
+                    mt: -0.5
                   }}
-                  startIcon={<LiveTv />}
-                  onClick={() => setTabValue(1)}
                 >
-                  🔴 Join Live Now
-                </ActionButton>
-                <ActionButton 
-                  variant="outlined" 
-                  size={isMobile ? 'small' : 'medium'}
-                  sx={{ 
-                    borderColor: 'white', 
-                    color: 'white',
-                    '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.1) }
-                  }}
-                  startIcon={<Schedule />}
-                  onClick={() => setTabValue(0)}
-                >
-                  📅 View Schedule
-                </ActionButton>
-                <ActionButton 
-                  variant="outlined" 
-                  size={isMobile ? 'small' : 'medium'}
-                  sx={{ 
-                    borderColor: 'white', 
-                    color: 'white',
-                    '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.1) }
-                  }}
-                  startIcon={<MenuBook />}
-                  onClick={() => navigate('/dashboard/student/courses')}
-                >
-                  📚 Study Materials
-                </ActionButton>
-                {recordedSessions > 0 && (
-                  <ActionButton 
-                    variant="outlined" 
-                    size={isMobile ? 'small' : 'medium'}
-                    sx={{ 
-                      borderColor: 'white', 
-                      color: 'white',
-                      '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.1) }
-                    }}
-                    startIcon={<OndemandVideo />}
-                    onClick={() => setTabValue(2)}
-                  >
-                    📹 Watch Recordings ({recordedSessions})
-                  </ActionButton>
-                )}
-              </Stack>
-            </Box>
-            <IconButton 
-              onClick={() => window.location.reload()}
-              sx={{ color: 'white', opacity: 0.7, alignSelf: { xs: 'flex-end', sm: 'center' } }}
-              title="Refresh sessions"
+                  <Refresh sx={{ fontSize: { xs: 24, sm: 28 } }} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+
+            {/* Action buttons - optimized for mobile */}
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }} 
+              spacing={1}
+              sx={{ width: '100%' }}
             >
-              <Refresh />
-            </IconButton>
+              <ActionButton 
+                fullWidth
+                variant="contained" 
+                size="small"
+                sx={{ 
+                  bgcolor: 'white', 
+                  color: 'primary.main',
+                  fontWeight: 700,
+                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                  py: { xs: 1, sm: 1.25 },
+                  '&:hover': { bgcolor: 'grey.100', transform: 'translateY(-2px)' }
+                }}
+                startIcon={<LiveTv sx={{ fontSize: { xs: 20, sm: 24 } }} />}
+                onClick={() => { setTabValue(1); scrollToTabs(); }}
+              >
+                Join Live
+              </ActionButton>
+              <ActionButton 
+                fullWidth
+                variant="outlined" 
+                size="small"
+                sx={{ 
+                  borderColor: 'white', 
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                  py: { xs: 1, sm: 1.25 },
+                  '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.15) }
+                }}
+                startIcon={<Schedule sx={{ fontSize: { xs: 20, sm: 24 } }} />}
+                onClick={() => { setTabValue(0); scrollToTabs(); }}
+              >
+                Schedule
+              </ActionButton>
+              {recordedSessions > 0 && (
+                <ActionButton 
+                  fullWidth
+                  variant="outlined" 
+                  size="small"
+                  sx={{ 
+                    borderColor: 'white', 
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                    py: { xs: 1, sm: 1.25 },
+                    '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.15) }
+                  }}
+                  startIcon={<OndemandVideo sx={{ fontSize: { xs: 20, sm: 24 } }} />}
+                  onClick={() => { setTabValue(2); scrollToTabs(); }}
+                >
+                  Recordings
+                </ActionButton>
+              )}
+            </Stack>
           </Stack>
         </HeroCard>
       </Fade>
 
       {/* Quick Stats */}
-      <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: { xs: 3, sm: 4 } }}>
+      <Grid container spacing={{ xs: 1, sm: 2, md: 3 }} sx={{ mb: { xs: 2.5, sm: 4, md: 5 } }}>
         <Grid item xs={6} sm={3}>
           <Card 
             sx={{ 
               textAlign: 'center', 
-              p: { xs: 1.5, sm: 2 }, 
-              bgcolor: alpha(theme.palette.error.main, 0.05), 
-              border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+              p: { xs: 1.5, sm: 2, md: 2.5 }, 
+              bgcolor: alpha(theme.palette.error.main, 0.08), 
+              border: `2px solid ${alpha(theme.palette.error.main, 0.2)}`,
               cursor: liveSessions > 0 ? 'pointer' : 'default',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              borderRadius: 2.5,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
               '&:hover': liveSessions > 0 ? {
                 transform: 'translateY(-2px)',
-                boxShadow: `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
+                boxShadow: `0 8px 20px ${alpha(theme.palette.error.main, 0.2)}`,
+                borderColor: theme.palette.error.main
               } : {}
             }}
             onClick={() => liveSessions > 0 && setTabValue(1)}
           >
-            <LiveTv sx={{ fontSize: { xs: 28, sm: 32 }, color: 'error.main', mb: 1 }} />
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'error.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+            <Box sx={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              width: { xs: 36, sm: 44 }, 
+              height: { xs: 36, sm: 44 }, 
+              bgcolor: alpha(theme.palette.error.main, 0.2), 
+              borderRadius: 2, 
+              mb: 1 
+            }}>
+              <LiveTv sx={{ fontSize: { xs: 22, sm: 26 }, color: 'error.main' }} />
+            </Box>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: 'error.main', fontSize: { xs: '1.4rem', sm: '1.6rem' }, mb: 0.25, lineHeight: 1 }}>
               {liveSessions}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              🔴 Live Now
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.85rem' }, fontWeight: 600 }}>
+              Live
             </Typography>
           </Card>
         </Grid>
@@ -437,24 +501,42 @@ const StudentLiveSessions: React.FC = () => {
           <Card 
             sx={{ 
               textAlign: 'center', 
-              p: { xs: 1.5, sm: 2 }, 
-              bgcolor: alpha(theme.palette.primary.main, 0.05), 
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+              p: { xs: 1.5, sm: 2, md: 2.5 }, 
+              bgcolor: alpha(theme.palette.primary.main, 0.08), 
+              border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
               cursor: upcomingSessions > 0 ? 'pointer' : 'default',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              borderRadius: 2.5,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
               '&:hover': upcomingSessions > 0 ? {
                 transform: 'translateY(-2px)',
-                boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
+                boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.2)}`,
+                borderColor: theme.palette.primary.main
               } : {}
             }}
             onClick={() => upcomingSessions > 0 && setTabValue(0)}
           >
-            <Schedule sx={{ fontSize: { xs: 28, sm: 32 }, color: 'primary.main', mb: 1 }} />
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+            <Box sx={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              width: { xs: 36, sm: 44 }, 
+              height: { xs: 36, sm: 44 }, 
+              bgcolor: alpha(theme.palette.primary.main, 0.2), 
+              borderRadius: 2, 
+              mb: 1 
+            }}>
+              <Schedule sx={{ fontSize: { xs: 22, sm: 26 }, color: 'primary.main' }} />
+            </Box>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main', fontSize: { xs: '1.4rem', sm: '1.6rem' }, mb: 0.25, lineHeight: 1 }}>
               {upcomingSessions}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              📅 Upcoming
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.85rem' }, fontWeight: 600 }}>
+              Soon
             </Typography>
           </Card>
         </Grid>
@@ -462,57 +544,85 @@ const StudentLiveSessions: React.FC = () => {
           <Card 
             sx={{ 
               textAlign: 'center', 
-              p: { xs: 1.5, sm: 2 }, 
-              bgcolor: alpha(theme.palette.success.main, 0.05), 
-              border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+              p: { xs: 1.5, sm: 2, md: 2.5 }, 
+              bgcolor: alpha(theme.palette.success.main, 0.08), 
+              border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
               cursor: recordedSessions > 0 ? 'pointer' : 'default',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              borderRadius: 2.5,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
               '&:hover': recordedSessions > 0 ? {
                 transform: 'translateY(-2px)',
-                boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.2)}`
+                boxShadow: `0 8px 20px ${alpha(theme.palette.success.main, 0.2)}`,
+                borderColor: theme.palette.success.main
               } : {}
             }}
             onClick={() => recordedSessions > 0 && setTabValue(2)}
           >
-            <OndemandVideo sx={{ fontSize: { xs: 28, sm: 32 }, color: 'success.main', mb: 1 }} />
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+            <Box sx={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              width: { xs: 36, sm: 44 }, 
+              height: { xs: 36, sm: 44 }, 
+              bgcolor: alpha(theme.palette.success.main, 0.2), 
+              borderRadius: 2, 
+              mb: 1 
+            }}>
+              <OndemandVideo sx={{ fontSize: { xs: 22, sm: 26 }, color: 'success.main' }} />
+            </Box>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main', fontSize: { xs: '1.4rem', sm: '1.6rem' }, mb: 0.25, lineHeight: 1 }}>
               {recordedSessions}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              📹 Recordings
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.85rem' }, fontWeight: 600 }}>
+              Videos
             </Typography>
-            {recordedSessions > 0 && (
-              <Typography variant="caption" color="success.main" sx={{ display: 'block', mt: 0.5, fontWeight: 600, fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
-                Click to view →
-              </Typography>
-            )}
           </Card>
         </Grid>
         <Grid item xs={6} sm={3}>
           <Card 
             sx={{ 
               textAlign: 'center', 
-              p: { xs: 1.5, sm: 2 }, 
-              bgcolor: alpha(theme.palette.info.main, 0.05), 
-              border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+              p: { xs: 1.5, sm: 2, md: 2.5 }, 
+              bgcolor: alpha(theme.palette.info.main, 0.08), 
+              border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`,
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              borderRadius: 2.5,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
               '&:hover': {
                 transform: 'translateY(-2px)',
-                boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.2)}`
+                boxShadow: `0 8px 20px ${alpha(theme.palette.info.main, 0.2)}`,
+                borderColor: theme.palette.info.main
               }
             }}
             onClick={() => navigate('/dashboard/student/courses')}
           >
-            <MenuBook sx={{ fontSize: { xs: 28, sm: 32 }, color: 'info.main', mb: 1 }} />
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'info.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+            <Box sx={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              width: { xs: 36, sm: 44 }, 
+              height: { xs: 36, sm: 44 }, 
+              bgcolor: alpha(theme.palette.info.main, 0.2), 
+              borderRadius: 2, 
+              mb: 1 
+            }}>
+              <MenuBook sx={{ fontSize: { xs: 22, sm: 26 }, color: 'info.main' }} />
+            </Box>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: 'info.main', fontSize: { xs: '1.4rem', sm: '1.6rem' }, mb: 0.25, lineHeight: 1 }}>
               📚
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              Study Materials
-            </Typography>
-            <Typography variant="caption" color="info.main" sx={{ display: 'block', mt: 0.5, fontWeight: 600, fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
-              Learn at your pace →
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.85rem' }, fontWeight: 600 }}>
+              Courses
             </Typography>
           </Card>
         </Grid>
@@ -569,60 +679,63 @@ const StudentLiveSessions: React.FC = () => {
       )}
 
       {/* Search and Filters */}
-      <FilterCard sx={{ mb: { xs: 3, sm: 4 }, p: { xs: 2, sm: 3 } }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, fontSize: { xs: '1rem', sm: '1.1rem' } }}>
-          🔍 Find Your Sessions
+      <FilterCard sx={{ mb: { xs: 2.5, sm: 4, md: 5 }, p: { xs: 2, sm: 3, md: 4 } }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.2rem' } }}>
+          🔍 Find Sessions
         </Typography>
-        <Grid container spacing={{ xs: 2, md: 3 }}>
-          <Grid item xs={12} md={8}>
-            <TextField
-              fullWidth
-              placeholder="Search for sessions, courses, or instructors..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+        <Stack spacing={{ xs: 1.5, sm: 2 }} sx={{ width: '100%' }}>
+          <TextField
+            fullWidth
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                bgcolor: 'white',
+                fontSize: { xs: '0.85rem', sm: '0.95rem' }
+              },
+              '& .MuiOutlinedInput-input::placeholder': {
+                opacity: 0.6
+              }
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search sx={{ color: 'primary.main', fontSize: 20 }} />
+                </InputAdornment>
+              ),
+            }}
+            size={isMobile ? 'small' : 'medium'}
+          />
+          <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
+            <InputLabel sx={{ fontSize: { xs: '0.85rem', sm: '0.95rem' } }}>Status</InputLabel>
+            <Select
+              value={statusFilter}
+              label="Status"
+              onChange={(e) => setStatusFilter(e.target.value)}
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 3,
-                  bgcolor: 'white',
+                borderRadius: 2,
+                bgcolor: 'white',
+                '& .MuiOutlinedInput-input': {
+                  fontSize: { xs: '0.85rem', sm: '0.95rem' }
                 }
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search sx={{ color: 'primary.main' }} />
-                  </InputAdornment>
-                ),
-              }}
-              size={isMobile ? 'small' : 'medium'}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
-              <InputLabel>📊 Filter by Status</InputLabel>
-              <Select
-                value={statusFilter}
-                label="📊 Filter by Status"
-                onChange={(e) => setStatusFilter(e.target.value)}
-                sx={{
-                  borderRadius: 3,
-                  bgcolor: 'white',
-                }}
-              >
-                <MenuItem value="all">🌟 All Sessions</MenuItem>
-                <MenuItem value="live">🔴 Live Now</MenuItem>
-                <MenuItem value="scheduled">📅 Scheduled</MenuItem>
-                <MenuItem value="ended">📹 Ended</MenuItem>
-                {tabValue === 2 && (
-                  <MenuItem value="recorded">🎬 With Recordings</MenuItem>
-                )}
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
+            >
+              <MenuItem value="all">All Sessions</MenuItem>
+              <MenuItem value="live">🔴 Live Now</MenuItem>
+              <MenuItem value="scheduled">📅 Scheduled</MenuItem>
+              <MenuItem value="ended">📹 Ended</MenuItem>
+              {tabValue === 2 && (
+                <MenuItem value="recorded">🎬 With Recordings</MenuItem>
+              )}
+            </Select>
+          </FormControl>
+        </Stack>
       </FilterCard>
 
       {/* Navigation Tabs */}
-      <Paper sx={{ mb: { xs: 3, sm: 4 }, borderRadius: 3, overflow: 'hidden' }}>
+      <Paper ref={tabsRef} sx={{ mb: { xs: 3, sm: 4, md: 5 }, borderRadius: 3, overflow: 'hidden', boxShadow: 2 }}>
         <Tabs 
           value={tabValue} 
           onChange={(e, newValue) => setTabValue(newValue)}
@@ -630,24 +743,30 @@ const StudentLiveSessions: React.FC = () => {
           scrollButtons={isMobile ? 'auto' : undefined}
           allowScrollButtonsMobile
           sx={{
+            bgcolor: 'background.paper',
             '& .MuiTab-root': {
               textTransform: 'none',
-              fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+              fontSize: { xs: '0.85rem', sm: '0.95rem', md: '1rem' },
               fontWeight: 600,
-              py: { xs: 1.25, sm: 2 },
-              px: { xs: 1, sm: 2 },
-              minHeight: { xs: 40, sm: 48 }
+              py: { xs: 1.5, sm: 2 },
+              px: { xs: 1.5, sm: 2.5 },
+              minHeight: { xs: 48, sm: 56 },
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.main, 0.03)
+              }
             },
             '& .MuiTabs-indicator': {
-              height: 4,
-              borderRadius: 2,
+              height: 5,
+              borderRadius: '5px 5px 0 0',
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
             },
           }}
         >
           <Tab 
-            icon={<Badge badgeContent={upcomingSessions} color="primary"><Schedule /></Badge>} 
+            icon={<Badge badgeContent={upcomingSessions} color="primary" sx={{ '& .MuiBadge-badge': { fontSize: { xs: '0.65rem', sm: '0.75rem' } } }}><Schedule /></Badge>} 
             iconPosition="start"
-            label="📅 Upcoming" 
+            label={isMobile ? "Upcoming" : "📅 Upcoming"}
             sx={{ 
               '&.Mui-selected': { 
                 color: 'primary.main',
@@ -656,9 +775,9 @@ const StudentLiveSessions: React.FC = () => {
             }}
           />
           <Tab 
-            icon={<Badge badgeContent={liveSessions} color="error"><LiveTv /></Badge>} 
+            icon={<Badge badgeContent={liveSessions} color="error" sx={{ '& .MuiBadge-badge': { fontSize: { xs: '0.65rem', sm: '0.75rem' } } }}><LiveTv /></Badge>} 
             iconPosition="start"
-            label="🔴 Live Now" 
+            label={isMobile ? "Live" : "🔴 Live Now"}
             sx={{ 
               '&.Mui-selected': { 
                 color: 'error.main',
@@ -667,9 +786,9 @@ const StudentLiveSessions: React.FC = () => {
             }}
           />
           <Tab 
-            icon={<Badge badgeContent={recordedSessions} color="success"><OndemandVideo /></Badge>} 
+            icon={<Badge badgeContent={recordedSessions} color="success" sx={{ '& .MuiBadge-badge': { fontSize: { xs: '0.65rem', sm: '0.75rem' } } }}><OndemandVideo /></Badge>} 
             iconPosition="start"
-            label="📹 Recordings" 
+            label={isMobile ? "Recordings" : "📹 Recordings"}
             sx={{ 
               '&.Mui-selected': { 
                 color: 'success.main',
@@ -680,7 +799,7 @@ const StudentLiveSessions: React.FC = () => {
           <Tab 
             icon={<Schedule />} 
             iconPosition="start"
-            label="📚 All Past" 
+            label={isMobile ? "Past" : "📚 Past"}
             sx={{ 
               '&.Mui-selected': { 
                 color: 'info.main',
@@ -708,37 +827,39 @@ const StudentLiveSessions: React.FC = () => {
 
           if (filteredRecordings.length === 0) {
             return (
-              <Paper sx={{ p: { xs: 4, sm: 6 }, textAlign: 'center', borderRadius: 3, bgcolor: 'grey.50' }}>
+              <Paper sx={{ p: { xs: 3, sm: 4, md: 6 }, textAlign: 'center', borderRadius: 3, bgcolor: alpha(theme.palette.success.main, 0.03), border: `2px dashed ${alpha(theme.palette.success.main, 0.2)}` }}>
                 <Box sx={{ mb: 3 }}>
-                  <OndemandVideo sx={{ fontSize: { xs: 56, sm: 80 }, color: 'success.main', opacity: 0.7 }} />
+                  <OndemandVideo sx={{ fontSize: { xs: 60, sm: 80, md: 100 }, color: 'success.main', opacity: 0.5 }} />
                 </Box>
-                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
-                  📹 No recordings available
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 700, fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.75rem' } }}>
+                  📹 No Recordings Yet
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                  {recordingsLoading ? 'Loading recordings...' : 'Recorded sessions from your instructors will appear here once available.'}
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3, fontSize: { xs: '0.95rem', sm: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
+                  {recordingsLoading ? 'Loading recordings...' : 'Once your instructors record live sessions, they\'ll appear here for you to watch anytime.'}
                 </Typography>
-                {recordingsLoading && <CircularProgress size={24} sx={{ mt: 2 }} />}
-                <ActionButton
-                  variant="outlined"
-                  size={isMobile ? 'small' : 'medium'}
-                  onClick={() => navigate('/courses')}
-                  startIcon={<VideoCall />}
-                >
-                  🎓 View My Courses
-                </ActionButton>
+                {recordingsLoading && <CircularProgress size={30} sx={{ mt: 2 }} />}
+                {!recordingsLoading && (
+                  <ActionButton
+                    variant="outlined"
+                    size={isMobile ? 'small' : 'medium'}
+                    onClick={() => navigate('/dashboard/student/courses')}
+                    startIcon={<VideoCall />}
+                    sx={{ mt: 2 }}
+                  >
+                    View My Courses
+                  </ActionButton>
+                )}
               </Paper>
             );
           }
 
           return (
-            <Grid container spacing={{ xs: 2, sm: 3 }}>
+            <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
               {filteredRecordings.map((recording, index) => {
-                // Check if this is a live session recording or uploaded recording
                 const isLiveSessionRecording = 'status' in recording;
                 
                 return (
-                  <Grid item xs={12} sm={12} md={6} lg={4} key={recording._id}>
+                  <Grid item xs={12} sm={6} md={6} lg={4} key={recording._id}>
                     <Zoom in={true} style={{ transitionDelay: `${index * 100}ms` }}>
                       {isLiveSessionRecording ? (
                         <RecordingCard
@@ -823,50 +944,49 @@ const StudentLiveSessions: React.FC = () => {
           );
         }
 
-        // For other tabs, use the existing filtered sessions logic
         if (filteredSessions.length === 0) {
           return (
-            <Paper sx={{ p: { xs: 4, sm: 6 }, textAlign: 'center', borderRadius: 3, bgcolor: 'grey.50' }}>
+            <Paper sx={{ p: { xs: 3, sm: 4, md: 6 }, textAlign: 'center', borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.03), border: `2px dashed ${alpha(theme.palette.primary.main, 0.2)}` }}>
               <Box sx={{ mb: 3 }}>
-                {tabValue === 0 && <Schedule sx={{ fontSize: { xs: 56, sm: 80 }, color: 'primary.main', opacity: 0.7 }} />}
-                {tabValue === 1 && <LiveTv sx={{ fontSize: { xs: 56, sm: 80 }, color: 'error.main', opacity: 0.7 }} />}
-                {tabValue === 3 && <Schedule sx={{ fontSize: { xs: 56, sm: 80 }, color: 'info.main', opacity: 0.7 }} />}
+                {tabValue === 0 && <Schedule sx={{ fontSize: { xs: 60, sm: 80, md: 100 }, color: 'primary.main', opacity: 0.5 }} />}
+                {tabValue === 1 && <LiveTv sx={{ fontSize: { xs: 60, sm: 80, md: 100 }, color: 'error.main', opacity: 0.5 }} />}
+                {tabValue === 3 && <Schedule sx={{ fontSize: { xs: 60, sm: 80, md: 100 }, color: 'info.main', opacity: 0.5 }} />}
               </Box>
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
-                {tabValue === 0 && '📅 No upcoming sessions'}
-                {tabValue === 1 && '🔴 No live sessions right now'}
-                {tabValue === 3 && '📚 No past sessions yet'}
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 700, fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.75rem' } }}>
+                {tabValue === 0 && '📅 No Upcoming Sessions'}
+                {tabValue === 1 && '🔴 No Live Sessions Now'}
+                {tabValue === 3 && '📚 No Past Sessions'}
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                {tabValue === 0 && 'Check back later for scheduled sessions from your enrolled courses.'}
-                {tabValue === 1 && 'When instructors start live sessions, they will appear here.'}
-                {tabValue === 3 && 'Completed sessions will be available here.'}
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3, fontSize: { xs: '0.95rem', sm: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
+                {tabValue === 0 && 'Stay tuned! Instructors will schedule sessions soon. Check back or enable notifications.'}
+                {tabValue === 1 && 'No live sessions at the moment. View the schedule to see when instructors go live.'}
+                {tabValue === 3 && 'Complete sessions will appear here for you to review.'}
               </Typography>
               <ActionButton
                 variant="outlined"
                 size={isMobile ? 'small' : 'medium'}
-                onClick={() => navigate('/courses')}
+                onClick={() => navigate('/dashboard/student/courses')}
                 startIcon={<VideoCall />}
+                sx={{ mt: 2 }}
               >
-                🎓 View My Courses
+                View My Courses
               </ActionButton>
             </Paper>
           );
         }
 
         return (
-          <Grid container spacing={{ xs: 2, sm: 3 }}>
+          <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
             {filteredSessions.map((session, index) => {
               const { date, time } = formatDateTime(session.scheduledTime);
               const isLive = session.status === 'live';
               const hasRecording = session.status === 'ended' && session.recordingUrl;
 
-              // Use regular SessionCard for other tabs
               return (
-                <Grid item xs={12} sm={12} md={6} lg={4} key={session._id}>
+                <Grid item xs={12} sm={6} md={6} lg={4} key={session._id}>
                   <Zoom in={true} style={{ transitionDelay: `${index * 100}ms` }}>
                     <SessionCard>
-                      <CardContent sx={{ flex: 1, p: { xs: 2, md: 3 } }}>
+                      <CardContent sx={{ flex: 1, p: { xs: 2.5, sm: 3, md: 3 } }}>
                         {/* Status and Actions Header */}
                         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
                           {isLive ? (
@@ -994,23 +1114,25 @@ const StudentLiveSessions: React.FC = () => {
 
                       <Divider />
 
-                      <CardActions sx={{ p: { xs: 2, md: 3 }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 0 } }}>
+                      <CardActions sx={{ p: { xs: 2, sm: 2.5, md: 3 }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1.5, sm: 1 } }}>
                         {isLive ? (
                           <ActionButton
                             fullWidth
                             variant="contained"
                             color="error"
-                            size={isMobile ? 'small' : 'large'}
+                            size={isMobile ? 'small' : 'medium'}
                             startIcon={<LiveTv />}
                             onClick={() => handleJoinSession(session._id)}
                             sx={{ 
                               fontWeight: 'bold',
                               animation: 'pulse 2s infinite',
                               bgcolor: 'error.main',
-                              '&:hover': { bgcolor: 'error.dark' }
+                              fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                              py: { xs: 0.75, sm: 1 },
+                              '&:hover': { bgcolor: 'error.dark', transform: 'translateY(-1px)' }
                             }}
                           >
-                            🔴 Join Live Session
+                            Join Live Session
                           </ActionButton>
                         ) : session.status === 'scheduled' ? (
                           <ActionButton
@@ -1019,8 +1141,9 @@ const StudentLiveSessions: React.FC = () => {
                             size={isMobile ? 'small' : 'medium'}
                             startIcon={<Schedule />}
                             disabled
+                            sx={{ fontSize: { xs: '0.85rem', sm: '0.95rem' } }}
                           >
-                            📅 Starts at {time}
+                            Starts at {time}
                           </ActionButton>
                         ) : hasRecording ? (
                           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: '100%' }}>
@@ -1033,12 +1156,14 @@ const StudentLiveSessions: React.FC = () => {
                               onClick={() => handlePlayRecording(session)}
                               sx={{ 
                                 bgcolor: 'success.main',
-                                '&:hover': { bgcolor: 'success.dark' }
+                                fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                                py: { xs: 0.75, sm: 1 },
+                                '&:hover': { bgcolor: 'success.dark', transform: 'translateY(-1px)' }
                               }}
                             >
-                              📹 Watch Recording
+                              Watch Recording
                             </ActionButton>
-                            <Tooltip title="View in course content">
+                            <Tooltip title="View in course">
                               <IconButton
                                 color="success"
                                 onClick={() => navigate(`/course/${session.course._id}`)}
@@ -1060,8 +1185,9 @@ const StudentLiveSessions: React.FC = () => {
                             size={isMobile ? 'small' : 'medium'}
                             startIcon={<CheckCircle />}
                             disabled
+                            sx={{ fontSize: { xs: '0.85rem', sm: '0.95rem' } }}
                           >
-                            ✅ Session Completed
+                            Session Completed
                           </ActionButton>
                         ) : (
                           <ActionButton
@@ -1069,8 +1195,9 @@ const StudentLiveSessions: React.FC = () => {
                             variant="outlined"
                             size={isMobile ? 'small' : 'medium'}
                             disabled
+                            sx={{ fontSize: { xs: '0.85rem', sm: '0.95rem' } }}
                           >
-                            Session Unavailable
+                            Unavailable
                           </ActionButton>
                         )}
                       </CardActions>
@@ -1092,7 +1219,8 @@ const StudentLiveSessions: React.FC = () => {
           autoPlay={true}
         />
       )}
-    </Container>
+      </Box>
+    </Box>
   );
 };
 

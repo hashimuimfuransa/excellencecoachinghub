@@ -209,7 +209,17 @@ const SectionAccordion = React.memo(({
         '&:hover': { backgroundColor: 'action.hover' },
         px: 3,
         py: 2,
-        minHeight: 64
+        minHeight: 64,
+        '@media (max-width: 768px)': {
+          px: 2,
+          py: 1.5,
+          minHeight: 56,
+        },
+        '@media (max-width: 600px)': {
+          px: 1.5,
+          py: 1,
+          minHeight: 48,
+        },
       }}
     >
       <Box display="flex" alignItems="center" gap={1} flex={1}>
@@ -314,7 +324,18 @@ const SectionAccordion = React.memo(({
       </Box>
     </AccordionSummary>
     
-    <AccordionDetails sx={{ px: 3, py: 2 }}>
+    <AccordionDetails sx={{ 
+      px: 3, 
+      py: 2,
+      '@media (max-width: 768px)': {
+        px: 2,
+        py: 1.5,
+      },
+      '@media (max-width: 600px)': {
+        px: 1.5,
+        py: 1,
+      },
+    }}>
       {/* Translation Display */}
       {translatedText && (
         <Card sx={{ mb: 3, backgroundColor: 'warning.light', color: 'warning.contrastText' }}>
@@ -2031,7 +2052,12 @@ ${'='.repeat(60)}
           )}
         </Box>
         {/* Second Row: Action Buttons */}
-        <Box display="flex" gap={1} mb={1} flexWrap="wrap">
+        <Box display="flex" gap={1} mb={1} flexWrap="wrap" sx={{
+          '@media (max-width: 600px)': {
+            gap: 0.5,
+            mb: 0.75,
+          },
+        }}>
           {/* Voice Controls */}
           <Tooltip title={isVoiceEnabled ? "Disable Voice Assistant" : "Enable Voice Assistant"}>
             <IconButton
@@ -2194,13 +2220,33 @@ ${'='.repeat(60)}
         )}
 
         {/* Fourth Row: Compact Controls and Metadata */}
-        <Box display="flex" gap={1} flexWrap="wrap" alignItems="center" justifyContent="space-between">
-          <Box display="flex" gap={1} flexWrap="wrap" alignItems="center">
+        <Box display="flex" gap={1} flexWrap="wrap" alignItems="center" justifyContent="space-between" sx={{
+          '@media (max-width: 768px)': {
+            gap: 0.75,
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+          },
+          '@media (max-width: 600px)': {
+            gap: 0.5,
+          },
+        }}>
+          <Box display="flex" gap={1} flexWrap="wrap" alignItems="center" sx={{
+            '@media (max-width: 600px)': {
+              width: '100%',
+              gap: 0.75,
+            },
+          }}>
             <Button
               size="small"
               variant={showKeyPointsOnly ? "contained" : "outlined"}
               onClick={() => setShowKeyPointsOnly(!showKeyPointsOnly)}
               startIcon={<Highlight />}
+              sx={{
+                '@media (max-width: 600px)': {
+                  fontSize: '0.75rem',
+                  padding: '4px 8px',
+                },
+              }}
             >
               Key Points Only
             </Button>
@@ -2210,6 +2256,12 @@ ${'='.repeat(60)}
               variant="outlined"
               onClick={() => copyToClipboard(notes.summary)}
               startIcon={<ContentCopy />}
+              sx={{
+                '@media (max-width: 600px)': {
+                  fontSize: '0.75rem',
+                  padding: '4px 8px',
+                },
+              }}
             >
               Copy Summary
             </Button>
@@ -2222,39 +2274,70 @@ ${'='.repeat(60)}
                 setExpandedSections(new Set(filteredSections.map((_, index) => index)));
               }}
               startIcon={<Visibility />}
+              sx={{
+                '@media (max-width: 600px)': {
+                  fontSize: '0.75rem',
+                  padding: '4px 8px',
+                },
+              }}
             >
               Show All Sections
             </Button>
           </Box>
           
-          <Box display="flex" gap={0.5} flexWrap="wrap">
+          <Box display="flex" gap={0.5} flexWrap="wrap" sx={{
+            '@media (max-width: 600px)': {
+              width: '100%',
+              gap: 0.5,
+            },
+          }}>
             <Chip 
-              icon={<MenuBook />} 
+              icon={<MenuBook fontSize="small" />} 
               label={`${notes.metadata?.totalSections || totalSections}`} 
               size="small" 
               variant="outlined"
+              sx={{
+                '@media (max-width: 600px)': {
+                  fontSize: '0.7rem',
+                },
+              }}
             />
             <Chip 
-              icon={<Timer />} 
+              icon={<Timer fontSize="small" />} 
               label={`${notes.metadata?.estimatedReadingTime || 'N/A'}m`} 
               size="small" 
               variant="outlined"
+              sx={{
+                '@media (max-width: 600px)': {
+                  fontSize: '0.7rem',
+                },
+              }}
             />
             <Chip 
-              icon={<TrendingUp />} 
+              icon={<TrendingUp fontSize="small" />} 
               label={notes.metadata?.difficulty || 'N/A'} 
               size="small" 
               color={notes.metadata?.difficulty === 'beginner' ? 'success' : 
                      notes.metadata?.difficulty === 'intermediate' ? 'warning' : 'error'}
               variant="outlined"
+              sx={{
+                '@media (max-width: 600px)': {
+                  fontSize: '0.7rem',
+                },
+              }}
             />
             {showProgress && (
               <Chip 
-                icon={<Schedule />} 
+                icon={<Schedule fontSize="small" />} 
                 label={`${readCount}/${totalSections}`} 
                 size="small" 
                 variant="outlined"
                 color={progress === 100 ? 'success' : 'default'}
+                sx={{
+                  '@media (max-width: 600px)': {
+                    fontSize: '0.7rem',
+                  },
+                }}
               />
             )}
           </Box>
@@ -2281,6 +2364,14 @@ ${'='.repeat(60)}
           px: isFullscreen ? 4 : 2,
           pb: isFullscreen ? 4 : 2,
           transition: 'all 0.3s ease-in-out',
+          '@media (max-width: 768px)': {
+            px: isFullscreen ? 3 : 1.5,
+            pb: isFullscreen ? 3 : 1.5,
+          },
+          '@media (max-width: 600px)': {
+            px: isFullscreen ? 2 : 1,
+            pb: isFullscreen ? 2 : 1,
+          },
           '&::-webkit-scrollbar': {
             width: isFullscreen ? '12px' : '8px',
           },
@@ -2298,12 +2389,48 @@ ${'='.repeat(60)}
         }}
       >
         {/* Summary */}
-        <Card sx={{ mb: 3, bgcolor: 'white' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
+        <Card sx={{ 
+          mb: 3, 
+          bgcolor: 'white',
+          '@media (max-width: 768px)': {
+            mb: 2,
+          },
+          '@media (max-width: 600px)': {
+            mb: 1.5,
+          },
+        }}>
+          <CardContent sx={{ 
+            p: 3,
+            '@media (max-width: 768px)': {
+              p: 2,
+            },
+            '@media (max-width: 600px)': {
+              p: 1.5,
+            },
+          }}>
+            <Typography variant="h5" gutterBottom sx={{ 
+              mb: 2,
+              '@media (max-width: 768px)': {
+                variant: 'h6',
+                mb: 1.5,
+              },
+              '@media (max-width: 600px)': {
+                fontSize: '1rem',
+                mb: 1,
+              },
+            }}>
               Summary
             </Typography>
-            <Typography variant="body1" paragraph sx={{ lineHeight: 1.7, fontSize: '1.1rem' }}>
+            <Typography variant="body1" paragraph sx={{ 
+              lineHeight: 1.7, 
+              fontSize: '1.1rem',
+              '@media (max-width: 768px)': {
+                fontSize: '1rem',
+              },
+              '@media (max-width: 600px)': {
+                fontSize: '0.95rem',
+              },
+            }}>
               {notes.summary}
             </Typography>
           </CardContent>
@@ -2311,16 +2438,58 @@ ${'='.repeat(60)}
 
         {/* Key Points */}
         {notes.keyPoints && notes.keyPoints.length > 0 && (
-          <Card sx={{ mb: 3, bgcolor: 'white' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
+          <Card sx={{ 
+            mb: 3, 
+            bgcolor: 'white',
+            '@media (max-width: 768px)': {
+              mb: 2,
+            },
+            '@media (max-width: 600px)': {
+              mb: 1.5,
+            },
+          }}>
+            <CardContent sx={{ 
+              p: 3,
+              '@media (max-width: 768px)': {
+                p: 2,
+              },
+              '@media (max-width: 600px)': {
+                p: 1.5,
+              },
+            }}>
+              <Typography variant="h5" gutterBottom sx={{ 
+                mb: 2,
+                '@media (max-width: 768px)': {
+                  variant: 'h6',
+                  mb: 1.5,
+                },
+                '@media (max-width: 600px)': {
+                  fontSize: '1rem',
+                  mb: 1,
+                },
+              }}>
                 Key Points
               </Typography>
-              <List>
+              <List sx={{
+                '@media (max-width: 600px)': {
+                  p: 0,
+                },
+              }}>
                 {notes.keyPoints.map((point: string, index: number) => (
-                  <ListItem key={index} sx={{ pl: 0, py: 1 }}>
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      <Lightbulb color="primary" />
+                  <ListItem key={index} sx={{ 
+                    pl: 0, 
+                    py: 1,
+                    '@media (max-width: 600px)': {
+                      py: 0.75,
+                    },
+                  }}>
+                    <ListItemIcon sx={{ 
+                      minWidth: 40,
+                      '@media (max-width: 600px)': {
+                        minWidth: 32,
+                      },
+                    }}>
+                      <Lightbulb color="primary" fontSize="small" />
                     </ListItemIcon>
                     <ListItemText 
                       primary={point}
@@ -2328,7 +2497,14 @@ ${'='.repeat(60)}
                         component: 'div',
                         sx: { 
                           fontSize: '1.05rem',
-                          lineHeight: 1.6
+                          lineHeight: 1.6,
+                          '@media (max-width: 768px)': {
+                            fontSize: '1rem',
+                          },
+                          '@media (max-width: 600px)': {
+                            fontSize: '0.9rem',
+                            lineHeight: 1.5,
+                          },
                         }
                       }}
                     />
@@ -2341,13 +2517,44 @@ ${'='.repeat(60)}
 
         {/* Table of Contents */}
         {!activeSearchQuery && filteredSections.length > 3 && (
-          <Card sx={{ mb: 3, bgcolor: 'white' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <MenuBook color="primary" />
+          <Card sx={{ 
+            mb: 3, 
+            bgcolor: 'white',
+            '@media (max-width: 768px)': {
+              mb: 2,
+            },
+            '@media (max-width: 600px)': {
+              mb: 1.5,
+            },
+          }}>
+            <CardContent sx={{ 
+              p: 3,
+              '@media (max-width: 768px)': {
+                p: 2,
+              },
+              '@media (max-width: 600px)': {
+                p: 1.5,
+              },
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ 
+                mb: 2, 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                '@media (max-width: 600px)': {
+                  fontSize: '1rem',
+                  mb: 1,
+                  flexWrap: 'wrap',
+                },
+              }}>
+                <MenuBook color="primary" fontSize="small" />
                 Table of Contents
               </Typography>
-              <Box display="flex" flexWrap="wrap" gap={1}>
+              <Box display="flex" flexWrap="wrap" gap={1} sx={{
+                '@media (max-width: 600px)': {
+                  gap: 0.75,
+                },
+              }}>
                 {filteredSections.slice(0, 10).map((section: any, index: number) => (
                   <Chip
                     key={`toc-${index}`}

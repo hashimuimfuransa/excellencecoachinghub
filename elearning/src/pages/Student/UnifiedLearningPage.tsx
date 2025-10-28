@@ -280,7 +280,6 @@ const UnifiedLearningPage: React.FC = () => {
   const [progress, setProgress] = useState<CourseProgressResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [assessments, setAssessments] = useState<IAssessment[]>([]);
@@ -672,11 +671,6 @@ const UnifiedLearningPage: React.FC = () => {
     }
   }, [location.search, upcomingEvents.length]);
 
-  // Handle mobile sidebar
-  useEffect(() => {
-    setSidebarOpen(!isMobile);
-  }, [isMobile]);
-
   const handleBack = () => {
     navigate('/dashboard/student/courses');
   };
@@ -757,10 +751,6 @@ const UnifiedLearningPage: React.FC = () => {
     } catch (err) {
       console.warn('Failed to track material view:', err);
     }
-  };
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
   };
 
   const toggleWeekExpanded = (weekId: string) => {
@@ -1612,26 +1602,7 @@ const UnifiedLearningPage: React.FC = () => {
                 Sign Out
               </MenuItem>
             </MuiMenu>
-            
-            {/* Sidebar Toggle Button */}
-            <IconButton
-              color="inherit"
-              onClick={toggleSidebar}
-              sx={{ 
-                p: { xs: 1, sm: 1.5 },
-                borderRadius: 3,
-                backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                border: '1px solid rgba(99, 102, 241, 0.15)',
-                '&:hover': {
-                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                  transform: 'scale(1.05)',
-                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
-                },
-                transition: 'all 0.3s ease'
-              }}
-            >
-              <Menu sx={{ fontSize: { xs: 20, sm: 22 } }} />
-            </IconButton>
+
           </Box>
         </Toolbar>
       </AppBar>
@@ -1644,11 +1615,17 @@ const UnifiedLearningPage: React.FC = () => {
           <LiveSessionStatus courseId={courseId!} fullWidth />
         </Box>
         
-        {/* Enhanced Live Session Navigation Indicator */}
-        <Box sx={{ 
-          mx: { xs: 1, sm: 1.5, md: 2 },
-          mb: { xs: 1, sm: 1.5 }
-        }}>
+        {/* Compact Live Session Navigation Indicator */}
+        <Container 
+          maxWidth="lg" 
+          sx={{ 
+            p: { xs: 1, sm: 1.5, md: 2 },
+            width: '100%',
+            maxWidth: '100%',
+            mx: 'auto',
+            mb: { xs: 2, sm: 2.5, md: 3 }
+          }}
+        >
           <Card 
             component={motion.div}
             initial={{ opacity: 0, scale: 0.95 }}
@@ -1657,14 +1634,15 @@ const UnifiedLearningPage: React.FC = () => {
             sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
-              borderRadius: 3,
+              borderRadius: { xs: 2.5, sm: 3, md: 3.5 },
               overflow: 'hidden',
               position: 'relative',
               cursor: 'pointer',
+              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25)',
               '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-                transition: 'all 0.3s ease'
+                transform: 'translateY(-4px)',
+                boxShadow: '0 12px 40px rgba(102, 126, 234, 0.35)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               },
               '&::before': {
                 content: '""',
@@ -1679,162 +1657,193 @@ const UnifiedLearningPage: React.FC = () => {
             }}
             onClick={handleGoToLiveSessions}
           >
-            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, position: 'relative', zIndex: 1 }}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                flexDirection: { xs: 'column', sm: 'row' },
-                gap: { xs: 2, sm: 0 }
-              }}>
-                <Box sx={{ flex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative', zIndex: 1 }}>
+              <Stack spacing={{ xs: 2, sm: 0 }} sx={{ justifyContent: 'space-between', height: '100%' }}>
+                {/* Header Row */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  gap: 2
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
                     <Box sx={{ 
                       display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 0.5,
-                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: { xs: 40, sm: 48 },
+                      height: { xs: 40, sm: 48 },
+                      backgroundColor: 'rgba(255,255,255,0.15)',
                       borderRadius: 2,
-                      px: 1.5,
-                      py: 0.5
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.2)'
                     }}>
-                      <VideoCall sx={{ fontSize: 20 }} />
-                      <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                      <VideoCall sx={{ fontSize: { xs: 24, sm: 28 } }} />
+                    </Box>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.125rem' }, mb: 0.25 }}>
                         Live Sessions
+                      </Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.75rem', sm: '0.8rem' } }}>
+                        Join & interact live
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Stats Pills */}
+                  <Stack direction="row" spacing={1} sx={{ display: { xs: 'none', sm: 'flex' } }}>
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.75,
+                      backgroundColor: 'rgba(255,255,255,0.12)',
+                      borderRadius: 1.5,
+                      px: 1.5,
+                      py: 0.75,
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.15)'
+                    }}>
+                      <VideoCall sx={{ fontSize: 16 }} />
+                      <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                        {upcomingEvents.length} Upcoming
                       </Typography>
                     </Box>
                     {unseenRecordings > 0 && (
-                      <Badge 
-                        badgeContent={unseenRecordings} 
-                        color="error" 
-                        sx={{ 
-                          '& .MuiBadge-badge': {
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            animation: 'pulse 2s infinite'
-                          }
-                        }}
-                      >
-                        <Box sx={{ 
-                          width: 8, 
-                          height: 8, 
-                          backgroundColor: '#ff6b35', 
-                          borderRadius: '50%',
-                          animation: 'pulse 2s infinite'
-                        }} />
-                      </Badge>
+                      <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.75,
+                        backgroundColor: 'rgba(255,107,53,0.2)',
+                        borderRadius: 1.5,
+                        px: 1.5,
+                        py: 0.75,
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255,107,53,0.4)'
+                      }}>
+                        <PlayCircleOutline sx={{ fontSize: 16 }} />
+                        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                          {unseenRecordings} New
+                        </Typography>
+                      </Box>
                     )}
-                  </Box>
-                  
-                  <Typography variant="body1" sx={{ 
-                    opacity: 0.9, 
-                    mb: 2,
-                    fontSize: { xs: '0.875rem', sm: '1rem' },
-                    lineHeight: 1.4
-                  }}>
-                    Join live coaching sessions, watch recordings, and interact with instructors in real-time.
-                  </Typography>
-                  
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 1, 
-                    flexWrap: 'wrap',
-                    mb: 2
-                  }}>
-                    <Chip
-                      icon={<VideoCall sx={{ fontSize: 16 }} />}
-                      label={`${upcomingEvents.length} Upcoming`}
-                      size="small"
-                      sx={{ 
-                        backgroundColor: 'rgba(255,255,255,0.2)', 
-                        color: 'white',
-                        fontSize: '0.75rem',
-                        height: 28,
-                        backdropFilter: 'blur(10px)'
-                      }}
-                    />
-                    <Chip
-                      icon={<PlayCircleOutline sx={{ fontSize: 16 }} />}
-                      label={`${unseenRecordings} New Recordings`}
-                      size="small"
-                      sx={{ 
-                        backgroundColor: 'rgba(255,255,255,0.2)', 
-                        color: 'white',
-                        fontSize: '0.75rem',
-                        height: 28,
-                        backdropFilter: 'blur(10px)'
-                      }}
-                    />
-                  </Box>
+                  </Stack>
                 </Box>
-                
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  alignItems: { xs: 'stretch', sm: 'flex-end' },
-                  gap: 1
-                }}>
+
+                {/* Mobile Stats */}
+                <Stack direction="row" spacing={0.75} sx={{ display: { xs: 'flex', sm: 'none' }, width: '100%' }}>
+                  <Box sx={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    borderRadius: 1,
+                    px: 1,
+                    py: 0.5,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.15)'
+                  }}>
+                    <VideoCall sx={{ fontSize: 14 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                      {upcomingEvents.length} Upcoming
+                    </Typography>
+                  </Box>
+                  {unseenRecordings > 0 && (
+                    <Box sx={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      backgroundColor: 'rgba(255,107,53,0.2)',
+                      borderRadius: 1,
+                      px: 1,
+                      py: 0.5,
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,107,53,0.4)'
+                    }}>
+                      <PlayCircleOutline sx={{ fontSize: 14 }} />
+                      <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                        {unseenRecordings} New
+                      </Typography>
+                    </Box>
+                  )}
+                </Stack>
+
+                {/* Actions Row */}
+                <Stack 
+                  direction={{ xs: 'column', sm: 'row' }} 
+                  spacing={{ xs: 1, sm: 1.5 }}
+                  sx={{ display: 'flex', justifyContent: 'flex-end' }}
+                >
                   <Button
                     variant="contained"
-                    size="large"
-                    startIcon={<VideoCall />}
+                    size="small"
+                    startIcon={<VideoCall sx={{ fontSize: 18 }} />}
                     sx={{
-                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      backgroundColor: 'rgba(255,255,255,0.25)',
                       color: 'white',
                       backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      borderRadius: 2,
-                      px: 3,
-                      py: 1.5,
-                      fontSize: '1rem',
+                      border: '1px solid rgba(255,255,255,0.35)',
+                      borderRadius: { xs: 1.5, sm: 2 },
+                      px: { xs: 2, sm: 2.5 },
+                      py: { xs: 0.75, sm: 1 },
+                      fontSize: { xs: '0.8rem', sm: '0.875rem' },
                       fontWeight: 600,
                       textTransform: 'none',
+                      whiteSpace: 'nowrap',
                       '&:hover': {
-                        backgroundColor: 'rgba(255,255,255,0.3)',
-                        transform: 'scale(1.05)',
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                        backgroundColor: 'rgba(255,255,255,0.35)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
                       },
-                      transition: 'all 0.3s ease'
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    {upcomingEvents.length > 0 ? 'Join Live Session' : 'View Sessions'}
+                    {upcomingEvents.length > 0 ? 'Join Session' : 'View Sessions'}
                   </Button>
                   
                   {unseenRecordings > 0 && (
                     <Button
                       variant="outlined"
                       size="small"
-                      startIcon={<PlayCircleOutline />}
+                      startIcon={<PlayCircleOutline sx={{ fontSize: 18 }} />}
                       sx={{
                         color: 'white',
-                        borderColor: 'rgba(255,255,255,0.5)',
-                        borderRadius: 2,
-                        textTransform: 'none',
+                        borderColor: 'rgba(255,255,255,0.4)',
+                        borderRadius: { xs: 1.5, sm: 2 },
+                        px: { xs: 2, sm: 2.5 },
+                        py: { xs: 0.75, sm: 1 },
+                        fontSize: { xs: '0.8rem', sm: '0.875rem' },
                         fontWeight: 600,
+                        textTransform: 'none',
+                        whiteSpace: 'nowrap',
                         '&:hover': {
-                          backgroundColor: 'rgba(255,255,255,0.1)',
-                          borderColor: 'white'
-                        }
+                          backgroundColor: 'rgba(255,255,255,0.15)',
+                          borderColor: 'white',
+                          transform: 'translateY(-2px)'
+                        },
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       Watch Recordings
                     </Button>
                   )}
-                </Box>
-              </Box>
+                </Stack>
+              </Stack>
             </CardContent>
             
             {/* Animated pulse effect for new recordings */}
             {unseenRecordings > 0 && (
               <Box sx={{
                 position: 'absolute',
-                top: 16,
-                right: 16,
-                width: 12,
-                height: 12,
+                top: { xs: 12, sm: 16 },
+                right: { xs: 12, sm: 16 },
+                width: 10,
+                height: 10,
                 backgroundColor: '#ff6b35',
                 borderRadius: '50%',
                 animation: 'pulse 2s infinite',
+                boxShadow: '0 0 8px rgba(255, 107, 53, 0.6)',
                 '@keyframes pulse': {
                   '0%': {
                     transform: 'scale(1)',
@@ -1852,7 +1861,7 @@ const UnifiedLearningPage: React.FC = () => {
               }} />
             )}
           </Card>
-        </Box>
+        </Container>
       </Box>
 
         {/* Main Content Area */}
@@ -1861,620 +1870,7 @@ const UnifiedLearningPage: React.FC = () => {
           flex: 1,
           position: 'relative'
         }}>
-        {/* Modern Sidebar with enhanced design */}
-        <Drawer
-          variant={isMobile ? "temporary" : "persistent"}
-          open={sidebarOpen}
-          onClose={toggleSidebar}
-          sx={{
-            width: { xs: 300, sm: 340 },
-            flexShrink: 0,
-            '& .MuiDrawer-paper': {
-              width: { xs: 300, sm: 340 },
-              boxSizing: 'border-box',
-              backgroundColor: 'rgba(255, 255, 255, 0.98)',
-              backdropFilter: 'blur(30px)',
-              borderRight: '1px solid rgba(99, 102, 241, 0.1)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-              position: 'relative',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                width: '1px',
-                height: '100%',
-                background: 'linear-gradient(180deg, transparent, rgba(99, 102, 241, 0.3), transparent)'
-              },
-              // Mobile optimizations
-              '@media (max-width: 600px)': {
-                width: '100vw',
-                maxWidth: '340px'
-              }
-            },
-          }}
-        >
-          <Box sx={{ 
-            p: { xs: 2, sm: 3 }, 
-            height: '100%', 
-            overflow: 'auto',
-            // Mobile scroll optimizations
-            '@media (max-width: 600px)': {
-              padding: 1.5
-            },
-            // Custom scrollbar styling
-            '&::-webkit-scrollbar': {
-              width: '6px',
-            },
-            '&::-webkit-scrollbar-track': {
-              background: 'rgba(0,0,0,0.05)',
-              borderRadius: '3px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-              borderRadius: '3px',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)',
-              }
-            }
-          }}>
-            {/* Enhanced Gamification Profile Card */}
-            <GamificationCard 
-              title="Your Progress" 
-              icon={<TrendingUp sx={{ color: 'primary.main' }} />}
-              gradient="primary"
-              sx={{ mb: 3 }}
-            >
-              {gamificationLoading ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Skeleton variant="circular" width={60} height={60} />
-                  <Box sx={{ flex: 1 }}>
-                    <Skeleton variant="text" width="60%" height={24} />
-                    <Skeleton variant="text" width="80%" height={20} sx={{ mb: 1 }} />
-                    <Skeleton variant="rectangular" width="100%" height={6} sx={{ borderRadius: 3 }} />
-                  </Box>
-                </Box>
-              ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Box sx={{ position: 'relative' }}>
-                    <Avatar sx={{ 
-                      width: 60, 
-                      height: 60, 
-                      background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-                      fontSize: '1.5rem',
-                      fontWeight: 'bold',
-                      boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
-                    }}>
-                      {user?.firstName?.charAt(0) || 'U'}
-                    </Avatar>
-                    <Box sx={{
-                      position: 'absolute',
-                      bottom: -2,
-                      right: -2,
-                      backgroundColor: 'success.main',
-                      borderRadius: '50%',
-                      width: 24,
-                      height: 24,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '3px solid white',
-                      boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
-                    }}>
-                      <Typography variant="caption" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem' }}>
-                        {userLevel}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: 'text.primary' }}>
-                      Level {userLevel}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.875rem' }}>
-                      {userXP.toLocaleString()} XP • {userStreak} day streak
-                    </Typography>
-                    <LinearProgress
-                      variant="determinate"
-                      value={Math.min((userXP % 1000) / 10, 100)}
-                      sx={{ 
-                        height: 8, 
-                        borderRadius: 4,
-                        backgroundColor: 'rgba(0,0,0,0.1)',
-                        '& .MuiLinearProgress-bar': {
-                          background: 'linear-gradient(90deg, #6366f1, #a855f7)',
-                          borderRadius: 4,
-                          boxShadow: '0 2px 4px rgba(99, 102, 241, 0.3)'
-                        }
-                      }}
-                    />
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', textAlign: 'right' }}>
-                      {Math.round((userXP % 1000) / 10)}% to next level
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-            </GamificationCard>
 
-            {/* Enhanced Badges Section */}
-            <GamificationCard 
-              title="Badges" 
-              icon={<MilitaryTech sx={{ color: 'warning.main' }} />}
-              gradient="warning"
-              sx={{ mb: 3 }}
-            >
-              {gamificationLoading ? (
-                <Grid container spacing={1}>
-                  {[1, 2, 3, 4].map((i) => (
-                    <Grid item xs={6} key={i}>
-                      <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 2 }} />
-                    </Grid>
-                  ))}
-                </Grid>
-              ) : userBadges.length > 0 ? (
-                <Grid container spacing={1}>
-                  {userBadges.slice(0, 4).map((badge) => (
-                    <Grid item xs={6} key={badge.id}>
-                      <Box sx={{
-                        p: 2,
-                        backgroundColor: badge.earned ? 'rgba(255, 193, 7, 0.1)' : 'rgba(0,0,0,0.05)',
-                        borderRadius: 3,
-                        border: badge.earned ? '2px solid rgba(255, 193, 7, 0.3)' : '1px solid rgba(0,0,0,0.1)',
-                        textAlign: 'center',
-                        opacity: badge.earned ? 1 : 0.6,
-                        transition: 'all 0.3s ease',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: badge.earned ? '0 4px 15px rgba(255, 193, 7, 0.2)' : '0 2px 8px rgba(0,0,0,0.1)'
-                        }
-                      }}>
-                        <Typography sx={{ fontSize: '2rem', mb: 1, display: 'block' }}>
-                          {badge.icon}
-                        </Typography>
-                        <Typography variant="caption" sx={{ 
-                          fontWeight: 700, 
-                          fontSize: '0.75rem',
-                          display: 'block',
-                          lineHeight: 1.2,
-                          color: badge.earned ? 'warning.main' : 'text.secondary'
-                        }}>
-                          {badge.name}
-                        </Typography>
-                        {badge.points > 0 && (
-                          <Typography variant="caption" sx={{ 
-                            fontSize: '0.65rem',
-                            color: 'text.secondary',
-                            display: 'block',
-                            mt: 0.5
-                          }}>
-                            +{badge.points} XP
-                          </Typography>
-                        )}
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
-              ) : (
-                <Box sx={{ 
-                  textAlign: 'center', 
-                  py: 3,
-                  backgroundColor: 'rgba(0,0,0,0.02)',
-                  borderRadius: 2,
-                  border: '1px dashed rgba(0,0,0,0.1)'
-                }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No badges earned yet. Keep learning to unlock achievements!
-                  </Typography>
-                </Box>
-              )}
-            </GamificationCard>
-
-            {/* Enhanced Achievements Section */}
-            <GamificationCard 
-              title="Achievements" 
-              icon={<EmojiEvents sx={{ color: 'success.main' }} />}
-              gradient="success"
-              sx={{ mb: 3 }}
-            >
-              {gamificationLoading ? (
-                <Stack spacing={1.5}>
-                  {[1, 2, 3].map((i) => (
-                    <Box key={i} sx={{ p: 1.5, backgroundColor: 'rgba(76, 175, 80, 0.05)', borderRadius: 2 }}>
-                      <Skeleton variant="text" width="80%" height={20} sx={{ mb: 1 }} />
-                      <Skeleton variant="text" width="60%" height={16} sx={{ mb: 1 }} />
-                      <Skeleton variant="rectangular" width="100%" height={4} sx={{ borderRadius: 2 }} />
-                    </Box>
-                  ))}
-                </Stack>
-              ) : achievements.length > 0 ? (
-                <Stack spacing={1.5}>
-                  {achievements.slice(0, 3).map((achievement) => (
-                    <Box key={achievement.id} sx={{
-                      p: 2,
-                      backgroundColor: achievement.isUnlocked ? 'rgba(76, 175, 80, 0.08)' : 'rgba(0,0,0,0.03)',
-                      borderRadius: 3,
-                      border: achievement.isUnlocked ? '2px solid rgba(76, 175, 80, 0.2)' : '1px solid rgba(0,0,0,0.1)',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: achievement.isUnlocked ? '0 4px 12px rgba(76, 175, 80, 0.15)' : '0 2px 8px rgba(0,0,0,0.1)'
-                      }
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                        <Typography sx={{ fontSize: '1.5rem' }}>
-                          {achievement.icon}
-                        </Typography>
-                        <Typography variant="body2" sx={{ 
-                          fontWeight: 700, 
-                          flex: 1,
-                          color: achievement.isUnlocked ? 'success.main' : 'text.secondary'
-                        }}>
-                          {achievement.title}
-                        </Typography>
-                        {achievement.isUnlocked && (
-                          <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
-                        )}
-                      </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block', lineHeight: 1.4 }}>
-                        {achievement.description}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <LinearProgress
-                          variant="determinate"
-                          value={Math.min((achievement.progress / achievement.total) * 100, 100)}
-                          sx={{ 
-                            flex: 1, 
-                            height: 6, 
-                            borderRadius: 3,
-                            backgroundColor: 'rgba(0,0,0,0.1)',
-                            '& .MuiLinearProgress-bar': {
-                              background: achievement.isUnlocked 
-                                ? 'linear-gradient(90deg, #4caf50, #8bc34a)'
-                                : 'linear-gradient(90deg, #ff9800, #ffc107)',
-                              borderRadius: 3
-                            }
-                          }}
-                        />
-                        <Typography variant="caption" sx={{ 
-                          fontWeight: 700, 
-                          fontSize: '0.7rem',
-                          color: achievement.isUnlocked ? 'success.main' : 'warning.main'
-                        }}>
-                          {achievement.progress}/{achievement.total}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <Box sx={{ 
-                  textAlign: 'center', 
-                  py: 3,
-                  backgroundColor: 'rgba(0,0,0,0.02)',
-                  borderRadius: 2,
-                  border: '1px dashed rgba(0,0,0,0.1)'
-                }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    Complete course activities to unlock achievements!
-                  </Typography>
-                </Box>
-              )}
-            </GamificationCard>
-
-            {/* Enhanced Leaderboard Section */}
-            <GamificationCard 
-              title="Leaderboard" 
-              icon={<BarChart sx={{ color: 'primary.main' }} />}
-              gradient="primary"
-              sx={{ mb: 3 }}
-            >
-              {gamificationLoading ? (
-                <Stack spacing={1}>
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Box key={i} sx={{ p: 1.5, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Skeleton variant="circular" width={24} height={24} />
-                      <Skeleton variant="circular" width={32} height={32} />
-                      <Box sx={{ flex: 1 }}>
-                        <Skeleton variant="text" width="70%" height={16} />
-                        <Skeleton variant="text" width="50%" height={12} />
-                      </Box>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : leaderboard.length > 0 ? (
-                <Stack spacing={1}>
-                  {leaderboard.slice(0, 5).map((player, index) => (
-                    <Box key={player.name} sx={{
-                      p: 2,
-                      backgroundColor: player.isCurrentUser ? 'rgba(99, 102, 241, 0.12)' : 'rgba(0,0,0,0.03)',
-                      borderRadius: 3,
-                      border: player.isCurrentUser ? '2px solid rgba(99, 102, 241, 0.3)' : '1px solid rgba(0,0,0,0.05)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1.5,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: player.isCurrentUser 
-                          ? '0 4px 12px rgba(99, 102, 241, 0.2)' 
-                          : '0 2px 8px rgba(0,0,0,0.1)'
-                      }
-                    }}>
-                      <Box sx={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
-                        backgroundColor: index < 3 ? '#ffd700' : 'rgba(0,0,0,0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        fontWeight: 'bold',
-                        color: index < 3 ? 'white' : 'text.secondary',
-                        boxShadow: index < 3 ? '0 2px 8px rgba(255, 215, 0, 0.3)' : 'none'
-                      }}>
-                        {player.rank}
-                      </Box>
-                      <Avatar sx={{ 
-                        width: 36, 
-                        height: 36, 
-                        fontSize: '0.9rem',
-                        fontWeight: 'bold',
-                        background: player.isCurrentUser 
-                          ? 'linear-gradient(135deg, #6366f1, #a855f7)' 
-                          : 'rgba(0,0,0,0.1)',
-                        color: player.isCurrentUser ? 'white' : 'text.secondary'
-                      }}>
-                        {player.avatar}
-                      </Avatar>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ 
-                          fontWeight: player.isCurrentUser ? 700 : 600,
-                          fontSize: '0.85rem',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          color: player.isCurrentUser ? 'primary.main' : 'text.primary'
-                        }}>
-                          {player.name}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', fontWeight: 600 }}>
-                            {player.xp.toLocaleString()} XP
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                            •
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                            {player.streak}🔥
-                          </Typography>
-                        </Box>
-                      </Box>
-                      {index < 3 && (
-                        <Box sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 20,
-                          height: 20,
-                          borderRadius: '50%',
-                          backgroundColor: '#ffd700',
-                          color: 'white',
-                          fontSize: '0.6rem'
-                        }}>
-                          {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-                        </Box>
-                      )}
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <Box sx={{ 
-                  textAlign: 'center', 
-                  py: 3,
-                  backgroundColor: 'rgba(0,0,0,0.02)',
-                  borderRadius: 2,
-                  border: '1px dashed rgba(0,0,0,0.1)'
-                }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No leaderboard data available yet. Start learning to climb the ranks!
-                  </Typography>
-                </Box>
-              )}
-            </GamificationCard>
-
-            {/* Enhanced Events Section */}
-            <GamificationCard 
-              title="Upcoming Events" 
-              icon={<Event sx={{ color: 'info.main' }} />}
-              gradient="primary"
-              sx={{ mb: 3 }}
-            >
-              {upcomingEvents.length > 0 ? (
-                <Stack spacing={1.5}>
-                  {upcomingEvents.slice(0, 3).map((event, index) => (
-                    <Box key={event._id || index} sx={{
-                      p: 2,
-                      backgroundColor: 'rgba(33, 150, 243, 0.08)',
-                      borderRadius: 3,
-                      border: '1px solid rgba(33, 150, 243, 0.2)',
-                      transition: 'all 0.3s ease',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(33, 150, 243, 0.15)'
-                      }
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                        <CalendarToday sx={{ fontSize: 16, color: 'info.main' }} />
-                        <Typography variant="body2" sx={{ 
-                          fontWeight: 700, 
-                          flex: 1,
-                          color: 'info.main',
-                          fontSize: '0.85rem'
-                        }}>
-                          {event.title || 'Live Session'}
-                        </Typography>
-                      </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', lineHeight: 1.4 }}>
-                        {event.description || 'Join this live session to learn more'}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <AccessTime sx={{ fontSize: 14, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                          {event.scheduledTime ? new Date(event.scheduledTime).toLocaleDateString() : 'TBA'}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  ))}
-                  {upcomingEvents.length > 3 && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => navigate(`/dashboard/student/course/${courseId}/events`)}
-                      sx={{
-                        borderColor: 'info.main',
-                        color: 'info.main',
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        py: 1
-                      }}
-                    >
-                      View All Events ({upcomingEvents.length})
-                    </Button>
-                  )}
-                </Stack>
-              ) : (
-                <Box sx={{ 
-                  textAlign: 'center', 
-                  py: 3,
-                  backgroundColor: 'rgba(0,0,0,0.02)',
-                  borderRadius: 2,
-                  border: '1px dashed rgba(0,0,0,0.1)'
-                }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No upcoming events scheduled yet.
-                  </Typography>
-                </Box>
-              )}
-            </GamificationCard>
-
-            {/* Enhanced Announcements Section */}
-            <GamificationCard 
-              title="Announcements" 
-              icon={<Announcement sx={{ color: 'warning.main' }} />}
-              gradient="warning"
-              sx={{ mb: 3 }}
-            >
-              {announcements.length > 0 ? (
-                <Stack spacing={1.5}>
-                  {announcements.slice(0, 3).map((announcement, index) => (
-                    <Box key={announcement._id || index} sx={{
-                      p: 2,
-                      backgroundColor: announcement.priority === 'urgent' 
-                        ? 'rgba(244, 67, 54, 0.08)' 
-                        : announcement.priority === 'high'
-                        ? 'rgba(255, 152, 0, 0.08)'
-                        : 'rgba(0,0,0,0.03)',
-                      borderRadius: 3,
-                      border: announcement.priority === 'urgent' 
-                        ? '2px solid rgba(244, 67, 54, 0.3)' 
-                        : announcement.priority === 'high'
-                        ? '2px solid rgba(255, 152, 0, 0.3)'
-                        : '1px solid rgba(0,0,0,0.05)',
-                      transition: 'all 0.3s ease',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: announcement.priority === 'urgent' 
-                          ? '0 4px 12px rgba(244, 67, 54, 0.15)' 
-                          : announcement.priority === 'high'
-                          ? '0 4px 12px rgba(255, 152, 0, 0.15)'
-                          : '0 2px 8px rgba(0,0,0,0.1)'
-                      }
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                        <Announcement sx={{ 
-                          fontSize: 16, 
-                          color: announcement.priority === 'urgent' ? 'error.main' : announcement.priority === 'high' ? 'warning.main' : 'text.secondary' 
-                        }} />
-                        <Typography variant="body2" sx={{ 
-                          fontWeight: 700, 
-                          flex: 1,
-                          color: announcement.priority === 'urgent' ? 'error.main' : announcement.priority === 'high' ? 'warning.main' : 'text.primary',
-                          fontSize: '0.85rem'
-                        }}>
-                          {announcement.title}
-                        </Typography>
-                        {announcement.priority === 'urgent' && (
-                          <Box sx={{
-                            width: 8,
-                            height: 8,
-                            backgroundColor: 'error.main',
-                            borderRadius: '50%',
-                            animation: 'pulse 2s infinite'
-                          }} />
-                        )}
-                      </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', lineHeight: 1.4 }}>
-                        {announcement.content?.substring(0, 80)}...
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <AccessTime sx={{ fontSize: 14, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                          {announcement.createdAt ? new Date(announcement.createdAt).toLocaleDateString() : 'Recently'}
-                        </Typography>
-                        {announcement.type && (
-                          <>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                              •
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', textTransform: 'capitalize' }}>
-                              {announcement.type}
-                            </Typography>
-                          </>
-                        )}
-                      </Box>
-                    </Box>
-                  ))}
-                  {announcements.length > 3 && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => navigate(`/dashboard/student/course/${courseId}/announcements`)}
-                      sx={{
-                        borderColor: 'warning.main',
-                        color: 'warning.main',
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        py: 1
-                      }}
-                    >
-                      View All Announcements ({announcements.length})
-                    </Button>
-                  )}
-                </Stack>
-              ) : (
-                <Box sx={{ 
-                  textAlign: 'center', 
-                  py: 3,
-                  backgroundColor: 'rgba(0,0,0,0.02)',
-                  borderRadius: 2,
-                  border: '1px dashed rgba(0,0,0,0.1)'
-                }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No announcements yet.
-                  </Typography>
-                </Box>
-              )}
-            </GamificationCard>
-
-          </Box>
-        </Drawer>
 
         {/* Main Content */}
         <Box
@@ -2645,6 +2041,519 @@ const UnifiedLearningPage: React.FC = () => {
               </Grid>
             </Grid>
           </Box>
+
+          {/* Materials Filter - Moved to Top for Fast Access */}
+          {weeks.length > 0 && (
+            <Box sx={{ 
+              mb: { xs: 2, sm: 3, md: 4 },
+              p: { xs: 1.5, sm: 2 },
+              backgroundColor: 'rgba(255, 255, 255, 0.6)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: { xs: 2, sm: 3 },
+              border: '1px solid rgba(0,0,0,0.05)',
+              width: '100%'
+            }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 700, 
+                mb: { xs: 1.5, sm: 2 },
+                fontSize: { xs: '1rem', sm: '1.125rem' }
+              }}>
+                Filter Content
+              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: { xs: 0.75, sm: 1 },
+                justifyContent: { xs: 'space-between', sm: 'flex-start' }
+              }}>
+                {[
+                  { key: 'all', label: 'All', icon: <FilterList sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'required', label: 'Required', icon: <Star sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'completed', label: 'Completed', icon: <CheckCircle sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'video', label: 'Videos', icon: <VideoFile sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'document', label: 'Documents', icon: <Description sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
+                  { key: 'exam', label: 'Exams', icon: <Quiz sx={{ fontSize: { xs: 14, sm: 16 } }} /> }
+                ].map((filter) => (
+                  <Chip 
+                    key={filter.key}
+                    clickable 
+                    icon={filter.icon}
+                    label={filter.label}
+                    onClick={() => setMaterialFilter(filter.key as any)}
+                    sx={{
+                      backgroundColor: materialFilter === filter.key 
+                        ? 'rgba(99, 102, 241, 0.1)' 
+                        : 'rgba(0,0,0,0.05)',
+                      color: materialFilter === filter.key 
+                        ? 'primary.main' 
+                        : 'text.secondary',
+                      fontWeight: 600,
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      height: { xs: 28, sm: 32 },
+                      minWidth: { xs: '18%', sm: 'auto' },
+                      flex: { xs: '1 1 18%', sm: 'none' },
+                      '& .MuiChip-icon': {
+                        fontSize: { xs: 14, sm: 16 }
+                      },
+                      '&:hover': {
+                        backgroundColor: materialFilter === filter.key 
+                          ? 'rgba(99, 102, 241, 0.15)' 
+                          : 'rgba(0,0,0,0.1)'
+                      }
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Course Content/Weeks Section */}
+          {weeks.length > 0 && (
+            <Grid id="weeks-section" container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ width: '100%', mb: { xs: 2, sm: 3, md: 4 } }}>
+              {weeks.map((week) => (
+                <Grid item xs={12} key={week._id} sx={{ width: '100%' }}>
+                  <Box 
+                    component={motion.div} 
+                    initial={{ opacity: 0, y: 20 }} 
+                    whileInView={{ opacity: 1, y: 0 }} 
+                    viewport={{ once: true, amount: 0.2 }}
+                    sx={{
+                      p: { xs: 2, sm: 2.5, md: 3 },
+                      backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                      backdropFilter: 'blur(20px)',
+                      borderRadius: { xs: 2, sm: 3, md: 4 },
+                      border: '1px solid rgba(0,0,0,0.05)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                      transition: 'all 0.3s ease',
+                      width: '100%',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      '&:hover': {
+                        transform: { xs: 'none', sm: 'translateY(-4px)' },
+                        boxShadow: { xs: '0 4px 20px rgba(0,0,0,0.08)', sm: '0 8px 30px rgba(0,0,0,0.15)' },
+                        borderColor: 'primary.main'
+                      }
+                    }}
+                  >
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start', 
+                      mb: { xs: 2, sm: 3 },
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      gap: { xs: 2, sm: 0 }
+                    }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography 
+                          variant="h5" 
+                          sx={{ 
+                            fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+                            fontWeight: 700,
+                            mb: { xs: 0.75, sm: 1 },
+                            color: 'text.primary'
+                          }}
+                        >
+                          {week.title}
+                        </Typography>
+                        <Typography 
+                          variant="body1" 
+                          color="text.secondary" 
+                          sx={{ 
+                            mb: { xs: 1.5, sm: 2 },
+                            lineHeight: 1.6,
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                          }}
+                        >
+                          {week.description}
+                        </Typography>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          gap: { xs: 0.75, sm: 1.5 }, 
+                          flexWrap: 'wrap', 
+                          mb: { xs: 2, sm: 3 },
+                          justifyContent: { xs: 'space-between', sm: 'flex-start' }
+                        }}>
+                          <Chip
+                            icon={<Description sx={{ fontSize: { xs: 14, sm: 16 } }} />}
+                            label={`${week.materials.filter(mat => mat.isPublished).length} Materials`}
+                            sx={{ 
+                              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                              color: 'primary.main',
+                              fontWeight: 600,
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              height: { xs: 24, sm: 32 }
+                            }}
+                          />
+                          <Chip
+                            icon={<Timer sx={{ fontSize: { xs: 14, sm: 16 } }} />}
+                            label={`${week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0)} min`}
+                            sx={{ 
+                              backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                              color: 'secondary.main',
+                              fontWeight: 600,
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              height: { xs: 24, sm: 32 }
+                            }}
+                          />
+                          <Chip
+                            icon={week.isPublished ? <CheckCircle sx={{ fontSize: { xs: 14, sm: 16 } }} /> : <Edit sx={{ fontSize: { xs: 14, sm: 16 } }} />}
+                            label={week.isPublished ? 'Published' : 'Draft'}
+                            sx={{ 
+                              backgroundColor: week.isPublished 
+                                ? 'rgba(76, 175, 80, 0.1)' 
+                                : 'rgba(255, 152, 0, 0.1)',
+                              color: week.isPublished 
+                                ? 'success.main' 
+                                : 'warning.main',
+                              fontWeight: 600,
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              height: { xs: 24, sm: 32 }
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                      
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: { xs: 1.5, sm: 2 },
+                        flexDirection: { xs: 'row', sm: 'column' },
+                        width: { xs: '100%', sm: 'auto' },
+                        justifyContent: { xs: 'space-between', sm: 'flex-end' }
+                      }}>
+                        <Box sx={{ 
+                          textAlign: { xs: 'left', sm: 'right' },
+                          flex: { xs: 1, sm: 'none' }
+                        }}>
+                          <Typography variant="h4" sx={{ 
+                            fontWeight: 700, 
+                            color: 'primary.main',
+                            mb: 0.5,
+                            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
+                          }}>
+                            {Math.round(getWeekProgress(week._id))}%
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ 
+                            mb: 1,
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                          }}>
+                            Complete
+                          </Typography>
+                          <LinearProgress
+                            variant="determinate"
+                            value={getWeekProgress(week._id)}
+                            sx={{ 
+                              width: { xs: '100%', sm: 150 }, 
+                              height: { xs: 6, sm: 8 }, 
+                              borderRadius: { xs: 3, sm: 4 },
+                              backgroundColor: 'rgba(0,0,0,0.1)',
+                              '& .MuiLinearProgress-bar': {
+                                background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                                borderRadius: { xs: 3, sm: 4 }
+                              }
+                            }}
+                          />
+                        </Box>
+                        
+                        <Button
+                          variant="outlined"
+                          size="large"
+                          onClick={() => toggleWeekExpanded(week._id)}
+                          startIcon={expandedWeeks.has(week._id) ? <ExpandLess /> : <ExpandMore />}
+                          sx={{ 
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            borderRadius: { xs: 1.5, sm: 2 },
+                            px: { xs: 2, sm: 3 },
+                            py: { xs: 1, sm: 1.5 },
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                            minWidth: { xs: 'auto', sm: '140px' }
+                          }}
+                        >
+                          {expandedWeeks.has(week._id) ? 'Hide' : 'Show'}
+                        </Button>
+                      </Box>
+                    </Box>
+                      
+                    {/* Materials List */}
+                    <Collapse in={expandedWeeks.has(week._id)}>
+                      {week.materials.filter(mat => mat.isPublished).length === 0 ? (
+                        <Box sx={{ 
+                          textAlign: 'center', 
+                          py: 4,
+                          backgroundColor: 'rgba(0,0,0,0.02)',
+                          borderRadius: 2,
+                          border: '1px dashed rgba(0,0,0,0.1)'
+                        }}>
+                          <Typography 
+                            variant="body1" 
+                            color="text.secondary" 
+                            sx={{ 
+                              fontStyle: 'italic',
+                              opacity: 0.8
+                            }}
+                          >
+                            {week.materials.length === 0 ? 'No materials added to this week yet.' : 'No published materials available yet.'}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mt: 2, width: '100%' }}>
+                          {week.materials
+                            .filter(mat => mat.isPublished)
+                            .filter(material => {
+                              if (materialFilter === 'all') return true;
+                              if (materialFilter === 'required') return material.isRequired;
+                              if (materialFilter === 'completed') return isMaterialCompleted(material._id);
+                              if (materialFilter === 'video') return material.type === 'video';
+                              if (materialFilter === 'document') return material.type === 'document';
+                              if (materialFilter === 'exam') return material.type === 'exam';
+                              return true;
+                            })
+                            .map((material) => {
+                            const isCompleted = isMaterialCompleted(material._id);
+                            return (
+                              <Grid item xs={12} sm={6} md={4} key={material._id} sx={{ width: '100%' }}>
+                                <Box
+                                  sx={{
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    p: { xs: 2, sm: 2.5, md: 3 },
+                                    backgroundColor: isCompleted 
+                                      ? 'rgba(76, 175, 80, 0.05)' 
+                                      : 'rgba(255, 255, 255, 0.6)',
+                                    backdropFilter: 'blur(20px)',
+                                    borderRadius: { xs: 2, sm: 2.5, md: 3 },
+                                    border: isCompleted 
+                                      ? '2px solid rgba(76, 175, 80, 0.3)' 
+                                      : '1px solid rgba(0,0,0,0.05)',
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    width: '100%',
+                                    maxWidth: '100%',
+                                    boxSizing: 'border-box',
+                                    '&:hover': {
+                                      transform: { xs: 'none', sm: 'translateY(-4px)' },
+                                      boxShadow: { xs: '0 4px 20px rgba(0,0,0,0.08)', sm: '0 8px 30px rgba(0,0,0,0.15)' },
+                                      borderColor: isCompleted ? 'success.main' : 'primary.main'
+                                    }
+                                  }}
+                                  onClick={() => handleMaterialClick(material)}
+                                >
+                                  {/* Material Header */}
+                                  <Box sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 1.5, 
+                                    mb: 2 
+                                  }}>
+                                    <Box sx={{
+                                      p: 1.5,
+                                      backgroundColor: material.type === 'video' 
+                                        ? 'rgba(102, 126, 234, 0.1)'
+                                        : material.type === 'document'
+                                        ? 'rgba(240, 147, 251, 0.1)'
+                                        : material.type === 'exam'
+                                        ? 'rgba(255, 152, 0, 0.1)'
+                                        : 'rgba(79, 172, 254, 0.1)',
+                                      borderRadius: 2,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}>
+                                      {getMaterialIcon(material.type)}
+                                    </Box>
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                      <Typography 
+                                        variant="h6" 
+                                        sx={{ 
+                                          fontWeight: 700,
+                                          fontSize: '1.125rem',
+                                          mb: 0.5,
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        {material.title}
+                                      </Typography>
+                                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                        {isCompleted && (
+                                          <Chip
+                                            icon={<CheckCircle />}
+                                            label="Completed"
+                                            size="small"
+                                            sx={{ 
+                                              backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                              color: 'success.main',
+                                              fontWeight: 600,
+                                              fontSize: '0.7rem'
+                                            }}
+                                          />
+                                        )}
+                                        {material.isRequired && (
+                                          <Chip
+                                            label="Required"
+                                            size="small"
+                                            sx={{ 
+                                              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                              color: 'error.main',
+                                              fontWeight: 600,
+                                              fontSize: '0.7rem'
+                                            }}
+                                          />
+                                        )}
+                                      </Box>
+                                    </Box>
+                                  </Box>
+                                  
+                                  <Typography 
+                                    variant="body2" 
+                                    color="text.secondary"
+                                    sx={{ 
+                                      mb: 2,
+                                      lineHeight: 1.5,
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'hidden'
+                                    }}
+                                  >
+                                    {material.description}
+                                  </Typography>
+                                  
+                                  {/* Material Info */}
+                                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                                    <Chip 
+                                      icon={getMaterialIcon(material.type)}
+                                      label={material.type === 'exam' ? (material.examType || 'EXAM').toUpperCase() : material.type.toUpperCase()}
+                                      size="small"
+                                      sx={{ 
+                                        backgroundColor: material.type === 'video' 
+                                          ? 'rgba(102, 126, 234, 0.1)' 
+                                          : material.type === 'document'
+                                          ? 'rgba(240, 147, 251, 0.1)'
+                                          : material.type === 'exam'
+                                          ? 'rgba(255, 152, 0, 0.1)'
+                                          : 'rgba(79, 172, 254, 0.1)',
+                                        color: material.type === 'video' 
+                                          ? '#667eea' 
+                                          : material.type === 'document'
+                                          ? '#f093fb'
+                                          : material.type === 'exam'
+                                          ? '#ff9800'
+                                          : '#4facfe',
+                                        fontWeight: 600
+                                      }}
+                                    />
+                                    <Chip
+                                      icon={<Timer sx={{ fontSize: 14 }} />}
+                                      label={`${material.estimatedDuration} min`}
+                                      size="small"
+                                      sx={{ 
+                                        backgroundColor: 'rgba(0,0,0,0.05)',
+                                        color: 'text.secondary',
+                                        fontWeight: 600
+                                      }}
+                                    />
+                                  </Box>
+                                  
+                                  {/* Progress */}
+                                  <Box sx={{ mb: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                        Progress
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                                        {getMaterialProgressPct(material._id)}%
+                                      </Typography>
+                                    </Box>
+                                    <LinearProgress 
+                                      variant="determinate" 
+                                      value={getMaterialProgressPct(material._id)} 
+                                      sx={{ 
+                                        height: 6, 
+                                        borderRadius: 3,
+                                        backgroundColor: 'rgba(0,0,0,0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                          background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                                          borderRadius: 3
+                                        }
+                                      }} 
+                                    />
+                                  </Box>
+                                  
+                                  {/* Actions */}
+                                  <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Button
+                                      variant="contained"
+                                      size="large"
+                                      startIcon={<PlayArrow />}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMaterialClick(material);
+                                      }}
+                                      sx={{
+                                        flex: 1,
+                                        background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                                        '&:hover': { 
+                                          background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)',
+                                          transform: 'translateY(-1px)'
+                                        },
+                                        textTransform: 'none',
+                                        fontWeight: 600,
+                                        borderRadius: 2,
+                                        py: 1.5
+                                      }}
+                                    >
+                                      {isCompleted ? 'Review' : 'Start'}
+                                    </Button>
+                                    {!isCompleted && (
+                                      <IconButton
+                                        size="large"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMarkComplete(week._id, material._id);
+                                        }}
+                                        disabled={markingComplete.has(material._id)}
+                                        sx={{ 
+                                          backgroundColor: markingComplete.has(material._id) 
+                                            ? 'rgba(76, 175, 80, 0.3)' 
+                                            : completedMaterials.has(material._id)
+                                            ? 'rgba(76, 175, 80, 0.8)'
+                                            : 'rgba(76, 175, 80, 0.1)',
+                                          '&:hover': {
+                                            backgroundColor: markingComplete.has(material._id)
+                                              ? 'rgba(76, 175, 80, 0.3)'
+                                              : completedMaterials.has(material._id)
+                                              ? 'rgba(76, 175, 80, 0.9)'
+                                              : 'rgba(76, 175, 80, 0.2)'
+                                          }
+                                        }}
+                                      >
+                                        {markingComplete.has(material._id) ? (
+                                          <CircularProgress size={24} sx={{ color: 'success.main' }} />
+                                        ) : completedMaterials.has(material._id) ? (
+                                          <CheckCircle sx={{ fontSize: 24, color: 'white' }} />
+                                        ) : (
+                                          <CheckCircle sx={{ fontSize: 24, color: 'success.main' }} />
+                                        )}
+                                      </IconButton>
+                                    )}
+                                  </Box>
+                                </Box>
+                              </Grid>
+                            );
+                          })}
+                        </Grid>
+                      )}
+                    </Collapse>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+
           {/* Mobile-Optimized Content Navigation */}
           <Box sx={{ 
             mb: { xs: 2, sm: 3, md: 4 },
@@ -3148,514 +3057,7 @@ const UnifiedLearningPage: React.FC = () => {
                 The instructor hasn't added any materials to this course.
               </Typography>
             </Box>
-          ) : (
-            <>
-            {/* Materials Filter */}
-            <Box sx={{ 
-              mb: { xs: 1.5, sm: 2, md: 2.5 },
-              p: { xs: 1.5, sm: 2 },
-              backgroundColor: 'rgba(255, 255, 255, 0.6)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: { xs: 2, sm: 3 },
-              border: '1px solid rgba(0,0,0,0.05)'
-            }}>
-              <Typography variant="h6" sx={{ 
-                fontWeight: 700, 
-                mb: { xs: 1.5, sm: 2 },
-                fontSize: { xs: '1rem', sm: '1.125rem' }
-              }}>
-                Filter Content
-              </Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: { xs: 0.75, sm: 1 },
-                justifyContent: { xs: 'space-between', sm: 'flex-start' }
-              }}>
-                {[
-                  { key: 'all', label: 'All', icon: <FilterList sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
-                  { key: 'required', label: 'Required', icon: <Star sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
-                  { key: 'completed', label: 'Completed', icon: <CheckCircle sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
-                  { key: 'video', label: 'Videos', icon: <VideoFile sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
-                  { key: 'document', label: 'Documents', icon: <Description sx={{ fontSize: { xs: 14, sm: 16 } }} /> },
-                  { key: 'exam', label: 'Exams', icon: <Quiz sx={{ fontSize: { xs: 14, sm: 16 } }} /> }
-                ].map((filter) => (
-                  <Chip 
-                    key={filter.key}
-                    clickable 
-                    icon={filter.icon}
-                    label={filter.label}
-                    onClick={() => setMaterialFilter(filter.key as any)}
-                    sx={{
-                      backgroundColor: materialFilter === filter.key 
-                        ? 'rgba(99, 102, 241, 0.1)' 
-                        : 'rgba(0,0,0,0.05)',
-                      color: materialFilter === filter.key 
-                        ? 'primary.main' 
-                        : 'text.secondary',
-                      fontWeight: 600,
-                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                      height: { xs: 28, sm: 32 },
-                      minWidth: { xs: '18%', sm: 'auto' },
-                      flex: { xs: '1 1 18%', sm: 'none' },
-                      '& .MuiChip-icon': {
-                        fontSize: { xs: 14, sm: 16 }
-                      },
-                      '&:hover': {
-                        backgroundColor: materialFilter === filter.key 
-                          ? 'rgba(99, 102, 241, 0.15)' 
-                          : 'rgba(0,0,0,0.1)'
-                      }
-                    }}
-                  />
-                ))}
-              </Box>
-            </Box>
-            <Grid id="weeks-section" container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ width: '100%' }}>
-              {weeks.map((week, index) => (
-                <Grid item xs={12} key={week._id} sx={{ width: '100%' }}>
-                  <Box 
-                    component={motion.div} 
-                    initial={{ opacity: 0, y: 20 }} 
-                    whileInView={{ opacity: 1, y: 0 }} 
-                    viewport={{ once: true, amount: 0.2 }}
-                    sx={{
-                      p: { xs: 2, sm: 2.5, md: 3 },
-                      backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                      backdropFilter: 'blur(20px)',
-                      borderRadius: { xs: 2, sm: 3, md: 4 },
-                      border: '1px solid rgba(0,0,0,0.05)',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                      transition: 'all 0.3s ease',
-                      width: '100%',
-                      maxWidth: '100%',
-                      boxSizing: 'border-box',
-                      '&:hover': {
-                        transform: { xs: 'none', sm: 'translateY(-4px)' },
-                        boxShadow: { xs: '0 4px 20px rgba(0,0,0,0.08)', sm: '0 8px 30px rgba(0,0,0,0.15)' },
-                        borderColor: 'primary.main'
-                      }
-                    }}
-                  >
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'flex-start', 
-                      mb: { xs: 2, sm: 3 },
-                      flexDirection: { xs: 'column', sm: 'row' },
-                      gap: { xs: 2, sm: 0 }
-                    }}>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography 
-                          variant="h5" 
-                          sx={{ 
-                            fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
-                            fontWeight: 700,
-                            mb: { xs: 0.75, sm: 1 },
-                            color: 'text.primary'
-                          }}
-                        >
-                          {week.title}
-                        </Typography>
-                        <Typography 
-                          variant="body1" 
-                          color="text.secondary" 
-                          sx={{ 
-                            mb: { xs: 1.5, sm: 2 },
-                            lineHeight: 1.6,
-                            fontSize: { xs: '0.875rem', sm: '1rem' }
-                          }}
-                        >
-                          {week.description}
-                        </Typography>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          gap: { xs: 0.75, sm: 1.5 }, 
-                          flexWrap: 'wrap', 
-                          mb: { xs: 2, sm: 3 },
-                          justifyContent: { xs: 'space-between', sm: 'flex-start' }
-                        }}>
-                          <Chip
-                            icon={<Description sx={{ fontSize: { xs: 14, sm: 16 } }} />}
-                            label={`${week.materials.filter(mat => mat.isPublished).length} Materials`}
-                            sx={{ 
-                              backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                              color: 'primary.main',
-                              fontWeight: 600,
-                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                              height: { xs: 24, sm: 32 }
-                            }}
-                          />
-                          <Chip
-                            icon={<Timer sx={{ fontSize: { xs: 14, sm: 16 } }} />}
-                            label={`${week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0)} min`}
-                            sx={{ 
-                              backgroundColor: 'rgba(156, 39, 176, 0.1)',
-                              color: 'secondary.main',
-                              fontWeight: 600,
-                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                              height: { xs: 24, sm: 32 }
-                            }}
-                          />
-                          <Chip
-                            icon={week.isPublished ? <CheckCircle sx={{ fontSize: { xs: 14, sm: 16 } }} /> : <Edit sx={{ fontSize: { xs: 14, sm: 16 } }} />}
-                            label={week.isPublished ? 'Published' : 'Draft'}
-                            sx={{ 
-                              backgroundColor: week.isPublished 
-                                ? 'rgba(76, 175, 80, 0.1)' 
-                                : 'rgba(255, 152, 0, 0.1)',
-                              color: week.isPublished 
-                                ? 'success.main' 
-                                : 'warning.main',
-                              fontWeight: 600,
-                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                              height: { xs: 24, sm: 32 }
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                      
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: { xs: 1.5, sm: 2 },
-                        flexDirection: { xs: 'row', sm: 'column' },
-                        width: { xs: '100%', sm: 'auto' },
-                        justifyContent: { xs: 'space-between', sm: 'flex-end' }
-                      }}>
-                        <Box sx={{ 
-                          textAlign: { xs: 'left', sm: 'right' },
-                          flex: { xs: 1, sm: 'none' }
-                        }}>
-                          <Typography variant="h4" sx={{ 
-                            fontWeight: 700, 
-                            color: 'primary.main',
-                            mb: 0.5,
-                            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
-                          }}>
-                            {Math.round(getWeekProgress(week._id))}%
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ 
-                            mb: 1,
-                            fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                          }}>
-                            Complete
-                          </Typography>
-                          <LinearProgress
-                            variant="determinate"
-                            value={getWeekProgress(week._id)}
-                            sx={{ 
-                              width: { xs: '100%', sm: 150 }, 
-                              height: { xs: 6, sm: 8 }, 
-                              borderRadius: { xs: 3, sm: 4 },
-                              backgroundColor: 'rgba(0,0,0,0.1)',
-                              '& .MuiLinearProgress-bar': {
-                                background: 'linear-gradient(90deg, #6366f1, #a855f7)',
-                                borderRadius: { xs: 3, sm: 4 }
-                              }
-                            }}
-                          />
-                        </Box>
-                        
-                        <Button
-                          variant="outlined"
-                          size="large"
-                          onClick={() => toggleWeekExpanded(week._id)}
-                          startIcon={expandedWeeks.has(week._id) ? <ExpandLess /> : <ExpandMore />}
-                          sx={{ 
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            borderRadius: { xs: 1.5, sm: 2 },
-                            px: { xs: 2, sm: 3 },
-                            py: { xs: 1, sm: 1.5 },
-                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                            minWidth: { xs: 'auto', sm: '140px' }
-                          }}
-                        >
-                          {expandedWeeks.has(week._id) ? 'Hide' : 'Show'}
-                        </Button>
-                      </Box>
-                    </Box>
-                      
-                    {/* Materials List */}
-                    <Collapse in={expandedWeeks.has(week._id)}>
-                      {week.materials.filter(mat => mat.isPublished).length === 0 ? (
-                        <Box sx={{ 
-                          textAlign: 'center', 
-                          py: 4,
-                          backgroundColor: 'rgba(0,0,0,0.02)',
-                          borderRadius: 2,
-                          border: '1px dashed rgba(0,0,0,0.1)'
-                        }}>
-                          <Typography 
-                            variant="body1" 
-                            color="text.secondary" 
-                            sx={{ 
-                              fontStyle: 'italic',
-                              opacity: 0.8
-                            }}
-                          >
-                            {week.materials.length === 0 ? 'No materials added to this week yet.' : 'No published materials available yet.'}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mt: 2, width: '100%' }}>
-                          {week.materials
-                            .filter(mat => mat.isPublished)
-                            .filter(material => {
-                              if (materialFilter === 'all') return true;
-                              if (materialFilter === 'required') return material.isRequired;
-                              if (materialFilter === 'completed') return isMaterialCompleted(material._id);
-                              if (materialFilter === 'video') return material.type === 'video';
-                              if (materialFilter === 'document') return material.type === 'document';
-                              if (materialFilter === 'exam') return material.type === 'exam';
-                              return true;
-                            })
-                            .map((material, matIndex) => {
-                            const isCompleted = isMaterialCompleted(material._id);
-                            return (
-                              <Grid item xs={12} sm={6} md={4} key={material._id} sx={{ width: '100%' }}>
-                                <Box
-                                  sx={{
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s ease',
-                                    p: { xs: 2, sm: 2.5, md: 3 },
-                                    backgroundColor: isCompleted 
-                                      ? 'rgba(76, 175, 80, 0.05)' 
-                                      : 'rgba(255, 255, 255, 0.6)',
-                                    backdropFilter: 'blur(20px)',
-                                    borderRadius: { xs: 2, sm: 2.5, md: 3 },
-                                    border: isCompleted 
-                                      ? '2px solid rgba(76, 175, 80, 0.3)' 
-                                      : '1px solid rgba(0,0,0,0.05)',
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    width: '100%',
-                                    maxWidth: '100%',
-                                    boxSizing: 'border-box',
-                                    '&:hover': {
-                                      transform: { xs: 'none', sm: 'translateY(-4px)' },
-                                      boxShadow: { xs: '0 4px 20px rgba(0,0,0,0.08)', sm: '0 8px 30px rgba(0,0,0,0.15)' },
-                                      borderColor: isCompleted ? 'success.main' : 'primary.main'
-                                    }
-                                  }}
-                                  onClick={() => handleMaterialClick(material)}
-                                >
-                                  {/* Material Header */}
-                                  <Box sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: 1.5, 
-                                    mb: 2 
-                                  }}>
-                                    <Box sx={{
-                                      p: 1.5,
-                                      backgroundColor: material.type === 'video' 
-                                        ? 'rgba(102, 126, 234, 0.1)'
-                                        : material.type === 'document'
-                                        ? 'rgba(240, 147, 251, 0.1)'
-                                        : material.type === 'exam'
-                                        ? 'rgba(255, 152, 0, 0.1)'
-                                        : 'rgba(79, 172, 254, 0.1)',
-                                      borderRadius: 2,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center'
-                                    }}>
-                                      {getMaterialIcon(material.type)}
-                                    </Box>
-                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                      <Typography 
-                                        variant="h6" 
-                                        sx={{ 
-                                          fontWeight: 700,
-                                          fontSize: '1.125rem',
-                                          mb: 0.5,
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis',
-                                          whiteSpace: 'nowrap'
-                                        }}
-                                      >
-                                        {material.title}
-                                      </Typography>
-                                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                        {isCompleted && (
-                                          <Chip
-                                            icon={<CheckCircle />}
-                                            label="Completed"
-                                            size="small"
-                                            sx={{ 
-                                              backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                                              color: 'success.main',
-                                              fontWeight: 600,
-                                              fontSize: '0.7rem'
-                                            }}
-                                          />
-                                        )}
-                                        {material.isRequired && (
-                                          <Chip
-                                            label="Required"
-                                            size="small"
-                                            sx={{ 
-                                              backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                              color: 'error.main',
-                                              fontWeight: 600,
-                                              fontSize: '0.7rem'
-                                            }}
-                                          />
-                                        )}
-                                      </Box>
-                                    </Box>
-                                  </Box>
-                                  
-                                  <Typography 
-                                    variant="body2" 
-                                    color="text.secondary"
-                                    sx={{ 
-                                      mb: 2,
-                                      lineHeight: 1.5,
-                                      display: '-webkit-box',
-                                      WebkitLineClamp: 2,
-                                      WebkitBoxOrient: 'vertical',
-                                      overflow: 'hidden'
-                                    }}
-                                  >
-                                    {material.description}
-                                  </Typography>
-                                  
-                                  {/* Material Info */}
-                                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                                    <Chip 
-                                      icon={getMaterialIcon(material.type)}
-                                      label={material.type === 'exam' ? (material.examType || 'EXAM').toUpperCase() : material.type.toUpperCase()}
-                                      size="small"
-                                      sx={{ 
-                                        backgroundColor: material.type === 'video' 
-                                          ? 'rgba(102, 126, 234, 0.1)' 
-                                          : material.type === 'document'
-                                          ? 'rgba(240, 147, 251, 0.1)'
-                                          : material.type === 'exam'
-                                          ? 'rgba(255, 152, 0, 0.1)'
-                                          : 'rgba(79, 172, 254, 0.1)',
-                                        color: material.type === 'video' 
-                                          ? '#667eea' 
-                                          : material.type === 'document'
-                                          ? '#f093fb'
-                                          : material.type === 'exam'
-                                          ? '#ff9800'
-                                          : '#4facfe',
-                                        fontWeight: 600
-                                      }}
-                                    />
-                                    <Chip
-                                      icon={<Timer sx={{ fontSize: 14 }} />}
-                                      label={`${material.estimatedDuration} min`}
-                                      size="small"
-                                      sx={{ 
-                                        backgroundColor: 'rgba(0,0,0,0.05)',
-                                        color: 'text.secondary',
-                                        fontWeight: 600
-                                      }}
-                                    />
-                                  </Box>
-                                  
-                                  {/* Progress */}
-                                  <Box sx={{ mb: 2 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                        Progress
-                                      </Typography>
-                                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
-                                        {getMaterialProgressPct(material._id)}%
-                                      </Typography>
-                                    </Box>
-                                    <LinearProgress 
-                                      variant="determinate" 
-                                      value={getMaterialProgressPct(material._id)} 
-                                      sx={{ 
-                                        height: 6, 
-                                        borderRadius: 3,
-                                        backgroundColor: 'rgba(0,0,0,0.1)',
-                                        '& .MuiLinearProgress-bar': {
-                                          background: 'linear-gradient(90deg, #6366f1, #a855f7)',
-                                          borderRadius: 3
-                                        }
-                                      }} 
-                                    />
-                                  </Box>
-                                  
-                                  {/* Actions */}
-                                  <Box sx={{ display: 'flex', gap: 1 }}>
-                                    <Button
-                                      variant="contained"
-                                      size="large"
-                                      startIcon={<PlayArrow />}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleMaterialClick(material);
-                                      }}
-                                      sx={{
-                                        flex: 1,
-                                        background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-                                        '&:hover': { 
-                                          background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)',
-                                          transform: 'translateY(-1px)'
-                                        },
-                                        textTransform: 'none',
-                                        fontWeight: 600,
-                                        borderRadius: 2,
-                                        py: 1.5
-                                      }}
-                                    >
-                                      {isCompleted ? 'Review' : 'Start'}
-                                    </Button>
-                                    {!isCompleted && (
-                                      <IconButton
-                                        size="large"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleMarkComplete(week._id, material._id);
-                                        }}
-                                        disabled={markingComplete.has(material._id)}
-                                        sx={{ 
-                                          backgroundColor: markingComplete.has(material._id) 
-                                            ? 'rgba(76, 175, 80, 0.3)' 
-                                            : completedMaterials.has(material._id)
-                                            ? 'rgba(76, 175, 80, 0.8)'
-                                            : 'rgba(76, 175, 80, 0.1)',
-                                          '&:hover': {
-                                            backgroundColor: markingComplete.has(material._id)
-                                              ? 'rgba(76, 175, 80, 0.3)'
-                                              : completedMaterials.has(material._id)
-                                              ? 'rgba(76, 175, 80, 0.9)'
-                                              : 'rgba(76, 175, 80, 0.2)'
-                                          }
-                                        }}
-                                      >
-                                        {markingComplete.has(material._id) ? (
-                                          <CircularProgress size={24} sx={{ color: 'success.main' }} />
-                                        ) : completedMaterials.has(material._id) ? (
-                                          <CheckCircle sx={{ fontSize: 24, color: 'white' }} />
-                                        ) : (
-                                          <CheckCircle sx={{ fontSize: 24, color: 'success.main' }} />
-                                        )}
-                                      </IconButton>
-                                    )}
-                                  </Box>
-                                </Box>
-                              </Grid>
-                            );
-                          })}
-                        </Grid>
-                      )}
-                    </Collapse>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-            </>
-          )}
+          ) : null}
           </Container>
         </Box>
       </Box>
@@ -3908,31 +3310,6 @@ const UnifiedLearningPage: React.FC = () => {
         </Alert>
       </Snackbar>
 
-      {/* Modern Floating Action Button for Mobile */}
-      {isMobile && (
-        <Fab
-          color="primary"
-          onClick={toggleSidebar}
-          sx={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-            zIndex: 1000,
-            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5b5bd6, #7c3aed)',
-              transform: 'scale(1.1)',
-              boxShadow: '0 12px 40px rgba(99, 102, 241, 0.4)'
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            width: 56,
-            height: 56
-          }}
-        >
-          <Menu sx={{ color: 'white' }} />
-        </Fab>
-      )}
 
       {/* AI Assistant Floating Button */}
       <Fab

@@ -83,6 +83,7 @@ import {
   Download,
   Share,
   Bookmark,
+  BookmarkBorder,
   Timer,
   School,
   Assignment,
@@ -997,9 +998,9 @@ Respond as a knowledgeable tutor who has access to the course material.`;
     };
   }, []);
 
-  // Handle back to course navigation
+  // Handle back to learning hub navigation
   const handleBackToCourse = () => {
-    navigate(`/dashboard/student/course/${courseId}`);
+    navigate('/student/learning-hub');
   };
 
   // PDF navigation functions
@@ -1260,10 +1261,10 @@ Respond as a knowledgeable tutor who has access to the course material.`;
             </IconButton>
             
             <Box>
-              <Typography variant="h6" noWrap sx={{ fontWeight: 600 }}>
+              <Typography variant="body1" noWrap sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
                 {material.title}
               </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.8 }}>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>
           {week.title}
               </Typography>
             </Box>
@@ -1558,787 +1559,435 @@ Respond as a knowledgeable tutor who has access to the course material.`;
         </Box>
       </Drawer>
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ 
+        py: 4,
+        '@media (max-width: 768px)': {
+          py: 2,
+          px: 1.5
+        },
+        '@media (max-width: 600px)': {
+          py: 1,
+          px: 1
+        }
+      }}>
 
-      {/* Material Header */}
-      <Card sx={{ 
+
+
+      {/* Material Content - Theater View Style */}
+      <Box sx={{ 
         mb: 4, 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-        color: 'white',
-        // Mobile optimizations
+        width: '100%',
         '@media (max-width: 768px)': {
           mb: 2
         }
       }}>
-        <CardContent sx={{
-          // Mobile padding optimizations
-          '@media (max-width: 480px)': {
-            padding: 2
-          }
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start', 
-            mb: 2,
-            // Mobile layout optimizations
-            '@media (max-width: 768px)': {
-              flexDirection: 'column',
-              gap: 2,
-              alignItems: 'stretch'
-            }
-          }}>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 2, 
-              flex: 1,
-              // Mobile layout optimizations
-              '@media (max-width: 480px)': {
-                flexDirection: 'column',
-                textAlign: 'center',
-                gap: 1
-              }
-            }}>
-              <Avatar sx={{ 
-                bgcolor: 'white', 
-                color: 'primary.main', 
-                width: 64, 
-                height: 64,
-                // Mobile avatar optimizations
-                '@media (max-width: 480px)': {
-                  width: 48,
-                  height: 48
-                }
-              }}>
-                {getFileIcon(material.type)}
-              </Avatar>
-              
-              <Box sx={{ flex: 1 }}>
-                <Typography 
-                  variant="h4" 
-                  gutterBottom
-                  sx={{
-                    // Mobile typography optimizations
-                    '@media (max-width: 768px)': {
-                      fontSize: '1.75rem'
-                    },
-                    '@media (max-width: 480px)': {
-                      fontSize: '1.5rem'
-                    }
-                  }}
-                >
-                  {material.title}
-                </Typography>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    opacity: 0.9, 
-                    mb: 2,
-                    // Mobile typography optimizations
-                    '@media (max-width: 768px)': {
-                      fontSize: '1rem'
-                    },
-                    '@media (max-width: 480px)': {
-                      fontSize: '0.9rem',
-                      mb: 1
-                    }
-                  }}
-                >
-                  {material.description}
-                </Typography>
-                
-                <Box sx={{ 
-                  display: 'flex', 
-                  gap: 1, 
-                  flexWrap: 'wrap',
-                  // Mobile chip optimizations
-                  '@media (max-width: 480px)': {
-                    justifyContent: 'center',
-                    gap: 0.5,
-                    '& .MuiChip-root': {
-                      fontSize: '0.75rem',
-                      height: '28px'
-                    }
-                  }
-                }}>
-                  <Chip 
-                    icon={<Timer />} 
-                    label={`${material.estimatedDuration} minutes`} 
-                    variant="outlined" 
-                    sx={{ color: 'white', borderColor: 'white' }}
-                  />
-                  <Chip 
-                    label={material.type} 
-                    variant="outlined" 
-                    sx={{ color: 'white', borderColor: 'white' }}
-                  />
-                  {material.isRequired && (
-                    <Chip 
-                      label="Required" 
-                      variant="outlined" 
-                      sx={{ color: 'white', borderColor: 'white' }}
-                    />
-                  )}
-                  {isCompleted && (
-                    <Chip 
-                      icon={<CheckCircle />} 
-                      label="Completed" 
-                      variant="outlined" 
-                      sx={{ color: 'white', borderColor: 'white' }}
-                    />
-                  )}
-                </Box>
-              </Box>
-            </Box>
-            
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 1,
-              // Mobile action buttons optimizations
-              '@media (max-width: 768px)': {
-                justifyContent: 'center',
-                alignSelf: 'center'
-              },
-              '@media (max-width: 480px)': {
-                '& .MuiIconButton-root': {
-                  padding: '8px'
-                }
-              }
-            }}>
-              <IconButton sx={{ color: 'white' }}>
-                <Bookmark />
-              </IconButton>
-              <IconButton sx={{ color: 'white' }}>
-                <Share />
-              </IconButton>
-            </Box>
-          </Box>
-
-          {/* Progress */}
-          <Box sx={{ 
-            mt: 2,
-            // Mobile progress optimizations
-            '@media (max-width: 480px)': {
-              mt: 1
-            }
-          }}>
+        {(material.url || material.type === 'structured_notes') ? (
+          <Box sx={{ width: '100%' }}>
+            {/* Viewer Controls Bar */}
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
+              alignItems: 'center', 
               mb: 1,
-              // Mobile progress text optimizations
-              '@media (max-width: 480px)': {
-                '& .MuiTypography-root': {
-                  fontSize: '0.8rem'
-                }
+              p: 1.5,
+              backgroundColor: '#f5f5f5',
+              borderRadius: '8px 8px 0 0',
+              gap: 1,
+              flexWrap: 'wrap',
+              '@media (max-width: 600px)': {
+                p: 1,
+                gap: 0.5
               }
             }}>
-              <Typography variant="body2">
-                {isCompleted ? 'Completed' : 'Progress'}
-              </Typography>
-              <Typography variant="body2">
-                {isCompleted ? '100%' : `${Math.round((timeSpent / material.estimatedDuration) * 100)}%`} 
-                ({timeSpent} / {material.estimatedDuration} min)
-              </Typography>
-            </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={isCompleted ? 100 : Math.min((timeSpent / material.estimatedDuration) * 100, 100)} 
-              sx={{ 
-                height: 8, 
-                borderRadius: 4,
-                backgroundColor: 'rgba(255,255,255,0.3)',
-                '& .MuiLinearProgress-bar': {
-                  backgroundColor: isCompleted ? '#4caf50' : 'white'
-                },
-                // Mobile progress bar optimizations
-                '@media (max-width: 480px)': {
-                  height: 6
-                }
-              }} 
-            />
-            {isCompleted && (
-              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CheckCircle sx={{ fontSize: 16, color: '#4caf50' }} />
-                <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
-                  Material completed successfully!
-                </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {viewerType === 'pdf' && numPages && (
+                  <Chip 
+                    label={`${numPages} pages`} 
+                    size="small" 
+                    color="primary" 
+                    variant="outlined"
+                  />
+                )}
               </Box>
-            )}
-          </Box>
-        </CardContent>
-      </Card>
+              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                {/* WebViewer Controls */}
+                {viewerType === 'webviewer' && webViewerInstance && (
+                  <>
+                    <Tooltip title="Add Comment">
+                      <IconButton 
+                        onClick={() => webViewerInstance.UI.enableElements(['annotationCommentButton'])}
+                        color="primary"
+                        size="small"
+                      >
+                        <Assignment fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Search">
+                      <IconButton 
+                        onClick={() => webViewerInstance.UI.openElements(['searchPanel'])}
+                        color="primary"
+                        size="small"
+                      >
+                        <Search fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                )}
+                
+                {/* PDF Controls */}
+                {viewerType === 'pdf' && (
+                  <>
+                    <Tooltip title="Previous Page">
+                      <span>
+                        <IconButton 
+                          onClick={goToPrevPage}
+                          disabled={pageNumber <= 1}
+                          color="primary"
+                          size="small"
+                        >
+                          <ArrowBack fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Next Page">
+                      <span>
+                        <IconButton 
+                          onClick={goToNextPage}
+                          disabled={pageNumber >= (numPages || 1)}
+                          color="primary"
+                          size="small"
+                        >
+                          <ArrowBack sx={{ transform: 'rotate(180deg)' }} fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Zoom In">
+                      <IconButton onClick={zoomIn} color="primary" size="small">
+                        <ZoomIn fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Zoom Out">
+                      <IconButton onClick={zoomOut} color="primary" size="small">
+                        <ZoomOut fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Rotate">
+                      <IconButton onClick={rotateDocument} color="primary" size="small">
+                        <RotateRight fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                )}
+                
+                <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
+                  <IconButton
+                    onClick={toggleFullscreen}
+                    color={isFullscreen ? 'error' : 'primary'}
+                    size="small"
+                  >
+                    {isFullscreen ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
 
-      {/* Material Content */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Material Content
-              </Typography>
-              
-              {(material.url || material.type === 'structured_notes') ? (
-                <Box sx={{ width: '100%' }}>
-                      {/* Modern Document Viewer Header */}
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        mb: 2,
-                        p: 2,
-                        backgroundColor: 'grey.50',
-                        borderRadius: 1
-                      }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <PictureAsPdf sx={{ color: 'error.main' }} />
-                          <Typography variant="h6">
-                            {material.title}
-                          </Typography>
-                          {viewerType === 'pdf' && numPages && (
-                            <Chip 
-                              label={`${numPages} pages`} 
-                              size="small" 
-                              color="primary" 
-                              variant="outlined"
-                            />
-                          )}
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          {/* WebViewer Controls */}
-                          {viewerType === 'webviewer' && webViewerInstance && (
-                            <>
-                              <Tooltip title="Add Comment">
-                                <IconButton 
-                                  onClick={() => webViewerInstance.UI.enableElements(['annotationCommentButton'])}
-                                  color="primary"
-                                >
-                                  <Assignment />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Search">
-                                <IconButton 
-                                  onClick={() => webViewerInstance.UI.openElements(['searchPanel'])}
-                                  color="primary"
-                                >
-                                  <Search />
-                                </IconButton>
-                              </Tooltip>
-                            </>
-                          )}
-                          
-                          {/* PDF Controls */}
-                          {viewerType === 'pdf' && (
-                            <>
-                              <Tooltip title="Previous Page">
-                                <span>
-                                  <IconButton 
-                                    onClick={goToPrevPage}
-                                    disabled={pageNumber <= 1}
-                                    color="primary"
-                                  >
-                                    <ArrowBack />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                              <Tooltip title="Next Page">
-                                <span>
-                                  <IconButton 
-                                    onClick={goToNextPage}
-                                    disabled={pageNumber >= (numPages || 1)}
-                                    color="primary"
-                                  >
-                                    <ArrowBack sx={{ transform: 'rotate(180deg)' }} />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                              <Tooltip title="Zoom In">
-                                <IconButton onClick={zoomIn} color="primary">
-                                  <ZoomIn />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Zoom Out">
-                                <IconButton onClick={zoomOut} color="primary">
-                                  <ZoomOut />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Rotate">
-                                <IconButton onClick={rotateDocument} color="primary">
-                                  <RotateRight />
-                                </IconButton>
-                              </Tooltip>
-                            </>
-                          )}
-                          
-                          <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen for Better Viewing"}>
-                            <Button
-                              variant="contained"
-                              onClick={toggleFullscreen}
-                              startIcon={isFullscreen ? <FullscreenExit /> : <Fullscreen />}
-                              sx={{
-                                backgroundColor: isFullscreen ? 'error.main' : 'primary.main',
-                                color: 'white',
-                                px: 3,
-                                py: 1.5,
-                                borderRadius: 2,
-                                fontWeight: 'bold',
-                                fontSize: '0.9rem',
-                                textTransform: 'none',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                '&:hover': {
-                                  backgroundColor: isFullscreen ? 'error.dark' : 'primary.dark',
-                                  transform: 'translateY(-2px)',
-                                  boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
-                                },
-                                '&:active': {
-                                  transform: 'translateY(0px)',
-                                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                                },
-                                animation: !isFullscreen ? 'pulse 2s infinite' : 'none',
-                                '@keyframes pulse': {
-                                  '0%': {
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                  },
-                                  '50%': {
-                                    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)',
-                                  },
-                                  '100%': {
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                  },
-                                },
-                              }}
-                            >
-                              {isFullscreen ? 'Exit Fullscreen' : 'View in Fullscreen'}
-                            </Button>
-                          </Tooltip>
-                        </Box>
-                      </Box>
 
-                      {/* Fullscreen Prompt Overlay */}
-                      {!isFullscreen && showFullscreenPrompt && (
-                        <Box sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          zIndex: 1000,
-                          borderRadius: 2,
-                          animation: 'fadeIn 0.5s ease-in-out',
-                          '@keyframes fadeIn': {
-                            '0%': { opacity: 0 },
-                            '100%': { opacity: 1 },
-                          },
-                        }}>
-                          <Box sx={{
-                            textAlign: 'center',
-                            color: 'white',
-                            p: 3,
-                            borderRadius: 2,
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            backdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                          }}>
-                            <IconButton
-                              onClick={() => setShowFullscreenPrompt(false)}
-                              sx={{
-                                position: 'absolute',
-                                top: 8,
-                                right: 8,
-                                color: 'white',
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                },
-                              }}
-                            >
-                              <VisibilityOff />
-                            </IconButton>
-                            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                              📖 Better Reading Experience
-                            </Typography>
-                            <Typography variant="body1" sx={{ mb: 3, opacity: 0.9 }}>
-                              Click "View in Fullscreen" for optimal material viewing
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-                              <Button
-                                variant="contained"
-                                size="large"
-                                onClick={() => setIsFullscreen(true)}
-                                startIcon={<Fullscreen />}
-                                sx={{
-                                  backgroundColor: 'primary.main',
-                                  color: 'white',
-                                  px: 4,
-                                  py: 1.5,
-                                  borderRadius: 2,
-                                  fontWeight: 'bold',
-                                  fontSize: '1rem',
-                                  textTransform: 'none',
-                                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                                  '&:hover': {
-                                    backgroundColor: 'primary.dark',
-                                    transform: 'translateY(-2px)',
-                                    boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
-                                  },
-                                }}
-                              >
-                                View in Fullscreen
-                              </Button>
-                              <Button
-                                variant="outlined"
-                                size="large"
-                                onClick={() => setShowFullscreenPrompt(false)}
-                                sx={{
-                                  color: 'white',
-                                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                                  px: 3,
-                                  py: 1.5,
-                                  borderRadius: 2,
-                                  fontWeight: 'bold',
-                                  fontSize: '1rem',
-                                  textTransform: 'none',
-                                  '&:hover': {
-                                    borderColor: 'white',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  },
-                                }}
-                              >
-                                Continue Reading
-                              </Button>
-                            </Box>
-                          </Box>
-                        </Box>
-                      )}
 
-                      {/* Modern Document Viewer */}
-                      <Box sx={{ 
-                        width: '100%', 
-                        height: isFullscreen ? '100vh' : '70vh',
-                        border: '1px solid #e0e0e0',
-                        borderRadius: 2,
-                        overflow: 'hidden',
-                        backgroundColor: 'white',
-                        position: isFullscreen ? 'fixed' : 'relative',
-                        top: isFullscreen ? 0 : 'auto',
-                        left: isFullscreen ? 0 : 'auto',
-                        zIndex: isFullscreen ? 9999 : 'auto'
-                      }}>
-                        {viewerType === 'webviewer' ? (
-                          // WebViewer for all supported formats
-                          <Box sx={{ width: '100%', height: '100%' }}>
-                            {!webViewerReady ? (
-                              <Box sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                height: '100%',
-                                gap: 2,
-                                p: 4
-                              }}>
-                                <CircularProgress size={60} />
-                                <Typography variant="body1" color="text.secondary">
-                                  Loading document viewer...
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  Supporting PDF, DOCX, PPTX, XLSX, and more
-                                </Typography>
-                              </Box>
-                            ) : (
-                              <div 
-                                ref={viewerRef}
-                                style={{ 
-                                  width: '100%', 
-                                  height: '100%',
-                                  position: 'relative'
-                                }}
-                              />
-                            )}
-                          </Box>
-                        ) : (
-                          // Use appropriate viewer based on material type
-                          (() => {
-                            console.log('🎯 MaterialView - Rendering material:', {
-                              title: material.title,
-                              type: material.type,
-                              hasContent: !!material.content,
-                              hasStructuredNotes: !!material.content?.structuredNotes
-                            });
-                            
-                            // Use appropriate viewer based on material type
-                            if (material.type === 'structured_notes') {
-                              return (
-                                <StructuredNotesViewer
-                                  material={material}
-                                  content={material.content}
-                                  title={material.title}
-                                  height="100%"
-                                  onTimeSpent={setTimeSpent}
-                                  onComplete={() => {
-                                    setIsCompleted(true);
-                                    handleMarkComplete();
-                                  }}
-                                  showProgress={true}
-                                  userId={user?._id}
-                                  autoRetry={true}
-                                  maxRetries={3}
-                                  validateContent={true}
-                                  onBack={handleBackToCourse}
-                                  onTimeSpent={(time) => {
-                                    if (courseId && week && materialId) {
-                                      progressTrackingService.updateTimeSpent(courseId, week._id, materialId, time);
-                                    }
-                                  }}
-                                  onComplete={() => {
-                                    if (!isCompleted) {
-                                      handleMarkComplete();
-                                    }
-                                  }}
-                                  userId={user?._id}
-                                  autoRetry={true}
-                                  maxRetries={3}
-                                  validateContent={true}
-                                  progressData={materialProgress}
-                                  onProgressUpdate={(progress) => {
-                                    if (courseId && week && materialId) {
-                                      progressTrackingService.updateMaterialProgress(courseId, week._id, materialId, progress);
-                                    }
-                                  }}
-                                />
-                              );
-                            }
-                            
-                            // For other material types, determine viewer based on material type or URL extension
-                            
-                            // Check material type first
-                            if (material.type === 'video') {
-                              return (
-                                <SimpleMediaViewer
-                                  url={url}
-                                  title={material.title}
-                                  type="video"
-                                  height="100%"
-                                  description={material.description}
-                                  estimatedDuration={material.estimatedDuration}
-                                  isRequired={material.isRequired}
-                                  materialType={material.type}
-                                  onProgressUpdate={(progress, timeSpent) => {
-                                    console.log(`📊 Video progress: ${progress.toFixed(1)}%, Time spent: ${timeSpent} min`);
-                                    // Update the time spent state
-                                    setTimeSpent(timeSpent);
-                                    
-                                    // Update progress tracking service
-                                    if (courseId && week && materialId) {
-                                      progressTrackingService.updateTimeSpent(courseId, week._id, materialId, timeSpent);
-                                    }
-                                  }}
-                                  onVideoEnd={() => {
-                                    console.log('🎬 Video ended - marking as completed');
-                                    handleMarkComplete();
-                                  }}
-                                  onVideoStart={() => {
-                                    console.log('▶️ Video started');
-                                    if (!startTime) {
-                                      setStartTime(new Date());
-                                    }
-                                  }}
-                                />
-                              );
-                            } else if (material.type === 'image') {
-                              return (
-                                <SimpleImageViewer
-                                  url={url}
-                                  title={material.title}
-                                  height="100%"
-                                  description={material.description}
-                                  estimatedDuration={material.estimatedDuration}
-                                  isRequired={material.isRequired}
-                                  materialType={material.type}
-                                />
-                              );
-                            } else if (urlLower.includes('.pdf')) {
-                              return (
-                                <SimplePDFViewer
-                                  url={url}
-                                  title={material.title}
-                                  height="100%"
-                                />
-                              );
-                            } else if (urlLower.match(/\.(doc|docx|ppt|pptx|xls|xlsx)$/)) {
-                              return (
-                                <SimpleOfficeViewer
-                                  url={url}
-                                  title={material.title}
-                                  height="100%"
-                                />
-                              );
-                            } else if (urlLower.match(/\.(mp4|avi|mov|wmv|flv|webm)$/)) {
-                              return (
-                                <SimpleMediaViewer
-                                  url={url}
-                                  title={material.title}
-                                  type="video"
-                                  height="100%"
-                                  description={material.description}
-                                  estimatedDuration={material.estimatedDuration}
-                                  isRequired={material.isRequired}
-                                  materialType={material.type}
-                                  onProgressUpdate={(progress, timeSpent) => {
-                                    console.log(`📊 Video progress: ${progress.toFixed(1)}%, Time spent: ${timeSpent} min`);
-                                    // Update the time spent state
-                                    setTimeSpent(timeSpent);
-                                    
-                                    // Update progress tracking service
-                                    if (courseId && week && materialId) {
-                                      progressTrackingService.updateTimeSpent(courseId, week._id, materialId, timeSpent);
-                                    }
-                                  }}
-                                  onVideoEnd={() => {
-                                    console.log('🎬 Video ended - marking as completed');
-                                    handleMarkComplete();
-                                  }}
-                                  onVideoStart={() => {
-                                    console.log('▶️ Video started');
-                                    if (!startTime) {
-                                      setStartTime(new Date());
-                                    }
-                                  }}
-                                />
-                              );
-                            } else if (urlLower.match(/\.(mp3|wav|ogg)$/)) {
-                              return (
-                                <SimpleMediaViewer
-                                  url={url}
-                                  title={material.title}
-                                  type="audio"
-                                  height="100%"
-                                  description={material.description}
-                                  estimatedDuration={material.estimatedDuration}
-                                  isRequired={material.isRequired}
-                                  materialType={material.type}
-                                />
-                              );
-                            } else if (urlLower.match(/\.(jpg|jpeg|png|gif|bmp|svg|webp)$/)) {
-                              return (
-                                <SimpleImageViewer
-                                  url={url}
-                                  title={material.title}
-                                  height="100%"
-                                  description={material.description}
-                                  estimatedDuration={material.estimatedDuration}
-                                  isRequired={material.isRequired}
-                                  materialType={material.type}
-                                />
-                              );
-                            } else {
-                              // Fallback for unsupported formats
-                              return (
-                                <Box 
-                                  display="flex" 
-                                  flexDirection="column" 
-                                  justifyContent="center" 
-                                  alignItems="center" 
-                                  height="100%" 
-                                  p={3}
-                                >
-                                  <Alert severity="info" sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                      Unsupported File Format
-                                    </Typography>
-                                    <Typography variant="body2">
-                                      This file format is not supported for inline viewing.
-                                    </Typography>
-                                  </Alert>
-                                  <Button 
-                                    variant="contained" 
-                                    onClick={() => window.open(url, '_blank')}
-                                    startIcon={<OpenInNew />}
-                                  >
-                                    Open in New Tab
-                                  </Button>
-                                </Box>
-                              );
-                            }
-                          })()
-                        )}
-                      </Box>
-
-                      {/* Document Info */}
-                      <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>File Type:</strong> {material.url?.split('.').pop()?.toUpperCase() || 'Unknown'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Estimated Duration:</strong> {material.estimatedDuration} minutes
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Viewer:</strong> {material.type === 'structured_notes' ? 'Structured Notes Viewer' :
-                                                   urlLower.includes('.pdf') ? 'PDF Viewer' :
-                                                   urlLower.match(/\.(doc|docx|ppt|pptx|xls|xlsx)$/) ? 'Office Document Viewer' :
-                                                   urlLower.match(/\.(mp4|avi|mov|wmv|flv|webm|mp3|wav|ogg)$/) ? 'Media Viewer' :
-                                                   urlLower.match(/\.(jpg|jpeg|png|gif|bmp|svg|webp)$/) ? 'Image Viewer' : 'Generic Viewer'}
-                        </Typography>
-                        {material.type === 'structured_notes' && (
-                          <Typography variant="body2" color="text.secondary">
-                            <strong>Features:</strong> Search, Bookmarks, Progress Tracking, User Notes
-                          </Typography>
-                        )}
-                        {urlLower.includes('.pdf') && (
-                          <Typography variant="body2" color="text.secondary">
-                            <strong>Features:</strong> Zoom, Fullscreen, Download, Print
-                          </Typography>
-                        )}
-                        {urlLower.match(/\.(doc|docx|ppt|pptx|xls|xlsx)$/) && (
-                          <Typography variant="body2" color="text.secondary">
-                            <strong>Features:</strong> Online Viewing, Download, Fullscreen
-                          </Typography>
-                        )}
-                        {urlLower.match(/\.(mp4|avi|mov|wmv|flv|webm|mp3|wav|ogg)$/) && (
-                          <Typography variant="body2" color="text.secondary">
-                            <strong>Features:</strong> Media Controls, Fullscreen, Download
-                          </Typography>
-                        )}
-                        {urlLower.match(/\.(jpg|jpeg|png|gif|bmp|svg|webp)$/) && (
-                          <Typography variant="body2" color="text.secondary">
-                            <strong>Features:</strong> Zoom, Rotate, Fullscreen, Download
-                          </Typography>
-                        )}
-                        {viewerType === 'pdf' && numPages && (
-                          <Typography variant="body2" color="text.secondary">
-                            <strong>Pages:</strong> {numPages}
-                          </Typography>
-                        )}
-                        {material.isRequired && (
-                          <Chip label="Required" size="small" color="error" sx={{ mt: 1 }} />
-                        )}
-                      </Box>
+            {/* Modern Document Viewer */}
+            <Box sx={{ 
+              width: '100%', 
+              height: isFullscreen ? '100vh' : '90vh',
+              border: '1px solid #e0e0e0',
+              borderRadius: '0 0 8px 8px',
+              overflow: 'hidden',
+              backgroundColor: 'white',
+              position: isFullscreen ? 'fixed' : 'relative',
+              top: isFullscreen ? 0 : 'auto',
+              left: isFullscreen ? 0 : 'auto',
+              zIndex: isFullscreen ? 9999 : 'auto',
+              '@media (max-width: 1200px)': {
+                height: isFullscreen ? '100vh' : '80vh'
+              },
+              '@media (max-width: 768px)': {
+                height: isFullscreen ? '100vh' : '72vh',
+                borderRadius: '0 0 8px 8px'
+              },
+              '@media (max-width: 600px)': {
+                height: isFullscreen ? '100vh' : '62vh'
+              }
+            }}>
+              {viewerType === 'webviewer' ? (
+                <Box sx={{ width: '100%', height: '100%' }}>
+                  {!webViewerReady ? (
+                    <Box sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      height: '100%',
+                      gap: 2,
+                      p: 4
+                    }}>
+                      <CircularProgress size={60} />
+                      <Typography variant="body1" color="text.secondary">
+                        Loading document viewer...
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Supporting PDF, DOCX, PPTX, XLSX, and more
+                      </Typography>
                     </Box>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Description sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="h6" gutterBottom>
-                    No Content Available
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    This material doesn't have any content to display.
-                  </Typography>
+                  ) : (
+                    <div 
+                      ref={viewerRef}
+                      style={{ 
+                        width: '100%', 
+                        height: '100%',
+                        position: 'relative'
+                      }}
+                    />
+                  )}
                 </Box>
+              ) : (
+                (() => {
+                  console.log('🎯 MaterialView - Rendering material:', {
+                    title: material.title,
+                    type: material.type,
+                    hasContent: !!material.content,
+                    hasStructuredNotes: !!material.content?.structuredNotes
+                  });
+                  
+                  if (material.type === 'structured_notes') {
+                    return (
+                      <StructuredNotesViewer
+                        material={material}
+                        content={material.content}
+                        title={material.title}
+                        height="100%"
+                        onTimeSpent={setTimeSpent}
+                        onComplete={() => {
+                          setIsCompleted(true);
+                          handleMarkComplete();
+                        }}
+                        showProgress={true}
+                        userId={user?._id}
+                        autoRetry={true}
+                        maxRetries={3}
+                        validateContent={true}
+                        onBack={handleBackToCourse}
+                        onTimeSpent={(time) => {
+                          if (courseId && week && materialId) {
+                            progressTrackingService.updateTimeSpent(courseId, week._id, materialId, time);
+                          }
+                        }}
+                        onComplete={() => {
+                          if (!isCompleted) {
+                            handleMarkComplete();
+                          }
+                        }}
+                        userId={user?._id}
+                        autoRetry={true}
+                        maxRetries={3}
+                        validateContent={true}
+                        progressData={materialProgress}
+                        onProgressUpdate={(progress) => {
+                          if (courseId && week && materialId) {
+                            progressTrackingService.updateMaterialProgress(courseId, week._id, materialId, progress);
+                          }
+                        }}
+                      />
+                    );
+                  }
+                  
+                  if (material.type === 'video') {
+                    return (
+                      <SimpleMediaViewer
+                        url={url}
+                        title={material.title}
+                        type="video"
+                        height="100%"
+                        description={material.description}
+                        estimatedDuration={material.estimatedDuration}
+                        isRequired={material.isRequired}
+                        materialType={material.type}
+                        onProgressUpdate={(progress, timeSpent) => {
+                          console.log(`📊 Video progress: ${progress.toFixed(1)}%, Time spent: ${timeSpent} min`);
+                          setTimeSpent(timeSpent);
+                          if (courseId && week && materialId) {
+                            progressTrackingService.updateTimeSpent(courseId, week._id, materialId, timeSpent);
+                          }
+                        }}
+                        onVideoEnd={() => {
+                          console.log('🎬 Video ended - marking as completed');
+                          handleMarkComplete();
+                        }}
+                        onVideoStart={() => {
+                          console.log('▶️ Video started');
+                          if (!startTime) {
+                            setStartTime(new Date());
+                          }
+                        }}
+                      />
+                    );
+                  } else if (material.type === 'image') {
+                    return (
+                      <SimpleImageViewer
+                        url={url}
+                        title={material.title}
+                        height="100%"
+                        description={material.description}
+                        estimatedDuration={material.estimatedDuration}
+                        isRequired={material.isRequired}
+                        materialType={material.type}
+                      />
+                    );
+                  } else if (urlLower.includes('.pdf')) {
+                    return (
+                      <SimplePDFViewer
+                        url={url}
+                        title={material.title}
+                        height="100%"
+                      />
+                    );
+                  } else if (urlLower.match(/\.(doc|docx|ppt|pptx|xls|xlsx)$/)) {
+                    return (
+                      <SimpleOfficeViewer
+                        url={url}
+                        title={material.title}
+                        height="100%"
+                      />
+                    );
+                  } else if (urlLower.match(/\.(mp4|avi|mov|wmv|flv|webm)$/)) {
+                    return (
+                      <SimpleMediaViewer
+                        url={url}
+                        title={material.title}
+                        type="video"
+                        height="100%"
+                        description={material.description}
+                        estimatedDuration={material.estimatedDuration}
+                        isRequired={material.isRequired}
+                        materialType={material.type}
+                        onProgressUpdate={(progress, timeSpent) => {
+                          console.log(`📊 Video progress: ${progress.toFixed(1)}%, Time spent: ${timeSpent} min`);
+                          setTimeSpent(timeSpent);
+                          if (courseId && week && materialId) {
+                            progressTrackingService.updateTimeSpent(courseId, week._id, materialId, timeSpent);
+                          }
+                        }}
+                        onVideoEnd={() => {
+                          console.log('🎬 Video ended - marking as completed');
+                          handleMarkComplete();
+                        }}
+                        onVideoStart={() => {
+                          console.log('▶️ Video started');
+                          if (!startTime) {
+                            setStartTime(new Date());
+                          }
+                        }}
+                      />
+                    );
+                  } else if (urlLower.match(/\.(mp3|wav|ogg)$/)) {
+                    return (
+                      <SimpleMediaViewer
+                        url={url}
+                        title={material.title}
+                        type="audio"
+                        height="100%"
+                        description={material.description}
+                        estimatedDuration={material.estimatedDuration}
+                        isRequired={material.isRequired}
+                        materialType={material.type}
+                      />
+                    );
+                  } else if (urlLower.match(/\.(jpg|jpeg|png|gif|bmp|svg|webp)$/)) {
+                    return (
+                      <SimpleImageViewer
+                        url={url}
+                        title={material.title}
+                        height="100%"
+                        description={material.description}
+                        estimatedDuration={material.estimatedDuration}
+                        isRequired={material.isRequired}
+                        materialType={material.type}
+                      />
+                    );
+                  } else {
+                    return (
+                      <Box 
+                        display="flex" 
+                        flexDirection="column" 
+                        justifyContent="center" 
+                        alignItems="center" 
+                        height="100%" 
+                        p={3}
+                      >
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                          <Typography variant="h6" gutterBottom>
+                            Unsupported File Format
+                          </Typography>
+                          <Typography variant="body2">
+                            This file format is not supported for inline viewing.
+                          </Typography>
+                        </Alert>
+                        <Button 
+                          variant="contained" 
+                          onClick={() => window.open(url, '_blank')}
+                          startIcon={<OpenInNew />}
+                        >
+                          Open in New Tab
+                        </Button>
+                      </Box>
+                    );
+                  }
+                })()
               )}
-            </CardContent>
-          </Card>
-        </Grid>
+            </Box>
+          </Box>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Description sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+              No Content Available
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              This material doesn't have any content to display.
+            </Typography>
+          </Box>
+        )}
+      </Box>
 
-        <Grid item xs={12} md={4}>
-          <Stack spacing={3}>
+      {/* Material Information & Actions Grid */}
+      <Grid 
+        container 
+        spacing={3} 
+        sx={{ 
+          mt: 2,
+          '@media (max-width: 768px)': {
+            spacing: 2,
+            mt: 1
+          },
+          '@media (max-width: 600px)': {
+            spacing: 1.5,
+            mt: 0.5
+          }
+        }}
+      >
+        <Grid item xs={12} sm={6} lg={5} sx={{
+          '@media (max-width: 768px)': {
+            order: 2
+          }
+        }}>
+          <Stack spacing={3} sx={{
+            '@media (max-width: 600px)': {
+              spacing: 1.5
+            }
+          }}>
             {/* Material Info */}
-            <Card>
+            <Card sx={{
+              '@media (max-width: 600px)': {
+                borderRadius: 2
+              }
+            }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Material Information
@@ -2496,6 +2145,383 @@ Respond as a knowledgeable tutor who has access to the course material.`;
             </Card>
           </Stack>
         </Grid>
+        
+        <Grid item xs={12} sm={6} lg={7} sx={{
+          '@media (max-width: 768px)': {
+            order: 1
+          }
+        }}>
+          <Stack spacing={3} sx={{
+            '@media (max-width: 600px)': {
+              spacing: 1.5
+            }
+          }}>
+            {/* Next Materials Section */}
+            <Card 
+              sx={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                borderRadius: 3,
+                overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                '@media (max-width: 600px)': {
+                  borderRadius: 2
+                }
+              }}
+            >
+              <CardContent sx={{
+                '@media (max-width: 600px)': {
+                  p: 1.5
+                }
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <PlayCircleOutline sx={{
+                    '@media (max-width: 600px)': {
+                      fontSize: '1.2rem'
+                    }
+                  }} />
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 'bold',
+                    '@media (max-width: 600px)': {
+                      fontSize: '1rem'
+                    }
+                  }}>
+                    Next Materials
+                  </Typography>
+                </Box>
+                <Typography variant="body2" sx={{ 
+                  opacity: 0.9, 
+                  mb: 2,
+                  '@media (max-width: 600px)': {
+                    fontSize: '0.85rem'
+                  }
+                }}>
+                  Continue your learning journey
+                </Typography>
+                
+                <Stack spacing={1.5} sx={{
+                  '@media (max-width: 600px)': {
+                    spacing: 1
+                  }
+                }}>
+                  {week?.materials.filter(m => m._id !== materialId).slice(0, 4).map((m, index) => (
+                    <Button
+                      key={m._id}
+                      onClick={() => navigate(`/student/course/${courseId}/material/${m._id}`)}
+                      sx={{ 
+                        justifyContent: 'flex-start',
+                        textTransform: 'none',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        color: 'white',
+                        p: 1.5,
+                        borderRadius: 2,
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        backdropFilter: 'blur(10px)',
+                        transition: 'all 0.3s ease',
+                        '@media (max-width: 600px)': {
+                          p: 1,
+                          gap: 0.5
+                        },
+                        '&:hover': {
+                          backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                          transform: 'translateX(8px)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                        }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+                        <Box sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          fontWeight: 'bold',
+                          fontSize: '0.75rem',
+                          flexShrink: 0,
+                          '@media (max-width: 600px)': {
+                            width: 24,
+                            height: 24,
+                            fontSize: '0.65rem'
+                          }
+                        }}>
+                          {index + 1}
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="body2" sx={{ 
+                            fontWeight: '600', 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            '@media (max-width: 600px)': {
+                              fontSize: '0.85rem'
+                            }
+                          }}>
+                            {m.title}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                            <Chip 
+                              label={m.type} 
+                              size="small" 
+                              sx={{ 
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                height: '20px',
+                                '& .MuiChip-label': {
+                                  px: 1,
+                                  fontSize: '0.7rem'
+                                },
+                                '@media (max-width: 600px)': {
+                                  height: '18px',
+                                  '& .MuiChip-label': {
+                                    px: 0.5,
+                                    fontSize: '0.65rem'
+                                  }
+                                }
+                              }} 
+                            />
+                            <Chip 
+                              label={`${m.estimatedDuration} min`} 
+                              size="small"
+                              icon={<Timer fontSize="small" />}
+                              sx={{ 
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                height: '20px',
+                                '& .MuiChip-label': {
+                                  px: 1,
+                                  fontSize: '0.7rem'
+                                },
+                                '@media (max-width: 600px)': {
+                                  height: '18px',
+                                  '& .MuiChip-label': {
+                                    px: 0.5,
+                                    fontSize: '0.65rem'
+                                  }
+                                }
+                              }} 
+                            />
+                          </Box>
+                        </Box>
+                        <ArrowBack sx={{ 
+                          transform: 'rotate(180deg)',
+                          flexShrink: 0,
+                          '@media (max-width: 600px)': {
+                            fontSize: '1rem'
+                          }
+                        }} />
+                      </Box>
+                    </Button>
+                  ))}
+                </Stack>
+
+                {week?.materials.filter(m => m._id !== materialId).length === 0 && (
+                  <Typography variant="body2" sx={{ opacity: 0.8, textAlign: 'center', py: 2 }}>
+                    No more materials in this week
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Learning Stats */}
+            <Card
+              sx={{
+                borderRadius: 3,
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                '@media (max-width: 600px)': {
+                  borderRadius: 2
+                }
+              }}
+            >
+              <CardContent sx={{
+                '@media (max-width: 600px)': {
+                  p: 1.5
+                }
+              }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 'bold', 
+                  mb: 2,
+                  '@media (max-width: 600px)': {
+                    fontSize: '1rem',
+                    mb: 1
+                  }
+                }}>
+                  📊 Learning Insights
+                </Typography>
+                
+                <Stack spacing={2}>
+                  {/* Duration */}
+                  <Box sx={{ 
+                    p: 2, 
+                    borderRadius: 2, 
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white'
+                  }}>
+                    <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                      Estimated Duration
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                      {material.estimatedDuration} minutes
+                    </Typography>
+                  </Box>
+
+                  {/* Importance */}
+                  <Box sx={{ 
+                    p: 2, 
+                    borderRadius: 2, 
+                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    color: 'white'
+                  }}>
+                    <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                      Importance Level
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                      {material.isRequired ? (
+                        <>
+                          <Star sx={{ fontSize: '1.5rem' }} />
+                          <Star sx={{ fontSize: '1.5rem' }} />
+                          <Star sx={{ fontSize: '1.5rem' }} />
+                        </>
+                      ) : (
+                        <>
+                          <Star sx={{ fontSize: '1.5rem' }} />
+                          <Star sx={{ fontSize: '1.5rem' }} />
+                          <StarBorder sx={{ fontSize: '1.5rem' }} />
+                        </>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {/* Material Type */}
+                  <Box sx={{ 
+                    p: 2, 
+                    borderRadius: 2, 
+                    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                    color: 'white'
+                  }}>
+                    <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                      Material Type
+                    </Typography>
+                    <Chip 
+                      label={material.type} 
+                      sx={{ 
+                        mt: 1,
+                        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                        color: 'white',
+                        fontWeight: 'bold'
+                      }} 
+                    />
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card
+              sx={{
+                borderRadius: 3,
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                '@media (max-width: 600px)': {
+                  borderRadius: 2
+                }
+              }}
+            >
+              <CardContent sx={{
+                '@media (max-width: 600px)': {
+                  p: 1.5
+                }
+              }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 'bold', 
+                  mb: 2,
+                  '@media (max-width: 600px)': {
+                    fontSize: '1rem',
+                    mb: 1
+                  }
+                }}>
+                  ⚡ Quick Actions
+                </Typography>
+                
+                <Stack spacing={1.5} sx={{
+                  '@media (max-width: 600px)': {
+                    spacing: 1
+                  }
+                }}>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    startIcon={<BookmarkBorder />}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      py: 1.2,
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                      '@media (max-width: 600px)': {
+                        py: 1,
+                        fontSize: '0.9rem'
+                      },
+                      '&:hover': {
+                        boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    Save for Later
+                  </Button>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    startIcon={<Share />}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                      py: 1.2,
+                      boxShadow: '0 4px 12px rgba(245, 87, 108, 0.3)',
+                      '@media (max-width: 600px)': {
+                        py: 1,
+                        fontSize: '0.9rem'
+                      },
+                      '&:hover': {
+                        boxShadow: '0 6px 20px rgba(245, 87, 108, 0.4)',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    Share
+                  </Button>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    startIcon={<Download />}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                      py: 1.2,
+                      boxShadow: '0 4px 12px rgba(79, 172, 254, 0.3)',
+                      '@media (max-width: 600px)': {
+                        py: 1,
+                        fontSize: '0.9rem'
+                      },
+                      '&:hover': {
+                        boxShadow: '0 6px 20px rgba(79, 172, 254, 0.4)',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    Download
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Stack>
+        </Grid>
       </Grid>
 
       {/* Floating AI Assistant */}
@@ -2513,8 +2539,15 @@ Respond as a knowledgeable tutor who has access to the course material.`;
           },
           transition: 'all 0.3s ease',
           boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-          zIndex: 10000, // Higher z-index to appear above fullscreen content
-          // Ensure visibility in fullscreen
+          zIndex: 10000,
+          '@media (max-width: 600px)': {
+            bottom: 80,
+            width: 48,
+            height: 48,
+            '& svg': {
+              fontSize: '1.2rem'
+            }
+          },
           '@media (display-mode: fullscreen)': {
             zIndex: 10000
           }
@@ -2538,9 +2571,11 @@ Respond as a knowledgeable tutor who has access to the course material.`;
           color: 'white',
           fontWeight: 'bold',
           fontSize: '0.75rem',
-          zIndex: 10000, // Higher z-index to appear above fullscreen content
+          zIndex: 10000,
           animation: 'pulse 2s infinite',
-          // Ensure visibility in fullscreen
+          '@media (max-width: 600px)': {
+            display: 'none'
+          },
           '@media (display-mode: fullscreen)': {
             zIndex: 10000
           }
@@ -2550,7 +2585,18 @@ Respond as a knowledgeable tutor who has access to the course material.`;
       {/* Floating Action Button */}
       <Fab 
         color="primary" 
-        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        sx={{ 
+          position: 'fixed', 
+          bottom: 16, 
+          right: 16,
+          '@media (max-width: 600px)': {
+            width: 48,
+            height: 48,
+            '& svg': {
+              fontSize: '1.2rem'
+            }
+          }
+        }}
         onClick={handleBackToCourse}
       >
         <School />

@@ -385,7 +385,7 @@ const StudentDashboard = () => {
                   startIcon={<PlayArrow />}
                   onClick={() => {
                     if (activeEnrollment) {
-                      navigate(`/dashboard/student/course/${activeEnrollment.course._id}`);
+                      navigate(`/course/${activeEnrollment.course._id}/learn`);
                     } else {
                       navigate('/courses');
                     }

@@ -177,6 +177,54 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
   );
 };
 
+const FilterSidebar = styled(Paper)(({ theme }) => ({
+  borderRadius: theme.spacing(2),
+  padding: theme.spacing(2.5),
+  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+  height: 'fit-content',
+  position: 'sticky',
+  top: theme.spacing(2),
+  [theme.breakpoints.down('md')]: {
+    marginBottom: theme.spacing(2),
+    position: 'relative',
+    top: 0,
+  }
+}));
+
+const FilterSection = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+  '&:last-child': {
+    marginBottom: 0
+  }
+}));
+
+const FilterTitle = styled(Typography)(({ theme }) => ({
+  fontSize: '0.95rem',
+  fontWeight: 700,
+  color: theme.palette.primary.main,
+  marginBottom: theme.spacing(1.5),
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px'
+}));
+
+const FilterChip = styled(Chip)(({ theme }) => ({
+  margin: theme.spacing(0.5),
+  '&.MuiChip-filled': {
+    background: `linear-gradient(45deg, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
+    color: theme.palette.primary.contrastText,
+    fontWeight: 600,
+  },
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
+  },
+  transition: 'all 0.2s ease'
+}));
+
 // Responsive button component for mobile optimization
 const ResponsiveButton = styled(Button)(({ theme }) => ({
   [theme.breakpoints.down('md')]: {
@@ -213,6 +261,12 @@ const StudentCourses: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
+  
+  // Advanced filter state
+  const [levelFilters, setLevelFilters] = useState<string[]>([]);
+  const [categoryChips, setCategoryChips] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'rating' | 'enrolled'>('newest');
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   
   // Mobile drawer state
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -325,6 +379,36 @@ const StudentCourses: React.FC = () => {
             });
           }
 
+          // Apply category chips filter
+          if (categoryChips.length > 0) {
+            const keywordMap: { [key: string]: string[] } = {
+              professional_coaching: ['Professional Coaching', 'Leadership', 'Executive', 'Project Management', 'CPA', 'ACCA', 'CAT', 'Career'],
+              business_entrepreneurship_coaching: ['Business', 'Entrepreneurship', 'Startup', 'SME', 'Strategy', 'Finance', 'Marketing', 'Branding'],
+              academic_coaching: ['Academic', 'Education', 'Primary', 'Secondary', 'University', 'Exam', 'Study Skills', 'Research', 'Thesis'],
+              language_coaching: ['Language', 'English', 'French', 'Kinyarwanda', 'Business Communication', 'Public Speaking', 'Writing'],
+              technical_digital_coaching: ['Technology', 'Programming', 'Web', 'Software', 'AI', 'Machine Learning', 'Data', 'Cybersecurity', 'Cloud', 'IT', 'Digital Marketing', 'Vocational'],
+              job_seeker_coaching: ['Job', 'Career', 'Resume', 'Portfolio', 'Interview'],
+              personal_corporate_development_coaching: ['Personal Development', 'Corporate', 'Communication', 'Confidence', 'Time Management', 'Emotional Intelligence', 'Public Speaking', 'Parenting', 'Team', 'HR', 'Compliance', 'Customer Service', 'Ethics']
+            };
+            courses = courses.filter((course: any) => {
+              return categoryChips.some(catId => {
+                if (Array.isArray(course.learningCategories) && course.learningCategories.includes(catId)) {
+                  return true;
+                }
+                const keywords = keywordMap[catId] || [];
+                const hay = [course.category, course.title, course.description].join(' ').toLowerCase();
+                return keywords.some(k => hay.includes(k.toLowerCase()));
+              });
+            });
+          }
+
+          // Apply level filter
+          if (levelFilters.length > 0) {
+            courses = courses.filter((course: any) => 
+              levelFilters.includes(course.level)
+            );
+          }
+
           // Apply search filter across title, description, tags, specificInterests, subcategories, and categories
           if (searchTerm && searchTerm.trim().length > 0) {
             const term = searchTerm.trim().toLowerCase();
@@ -414,7 +498,7 @@ const StudentCourses: React.FC = () => {
   // Load courses when tab changes or filters change
   useEffect(() => {
     loadCourses();
-  }, [tabValue, searchTerm, categoryFilter, learningInterests]);
+  }, [tabValue, searchTerm, categoryFilter, learningInterests, levelFilters, categoryChips, sortBy]);
 
   // Handle URL parameters for tab and interests
   useEffect(() => {
@@ -555,10 +639,9 @@ const StudentCourses: React.FC = () => {
     try {
       setLoading(true);
       await enrollmentService.enrollInCourse(courseId);
-      // Refresh courses to update enrollment status
-      await loadCourses();
-      // Show success message
       setError(null);
+      // Navigate to dashboard after successful enrollment
+      navigate('/dashboard/student');
     } catch (err: any) {
       setError(err.message || 'Failed to enroll in course');
     } finally {
@@ -618,6 +701,9 @@ const StudentCourses: React.FC = () => {
   const clearFilters = () => {
     setSearchTerm('');
     setCategoryFilter('');
+    setLevelFilters([]);
+    setCategoryChips([]);
+    setSortBy('newest');
   };
 
   // Handle learning interest popup completion
@@ -740,6 +826,51 @@ const StudentCourses: React.FC = () => {
     setShowInterestPopup(false);
     // Mark as completed even if closed without completion
     localStorage.setItem('learningInterestsCompleted', 'true');
+  };
+
+  // Sort courses based on selected sort option
+  const sortCourses = (coursesToSort: ICourse[]) => {
+    const sorted = [...coursesToSort];
+    switch (sortBy) {
+      case 'newest':
+        return sorted.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      case 'popular':
+        return sorted.sort((a, b) => (b.enrollmentCount || 0) - (a.enrollmentCount || 0));
+      case 'rating':
+        return sorted.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+      case 'enrolled':
+        return sorted.sort((a, b) => {
+          const aEnrolled = enrollments.some(e => {
+            if (typeof e.course === 'object' && e.course && '_id' in e.course) return e.course._id === a._id;
+            return e.course === a._id;
+          });
+          const bEnrolled = enrollments.some(e => {
+            if (typeof e.course === 'object' && e.course && '_id' in e.course) return e.course._id === b._id;
+            return e.course === b._id;
+          });
+          return (bEnrolled ? 1 : 0) - (aEnrolled ? 1 : 0);
+        });
+      default:
+        return sorted;
+    }
+  };
+
+  // Handle category chip toggle
+  const handleCategoryChipToggle = (categoryId: string) => {
+    setCategoryChips(prev => 
+      prev.includes(categoryId)
+        ? prev.filter(c => c !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  // Handle level filter toggle
+  const handleLevelToggle = (level: string) => {
+    setLevelFilters(prev =>
+      prev.includes(level)
+        ? prev.filter(l => l !== level)
+        : [...prev, level]
+    );
   };
 
   return (
@@ -1298,7 +1429,7 @@ const StudentCourses: React.FC = () => {
                               variant="contained"
                               size={buttonSize}
                               startIcon={progress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                              onClick={() => navigate(`/dashboard/student/course/${course._id}`)}
+                              onClick={() => navigate(`/course/${course._id}/learn`)}
                               sx={{ 
                                 bgcolor: progress >= 100 ? 'success.main' : 'primary.main',
                                 '&:hover': {
@@ -1342,125 +1473,345 @@ const StudentCourses: React.FC = () => {
 
       {/* Discover Courses Tab */}
       <TabPanel value={tabValue} index={1}>
+        <Grid container spacing={3}>
+          {/* Sidebar Filters - Hidden on Mobile by default */}
+          {!isMobile ? (
+            <Grid item xs={12} md={3}>
+              <FilterSidebar>
+                {/* Search */}
+                <FilterSection>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Search courses..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        bgcolor: 'white',
+                      }
+                    }}
+                    InputProps={{
+                      startAdornment: <Search sx={{ mr: 1, color: 'primary.main', fontSize: 20 }} />
+                    }}
+                  />
+                </FilterSection>
 
-        {/* Search and Filters - Minimal */}
-        <Paper sx={{ p: { xs: 2, md: 2 }, mb: 2, borderRadius: 2, background: 'white', border: '1px solid rgba(0,0,0,0.06)' }}>
-          <Grid container spacing={{ xs: 1.5, md: 2 }} alignItems="center">
-            <Grid item xs={12} md={8}>
-              <TextField
-                fullWidth
-                placeholder={isMobile ? "Search courses, subcategories, categories..." : "Search courses, subcategories, categories..."}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    bgcolor: 'white',
-                    fontSize: { xs: '0.9rem', md: '0.95rem' },
-                    border: '1px solid rgba(0,0,0,0.1)'
-                  }
-                }}
-                InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: 'primary.main' }} />
-                }}
-                size="small"
-              />
+                {/* Sort */}
+                <FilterSection>
+                  <FilterTitle>
+                    <TrendingUp fontSize="small" />
+                    Sort By
+                  </FilterTitle>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      sx={{
+                        borderRadius: 1.5,
+                        bgcolor: 'white',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'rgba(0,0,0,0.1)'
+                        }
+                      }}
+                    >
+                      <MenuItem value="newest">📅 Newest</MenuItem>
+                      <MenuItem value="popular">🔥 Most Popular</MenuItem>
+                      <MenuItem value="rating">⭐ Highest Rated</MenuItem>
+                      <MenuItem value="enrolled">✅ Enrolled First</MenuItem>
+                    </Select>
+                  </FormControl>
+                </FilterSection>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Level Filter */}
+                <FilterSection>
+                  <FilterTitle>
+                    <Psychology fontSize="small" />
+                    Level
+                  </FilterTitle>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {['Beginner', 'Intermediate', 'Advanced'].map((level) => (
+                      <Chip
+                        key={level}
+                        label={level}
+                        onClick={() => handleLevelToggle(level)}
+                        variant={levelFilters.includes(level) ? 'filled' : 'outlined'}
+                        color={levelFilters.includes(level) ? 'primary' : 'default'}
+                        sx={{
+                          justifyContent: 'flex-start',
+                          '& .MuiChip-label': { width: '100%', textAlign: 'left' }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </FilterSection>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Category Filter */}
+                <FilterSection>
+                  <FilterTitle>
+                    <LocalLibrary fontSize="small" />
+                    Categories
+                  </FilterTitle>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {[
+                      { id: 'professional_coaching', label: '💼 Professional' },
+                      { id: 'business_entrepreneurship_coaching', label: '🚀 Business' },
+                      { id: 'academic_coaching', label: '📚 Academic' },
+                      { id: 'language_coaching', label: '🗣️ Language' },
+                      { id: 'technical_digital_coaching', label: '💻 Tech & Digital' },
+                      { id: 'job_seeker_coaching', label: '💼 Job Seeking' },
+                      { id: 'personal_corporate_development_coaching', label: '🌟 Personal Dev' }
+                    ].map((cat) => (
+                      <Chip
+                        key={cat.id}
+                        label={cat.label}
+                        onClick={() => handleCategoryChipToggle(cat.id)}
+                        variant={categoryChips.includes(cat.id) ? 'filled' : 'outlined'}
+                        color={categoryChips.includes(cat.id) ? 'primary' : 'default'}
+                        sx={{
+                          justifyContent: 'flex-start',
+                          '& .MuiChip-label': { width: '100%', textAlign: 'left' }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </FilterSection>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Clear Filters */}
+                {(searchTerm || categoryFilter || levelFilters.length > 0 || categoryChips.length > 0) && (
+                  <ActionButton
+                    fullWidth
+                    variant="outlined"
+                    onClick={clearFilters}
+                    startIcon={<ClearAll />}
+                    size="small"
+                    sx={{ mt: 1 }}
+                  >
+                    Clear All
+                  </ActionButton>
+                )}
+              </FilterSidebar>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={categoryFilter}
-                  label="Category"
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  sx={{ borderRadius: 2, bgcolor: 'white', border: '1px solid rgba(0,0,0,0.1)' }}
+          ) : null}
+
+          {/* Main Content Area */}
+          <Grid item xs={12} md={isMobile ? 12 : 9}>
+            {/* Mobile Filter Toggle */}
+            {isMobile && (
+              <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
+                  startIcon={<FilterList />}
+                  size="small"
                 >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="professional_coaching">Professional Coaching</MenuItem>
-                  <MenuItem value="business_entrepreneurship_coaching">Business & Entrepreneurship</MenuItem>
-                  <MenuItem value="academic_coaching">Academic Coaching</MenuItem>
-                  <MenuItem value="language_coaching">Language Coaching</MenuItem>
-                  <MenuItem value="technical_digital_coaching">Technical & Digital</MenuItem>
-                  <MenuItem value="job_seeker_coaching">Job Seeker Coaching</MenuItem>
-                  <MenuItem value="personal_corporate_development_coaching">Personal & Corporate</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-          
-          {/* Clear Filters Button */}
-          {(searchTerm || categoryFilter) && (
-            <Box sx={{ mt: 1.5, textAlign: 'right' }}>
-              <ResponsiveButton
-                variant="outlined"
-                onClick={clearFilters}
-                startIcon={<ClearAll />}
-                size="small"
-              >
-                Clear All Filters
-              </ResponsiveButton>
-            </Box>
-          )}
-        </Paper>
+                  Filters
+                </Button>
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <Select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                  >
+                    <MenuItem value="newest">Newest</MenuItem>
+                    <MenuItem value="popular">Popular</MenuItem>
+                    <MenuItem value="rating">Rated</MenuItem>
+                    <MenuItem value="enrolled">Enrolled</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
 
-        {loading ? (
-          <Box display="flex" flexDirection="column" alignItems="center" py={8}>
-            <CircularProgress size={60} thickness={4} />
-            <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>
-              Finding amazing courses for you...
-            </Typography>
-          </Box>
-        ) : availableCourses.length === 0 ? (
-          <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3, bgcolor: 'grey.50' }}>
-            <Psychology sx={{ fontSize: 80, color: 'primary.main', opacity: 0.7, mb: 2 }} />
-            <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
-              🤔 No courses found
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              {learningInterests ? 
-                "No courses match your selected interests. Try adjusting your preferences or browse all courses." :
-                "Try adjusting your search terms or browse all categories"
-              }
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-              <ActionButton
-                variant="outlined"
-                onClick={() => {
-                  setSearchTerm('');
-                  setCategoryFilter('');
-                  setLearningInterests(null);
-                  localStorage.removeItem('learningInterests');
-                }}
+            {/* Mobile Filter Drawer */}
+            {isMobile && (
+              <Drawer
+                anchor="left"
+                open={mobileFilterOpen}
+                onClose={() => setMobileFilterOpen(false)}
               >
-                🔄 Clear All Filters
-              </ActionButton>
-              {learningInterests && (
-                <ActionButton
-                  variant="contained"
-                  onClick={() => {
-                    console.log('🔄 Show All Courses clicked - clearing interests');
-                    setLearningInterests(null);
-                    localStorage.removeItem('learningInterests');
-                    setSearchTerm('');
-                    setCategoryFilter('');
-                    loadCourses();
+                <FilterSidebar sx={{ width: 300, height: '100vh', borderRadius: 0, position: 'relative', top: 0 }}>
+                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      Filters
+                    </Typography>
+                    <IconButton onClick={() => setMobileFilterOpen(false)} size="small">
+                      <Close />
+                    </IconButton>
+                  </Box>
+
+                  {/* Mobile Search */}
+                  <FilterSection>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Search courses..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          bgcolor: 'white',
+                        }
+                      }}
+                      InputProps={{
+                        startAdornment: <Search sx={{ mr: 1, color: 'primary.main', fontSize: 20 }} />
+                      }}
+                    />
+                  </FilterSection>
+
+                  {/* Mobile Level Filter */}
+                  <FilterSection>
+                    <FilterTitle>Level</FilterTitle>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {['Beginner', 'Intermediate', 'Advanced'].map((level) => (
+                        <Chip
+                          key={level}
+                          label={level}
+                          onClick={() => handleLevelToggle(level)}
+                          variant={levelFilters.includes(level) ? 'filled' : 'outlined'}
+                          color={levelFilters.includes(level) ? 'primary' : 'default'}
+                          fullWidth
+                        />
+                      ))}
+                    </Box>
+                  </FilterSection>
+
+                  {/* Mobile Category Filter */}
+                  <FilterSection>
+                    <FilterTitle>Categories</FilterTitle>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {[
+                        { id: 'professional_coaching', label: '💼 Professional' },
+                        { id: 'business_entrepreneurship_coaching', label: '🚀 Business' },
+                        { id: 'academic_coaching', label: '📚 Academic' },
+                        { id: 'language_coaching', label: '🗣️ Language' },
+                        { id: 'technical_digital_coaching', label: '💻 Tech' },
+                        { id: 'job_seeker_coaching', label: '💼 Job Seeking' },
+                        { id: 'personal_corporate_development_coaching', label: '🌟 Personal' }
+                      ].map((cat) => (
+                        <Chip
+                          key={cat.id}
+                          label={cat.label}
+                          onClick={() => handleCategoryChipToggle(cat.id)}
+                          variant={categoryChips.includes(cat.id) ? 'filled' : 'outlined'}
+                          color={categoryChips.includes(cat.id) ? 'primary' : 'default'}
+                          fullWidth
+                        />
+                      ))}
+                    </Box>
+                  </FilterSection>
+
+                  {(searchTerm || categoryFilter || levelFilters.length > 0 || categoryChips.length > 0) && (
+                    <ActionButton
+                      fullWidth
+                      variant="outlined"
+                      onClick={() => {
+                        clearFilters();
+                        setMobileFilterOpen(false);
+                      }}
+                      startIcon={<ClearAll />}
+                      size="small"
+                      sx={{ mt: 2 }}
+                    >
+                      Clear All
+                    </ActionButton>
+                  )}
+                </FilterSidebar>
+              </Drawer>
+            )}
+
+            {/* Search Bar for Desktop */}
+            {!isMobile && (
+              <Paper sx={{ p: 2, mb: 3, borderRadius: 2, background: 'white', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <TextField
+                  fullWidth
+                  placeholder="🔍 Search courses, skills, instructors..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      bgcolor: 'white',
+                      fontSize: '0.95rem',
+                      border: '1px solid rgba(0,0,0,0.1)'
+                    }
                   }}
-                >
-                  👀 Show All Courses
-                </ActionButton>
-              )}
-            </Stack>
-          </Paper>
-        ) : (
-          <>
-            <Box sx={{ mb: 3, textAlign: 'center' }}>
-              <Typography variant="h6" color="text.secondary">
-                ✨ Found {availableCourses.length} amazing course{availableCourses.length !== 1 ? 's' : ''} for you!
-              </Typography>
-            </Box>
-            
-            <Grid container spacing={{ xs: 2, md: 3 }}>
-              {availableCourses.map((course, index) => {
+                  InputProps={{
+                    startAdornment: <Search sx={{ mr: 1.5, color: 'primary.main', fontSize: 22 }} />
+                  }}
+                />
+              </Paper>
+            )}
+
+            {loading ? (
+              <Box display="flex" flexDirection="column" alignItems="center" py={8}>
+                <CircularProgress size={60} thickness={4} />
+                <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>
+                  Finding amazing courses for you...
+                </Typography>
+              </Box>
+            ) : availableCourses.length === 0 ? (
+              <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3, bgcolor: 'grey.50' }}>
+                <Psychology sx={{ fontSize: 80, color: 'primary.main', opacity: 0.7, mb: 2 }} />
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+                  🤔 No courses found
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  {learningInterests ? 
+                    "No courses match your selected interests. Try adjusting your preferences or browse all courses." :
+                    "Try adjusting your search terms or browse all categories"
+                  }
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+                  <ActionButton
+                    variant="outlined"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setCategoryFilter('');
+                      setLearningInterests(null);
+                      setLevelFilters([]);
+                      setCategoryChips([]);
+                      localStorage.removeItem('learningInterests');
+                    }}
+                  >
+                    🔄 Clear All Filters
+                  </ActionButton>
+                  {learningInterests && (
+                    <ActionButton
+                      variant="contained"
+                      onClick={() => {
+                        console.log('🔄 Show All Courses clicked - clearing interests');
+                        setLearningInterests(null);
+                        localStorage.removeItem('learningInterests');
+                        setSearchTerm('');
+                        setCategoryFilter('');
+                        setLevelFilters([]);
+                        setCategoryChips([]);
+                        loadCourses();
+                      }}
+                    >
+                      👀 Show All Courses
+                    </ActionButton>
+                  )}
+                </Stack>
+              </Paper>
+            ) : (
+              <>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center' }}>
+                    ✨ Found {availableCourses.length} amazing course{availableCourses.length !== 1 ? 's' : ''} for you!
+                  </Typography>
+                </Box>
+                
+                <Grid container spacing={{ xs: 2, md: 3 }}>
+              {sortCourses(availableCourses).map((course, index) => {
                 const levelColor = getLevelColor(course.level);
                 const isEnrolled = enrollments.some(e => {
                   if (typeof e.course === 'object' && e.course && '_id' in e.course) {
@@ -1607,7 +1958,7 @@ const StudentCourses: React.FC = () => {
                                 variant="contained"
                                 size={buttonSize}
                                 startIcon={enrollmentProgress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                                onClick={() => navigate(`/dashboard/student/course/${course._id}`)}
+                                onClick={() => navigate(`/course/${course._id}/learn`)}
                                 sx={{ 
                                   bgcolor: enrollmentProgress >= 100 ? 'success.main' : 'primary.main',
                                   '&:hover': {
@@ -1675,9 +2026,11 @@ const StudentCourses: React.FC = () => {
                   </Grid>
                 );
               })}
-            </Grid>
-          </>
-        )}
+                </Grid>
+              </>
+            )}
+          </Grid>
+        </Grid>
       </TabPanel>
 
       {/* Floating Help Button */}

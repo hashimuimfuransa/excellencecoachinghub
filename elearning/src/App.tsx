@@ -71,7 +71,6 @@ import Progress from './pages/Student/Progress';
 import AIAssistantPage from './pages/Student/AIAssistantPage';
 import StudentSettings from './pages/Student/StudentSettings';
 import RecordedSessionsPage from './pages/Student/RecordedSessionsPage';
-import CourseViewPage from './pages/Student/CourseViewPage';
 import CourseMaterialPage from './pages/Student/CourseMaterialPage';
 
 import EnhancedCourseViewPage from './pages/Student/EnhancedCourseViewPage';
@@ -305,7 +304,6 @@ const App: React.FC = () => {
           <Route path="course/:id/announcements" element={<CourseAnnouncementsPage />} />
           <Route path="course/:courseId/events" element={<EventsAndAnnouncementsPage />} />
           <Route path="course/:courseId/announcements" element={<EventsAndAnnouncementsPage />} />
-          <Route path="course/:id" element={<CourseViewPage />} />
           <Route path="quiz/:quizId" element={<StudentQuizPage />} />
           <Route path="certificate/:certificateId" element={<CertificatePage />} />
           <Route path="assignment/:assignmentId" element={<TakeExamNew />} />

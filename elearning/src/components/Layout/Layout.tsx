@@ -173,7 +173,7 @@ const ResponsiveMain = styled(Box, {
   minHeight: '100vh',
   backgroundColor: '#f8fafc',
   padding: theme.spacing(0, 1, 2, 1),
-  paddingTop: theme.spacing(1),
+  paddingTop: theme.spacing(0.5),
   marginLeft: 0,
   transition: theme.transitions.create(['margin', 'padding'], {
     duration: theme.transitions.duration.enteringScreen,
@@ -182,11 +182,11 @@ const ResponsiveMain = styled(Box, {
   [theme.breakpoints.up('md')]: {
     marginLeft: collapsed ? COLLAPSED_DRAWER_WIDTH : EXPANDED_DRAWER_WIDTH,
     padding: theme.spacing(0, 3, 4, 3),
-    paddingTop: theme.spacing(2),
+    paddingTop: theme.spacing(0.5),
   },
   [theme.breakpoints.up('lg')]: {
     padding: theme.spacing(0, 4, 6, 4),
-    paddingTop: theme.spacing(3),
+    paddingTop: theme.spacing(0.5),
   },
 }));
 

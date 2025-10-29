@@ -35,6 +35,7 @@ export interface IGeneratedPsychometricTestDocument extends Document {
     jobDescription: string;
     requiredSkills: string[];
     experienceLevel: string;
+    selectedCategories?: string[];
   };
 }
 
@@ -189,7 +190,8 @@ const generatedPsychometricTestSchema = new Schema<IGeneratedPsychometricTestDoc
     jobTitle: { type: String, required: true },
     jobDescription: { type: String, required: true },
     requiredSkills: [{ type: String }],
-    experienceLevel: { type: String, required: true }
+    experienceLevel: { type: String, required: true },
+    selectedCategories: [{ type: String }]
   }
 }, {
   timestamps: true,

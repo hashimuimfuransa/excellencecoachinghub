@@ -197,6 +197,10 @@ const SidebarCard = styled(Card)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
   position: 'sticky',
   top: theme.spacing(2),
+  [theme.breakpoints.down('md')]: {
+    position: 'relative',
+    top: 'auto',
+  },
 }));
 
 interface ModernSocialNetworkPageProps {}
@@ -1437,7 +1441,7 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
   };
 
   const renderRightSidebar = () => (
-    <Box sx={{ position: 'sticky', top: theme.spacing(2) }}>
+    <Box sx={{ position: { xs: 'relative', md: 'sticky' }, top: { md: theme.spacing(2) } }}>
       {/* User Profile Section */}
       <SidebarCard sx={{ 
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -2295,11 +2299,11 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
       )}
 
       <Container maxWidth="xl" sx={{ py: isMobile ? 1 : 3, px: { xs: 1, sm: 2, md: 3 } }}>
-        <Box sx={{ display: 'flex', gap: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
           
           {/* Left Job Preparation Column */}
           {!isMobile && (
-            <Box sx={{ width: { md: 260, lg: 280 } }}>
+            <Box sx={{ width: { md: 220, lg: 240 } }}>
               {renderJobPreparationColumn()}
             </Box>
           )}
@@ -2445,12 +2449,15 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
         </Box>
           </Box>
 
-          {/* Right Sidebar - Desktop and Tablet */}
-          {!isMobile && (
-            <Box sx={{ width: { xs: '100%', md: 260, lg: 300 } }}>
-              {renderRightSidebar()}
-            </Box>
-          )}
+          {/* Right Sidebar */}
+          <Box
+            sx={{
+              width: { xs: '100%', md: 260, lg: 300 },
+              mt: { xs: 3, md: 0 }
+            }}
+          >
+            {renderRightSidebar()}
+          </Box>
             </Box>
       </Container>
 

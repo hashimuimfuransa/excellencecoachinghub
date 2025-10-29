@@ -67,6 +67,64 @@ interface TestQuestion {
   category: string;
 }
 
+const DEFAULT_CATEGORY_IDS = [
+  'time_management',
+  'teamwork',
+  'communication',
+  'decision_making'
+];
+
+const PSYCHOMETRIC_CATEGORY_OPTIONS = [
+  {
+    id: 'time_management',
+    label: 'Time Management'
+  },
+  {
+    id: 'teamwork',
+    label: 'Teamwork & Collaboration'
+  },
+  {
+    id: 'communication',
+    label: 'Communication'
+  },
+  {
+    id: 'decision_making',
+    label: 'Decision Making'
+  },
+  {
+    id: 'problem_solving',
+    label: 'Problem Solving'
+  },
+  {
+    id: 'leadership',
+    label: 'Leadership'
+  },
+  {
+    id: 'conflict_resolution',
+    label: 'Conflict Resolution'
+  },
+  {
+    id: 'adaptability',
+    label: 'Adaptability'
+  },
+  {
+    id: 'creativity',
+    label: 'Creativity'
+  },
+  {
+    id: 'critical_thinking',
+    label: 'Critical Thinking'
+  },
+  {
+    id: 'emotional_intelligence',
+    label: 'Emotional Intelligence'
+  },
+  {
+    id: 'stress_management',
+    label: 'Stress Management'
+  }
+];
+
 const PsychometricTestsPage: React.FC = () => {
   const { user } = useAuth();
   
@@ -90,6 +148,7 @@ const PsychometricTestsPage: React.FC = () => {
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jobSearchTerm, setJobSearchTerm] = useState('');
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(DEFAULT_CATEGORY_IDS);
   const [paymentRequestOpen, setPaymentRequestOpen] = useState(false);
   const [requestTestDialogOpen, setRequestTestDialogOpen] = useState(false);
   const [selectedJobForPayment, setSelectedJobForPayment] = useState<Job | null>(null);
@@ -186,6 +245,12 @@ Alternatively, you can:
 
     return () => clearInterval(interval);
   }, [user, testInProgress]);
+
+  useEffect(() => {
+    if (jobSelectionOpen) {
+      setSelectedCategoryIds(DEFAULT_CATEGORY_IDS);
+    }
+  }, [jobSelectionOpen]);
 
   useEffect(() => {
     let interval: any;
@@ -325,7 +390,8 @@ Alternatively, you can:
         industry: 'General',
         testType: 'basic',
         questionCount: 10,
-        timeLimit: 15
+        timeLimit: 15,
+        categories: selectedCategoryIds
       });
 
       // Start test session
@@ -383,9 +449,22 @@ Alternatively, you can:
     setSelectedJobInDialog(job);
   };
 
+  const handleCategoryToggle = (categoryId: string) => {
+    setSelectedCategoryIds(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
   const handleGenerateAssessment = async () => {
     if (!selectedJobInDialog) {
       setError('Please select a job first');
+      return;
+    }
+
+    if (selectedCategoryIds.length === 0) {
+      setError('Select at least one psychometric focus area');
       return;
     }
 
@@ -396,7 +475,8 @@ Alternatively, you can:
       approvedRequests,
       hasApprovedRequest: approvedRequests[selectedJobInDialog._id],
       pendingRequests,
-      hasPendingRequest: pendingRequests[selectedJobInDialog._id]
+      hasPendingRequest: pendingRequests[selectedJobInDialog._id],
+      selectedCategoryIds
     });
 
     if (testType === 'free') {
@@ -606,7 +686,8 @@ Alternatively, you can:
         industry: 'General',
         testType: 'premium',
         questionCount: 40,
-        timeLimit: 60
+        timeLimit: 60,
+        categories: selectedCategoryIds
       });
 
       console.log('✅ Test generation successful:', testGeneration);
@@ -1117,10 +1198,30 @@ Alternatively, you can:
           </Stack>
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Choose a job position for your psychometric assessment. All available jobs are shown below.
           </Typography>
-          
+
+          <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+            Select psychometric focus areas
+          </Typography>
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 3 }}>
+            {PSYCHOMETRIC_CATEGORY_OPTIONS.map(option => {
+              const selected = selectedCategoryIds.includes(option.id);
+              return (
+                <Chip
+                  key={option.id}
+                  label={option.label}
+                  color={selected ? 'primary' : 'default'}
+                  variant={selected ? 'filled' : 'outlined'}
+                  onClick={() => handleCategoryToggle(option.id)}
+                  sx={{ borderRadius: 2 }}
+                />
+              );
+            })}
+          </Box>
+
           <TextField
             fullWidth
             variant="outlined"

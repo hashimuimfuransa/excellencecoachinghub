@@ -49,6 +49,7 @@ class SimplePsychometricService {
     testType?: 'basic' | 'premium';
     questionCount?: number;
     timeLimit?: number;
+    categories?: string[];
   }): Promise<{ testSessionId: string; jobTitle: string; testLevel: string; questionCount: number; timeLimit: number; instructions: string }> {
     try {
       console.log('🚀 Generating simple psychometric test:', params);
@@ -64,7 +65,8 @@ class SimplePsychometricService {
       // Send the correct parameters that the backend expects
       const requestData = {
         jobId: params.jobId,
-        levelId: levelId
+        levelId: levelId,
+        categories: params.categories && params.categories.length > 0 ? params.categories : undefined
       };
       
       console.log('📤 Sending request data:', requestData);

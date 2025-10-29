@@ -152,6 +152,7 @@ export class AIService {
     timeLimit: number;
     userId: string;
     jobId: string;
+    categories: string[];
   }): Promise<{
     questions: Array<{
       question: string;
@@ -162,7 +163,7 @@ export class AIService {
     }>;
   }> {
     try {
-      const { jobTitle, jobDescription, industry, experienceLevel, skills, questionCount, testLevel, timeLimit, userId, jobId } = params;
+      const { jobTitle, jobDescription, industry, experienceLevel, skills, questionCount, testLevel, timeLimit, userId, jobId, categories } = params;
       
       // Fetch previous questions for this user and job to avoid duplicates
       let previousQuestions: string[] = [];
@@ -204,12 +205,12 @@ ${previousQuestions.length > 0 ? `6. CRITICAL: Avoid generating questions simila
    ${previousQuestions.slice(0, 20).map((q, i) => `- "${q}"`).join('\n   ')}
    ${previousQuestions.length > 20 ? `   ... and ${previousQuestions.length - 20} more questions` : ''}
    Generate completely different questions that test the same competencies but with different wording, scenarios, and approaches.` : ''}
+7. PRIMARY FOCUS AREAS: Only generate questions aligned with these psychometric focus areas selected by the user:
+${categories.map((category, index) => `   ${index + 1}. ${category.replace(/_/g, ' ')}`).join('\n')}
+   Do not include any questions outside of these selected categories.
 
-Assessment Areas (distribute questions evenly):
-1. COGNITIVE ABILITIES (25% of questions) - logical reasoning, analytical thinking, pattern recognition
-2. PERSONALITY TRAITS (25% of questions) - behavior patterns, work style preferences, team dynamics
-3. PROBLEM-SOLVING (25% of questions) - creative solutions, critical thinking, decision-making
-4. SITUATIONAL JUDGMENT (25% of questions) - workplace scenarios, ethical decisions, conflict resolution
+Assessment Areas (distribute questions evenly across the selected focus areas):
+${categories.map((category, index) => `${index + 1}. ${category.replace(/_/g, ' ').toUpperCase()}`).join('\n')}
 
 Requirements:
 - Each question must have exactly 4 options
@@ -310,36 +311,16 @@ Generate all ${questionCount} questions now:`;
             // Clean up category values with comprehensive normalization
             let category = question.category;
             if (typeof category === 'string') {
-              category = category.toLowerCase().trim();
+              category = category.toLowerCase().trim().replace(/\s+/g, '_');
               
-              // Remove common variations and normalize to valid enum values
-              if (category === 'problemsolving' || 
-                  category === 'problem_solving' || 
-                  category.includes('problem') || 
-                  category.includes('solving')) {
-                category = 'problem-solving';
-              } else if (category.includes('situational') || 
-                         category.includes('judgment') || 
-                         category.includes('scenario')) {
-                category = 'situational';
-              } else if (category.includes('personality') || 
-                         category.includes('behavior') || 
-                         category.includes('trait')) {
-                category = 'personality';
-              } else if (category.includes('cognitive') || 
-                         category.includes('logical') || 
-                         category.includes('analytical') ||
-                         category.includes('reasoning')) {
-                category = 'cognitive';
-              } else {
-                // Default fallback
-                console.warn(`⚠️ Unknown category "${question.category}" for question ${index + 1}, defaulting to cognitive`);
-                category = 'cognitive';
+              if (!categories.includes(category)) {
+                console.warn(`⚠️ Question ${index + 1} category "${question.category}" not in selected categories, defaulting to ${categories[0]}`);
+                category = categories[0];
               }
               
               console.log(`🔄 Category mapping: "${question.category}" → "${category}"`);
             } else {
-              category = 'cognitive';
+              category = categories[0];
             }
             
             return {
@@ -356,7 +337,8 @@ Generate all ${questionCount} questions now:`;
             question.question && 
             question.options && 
             Array.isArray(question.options) && 
-            question.options.length === 4
+            question.options.length === 4 &&
+            categories.includes(question.category)
           );
           
           // Ensure exact question count
@@ -367,14 +349,13 @@ Generate all ${questionCount} questions now:`;
             console.log(`⚠️ AI generated ${result.questions.length} valid questions, padding to ${questionCount}`);
             // Add high-quality fallback questions to reach the target count
             const needed = questionCount - result.questions.length;
-            const categories = ['cognitive', 'personality', 'problem-solving', 'situational'];
             
             for (let i = 0; i < needed; i++) {
               const questionNum = result.questions.length + 1;
               const category = categories[i % categories.length];
               
               result.questions.push({
-                question: `As a ${jobTitle} professional in the ${industry} industry, how would you approach a ${testLevel} level challenge that requires ${category} skills?`,
+                question: `As a ${jobTitle} professional in the ${industry} industry, how would you approach a ${testLevel} level challenge that requires ${category.replace(/_/g, ' ')}?`,
                 options: [
                   "Take a systematic and analytical approach",
                   "Rely on past experience only",

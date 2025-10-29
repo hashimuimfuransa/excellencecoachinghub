@@ -7,6 +7,73 @@ import { aiService } from '../services/aiService';
 import { validateObjectIdParam } from '../utils/validation';
 import mongoose from 'mongoose';
 
+const PSYCHOMETRIC_CATEGORY_DEFINITIONS: Record<string, { label: string }> = {
+  time_management: { label: 'Time Management' },
+  teamwork: { label: 'Teamwork & Collaboration' },
+  communication: { label: 'Communication' },
+  decision_making: { label: 'Decision Making' },
+  problem_solving: { label: 'Problem Solving' },
+  leadership: { label: 'Leadership' },
+  conflict_resolution: { label: 'Conflict Resolution' },
+  adaptability: { label: 'Adaptability' },
+  creativity: { label: 'Creativity' },
+  critical_thinking: { label: 'Critical Thinking' },
+  emotional_intelligence: { label: 'Emotional Intelligence' },
+  stress_management: { label: 'Stress Management' }
+};
+
+const DEFAULT_CATEGORY_IDS = ['time_management', 'teamwork', 'communication', 'decision_making'];
+
+const sanitizeCategoryIds = (rawCategories: unknown): string[] => {
+  if (!Array.isArray(rawCategories)) {
+    return DEFAULT_CATEGORY_IDS;
+  }
+
+  const sanitized = rawCategories
+    .map((value) => {
+      if (typeof value !== 'string') {
+        return null;
+      }
+      const normalized = value.toLowerCase().trim().replace(/\s+/g, '_');
+      if (PSYCHOMETRIC_CATEGORY_DEFINITIONS[normalized]) {
+        return normalized;
+      }
+      return null;
+    })
+    .filter((value): value is string => Boolean(value));
+
+  if (sanitized.length === 0) {
+    return DEFAULT_CATEGORY_IDS;
+  }
+
+  return Array.from(new Set(sanitized));
+};
+
+const normalizeQuestionText = (question: any): string | null => {
+  if (!question || typeof question.question !== 'string') {
+    return null;
+  }
+  const normalized = question.question.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return null;
+  }
+  return normalized;
+};
+
+const addUniqueQuestions = (questions: any[], seen: Set<string>, store: any[]): void => {
+  if (!Array.isArray(questions)) {
+    return;
+  }
+  for (const question of questions) {
+    const key = normalizeQuestionText(question);
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    store.push(question);
+  }
+};
+
 /**
  * @desc Generate psychometric test based on job and user's purchased level
  * @route POST /api/psychometric-tests/generate-test
@@ -14,7 +81,9 @@ import mongoose from 'mongoose';
  */
 export const generatePsychometricTest = async (req: AuthRequest, res: Response) => {
   try {
-    const { jobId, levelId } = req.body;
+    const { jobId, levelId, categories: rawCategories } = req.body;
+
+    const selectedCategories = sanitizeCategoryIds(rawCategories);
     const userId = req.user?.id;
 
     if (!userId) {
@@ -75,31 +144,60 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
       }
     }
 
-    // Generate test using AI service with proper JSON parsing
-    const testData = await aiService.generatePsychometricTest({
+    const generationPayload = {
       jobTitle: job.title,
       jobDescription: job.description,
       industry: job.industry,
       experienceLevel: job.experienceLevel,
       skills: job.skills && Array.isArray(job.skills) ? job.skills : [],
-      questionCount,
       testLevel: levelId,
       timeLimit,
       userId: userId,
-      jobId: jobId
+      jobId: jobId,
+      categories: selectedCategories
+    };
+
+    const initialData = await aiService.generatePsychometricTest({
+      ...generationPayload,
+      questionCount
     });
 
-    // Validate the structure
-    if (!testData.questions || !Array.isArray(testData.questions)) {
+    if (!initialData.questions || !Array.isArray(initialData.questions)) {
       return res.status(500).json({
         success: false,
         error: 'Failed to generate test questions - invalid structure'
       });
     }
 
-    console.log('✅ Successfully generated', testData.questions.length, 'questions for', job.title);
+    const desiredQuestionCount = questionCount;
+    const seenQuestions = new Set<string>();
+    const uniqueQuestions: any[] = [];
+    addUniqueQuestions(initialData.questions, seenQuestions, uniqueQuestions);
 
-    // Save the generated test to the database for tracking
+    let uniquenessAttempts = 0;
+    const maxUniquenessAttempts = 2;
+
+    while (uniqueQuestions.length < desiredQuestionCount && uniquenessAttempts < maxUniquenessAttempts) {
+      uniquenessAttempts++;
+      const remaining = desiredQuestionCount - uniqueQuestions.length;
+      const additionalData = await aiService.generatePsychometricTest({
+        ...generationPayload,
+        questionCount: Math.max(remaining, desiredQuestionCount)
+      });
+      addUniqueQuestions(additionalData.questions, seenQuestions, uniqueQuestions);
+    }
+
+    if (uniqueQuestions.length < desiredQuestionCount) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate sufficient unique questions'
+      });
+    }
+
+    const finalQuestions = uniqueQuestions.slice(0, desiredQuestionCount);
+
+    console.log('✅ Successfully generated', finalQuestions.length, 'unique questions for', job.title);
+
     try {
       const generatedTestId = `gen_test_${userId}_${jobId}_${Date.now()}`;
       
@@ -110,7 +208,7 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
         title: `Psychometric Assessment for ${job.title}`,
         description: `AI-generated psychometric test for ${job.title} position`,
         type: 'comprehensive',
-        questions: testData.questions.map((q, index) => ({
+        questions: finalQuestions.map((q, index) => ({
           id: `q${index + 1}`,
           number: index + 1,
           question: q.question,
@@ -125,24 +223,23 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
         industry: job.industry,
         jobRole: job.title,
         difficulty: levelId === 'intermediate' ? 'moderate' : (levelId === 'advanced' ? 'hard' : 'easy'),
-        categories: [...new Set(testData.questions.map(q => q.category).filter(Boolean))],
+        categories: selectedCategories,
         jobSpecific: true,
         metadata: {
           jobTitle: job.title,
           jobDescription: job.description,
           requiredSkills: job.skills && Array.isArray(job.skills) ? job.skills : [],
-          experienceLevel: job.experienceLevel
+          experienceLevel: job.experienceLevel,
+          selectedCategories
         }
       });
       
       console.log('✅ Generated test saved to database with ID:', generatedTestId);
+      console.log('🎯 Selected categories persisted:', selectedCategories);
     } catch (saveError) {
       console.warn('⚠️ Warning: Could not save generated test to database:', saveError);
-      // Continue execution - this is not critical for the test generation
     }
 
-    // Create test session (simple version - no purchase required)
-    // Use retry logic for MongoDB operations after long AI generation
     let testSession;
     let retryCount = 0;
     const maxRetries = 3;
@@ -153,13 +250,13 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
           user: userId,
           job: jobId,
           testLevel: levelId,
-          purchase: null, // No purchase required for simple tests
-          questions: testData.questions,
+          purchase: null,
+          questions: finalQuestions,
           timeLimit: timeLimit,
           status: 'ready',
           generatedAt: new Date()
         });
-        break; // Success, exit retry loop
+        break;
       } catch (dbError: any) {
         retryCount++;
         console.log(`🔄 MongoDB retry ${retryCount}/${maxRetries} for test session creation`);
@@ -169,7 +266,6 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
           throw dbError;
         }
         
-        // Wait a bit before retrying
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
@@ -189,9 +285,9 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
         testSessionId: testSession._id,
         jobTitle: job.title,
         testLevel: levelId,
-        questionCount: testData.questions.length,
+        questionCount: finalQuestions.length,
         timeLimit: timeLimit,
-        instructions: `You have ${timeLimit} minutes to complete ${testData.questions.length} questions. Each question has only one correct answer. Good luck!`
+        instructions: `You have ${timeLimit} minutes to complete ${finalQuestions.length} questions. Each question has only one correct answer. Good luck!`
       },
       message: 'Psychometric test generated successfully!'
     });

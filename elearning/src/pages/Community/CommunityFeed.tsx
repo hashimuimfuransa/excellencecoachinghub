@@ -302,15 +302,15 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
             console.log('Comments loaded:', response.data.comments);
             
             // Organize comments with their replies
-            const organizedComments = response.data.comments.map(comment => ({
+            const organizedComments = response.data.comments.map((comment: { id: any; }) => ({
               ...comment,
-              replies: response.data.comments.filter(reply => 
+              replies: response.data.comments.filter((reply: { parentCommentId: any; }) => 
                 reply.parentCommentId === comment.id
               )
             }));
 
             // Only show top-level comments (those without parentCommentId)
-            const topLevelComments = organizedComments.filter(comment => !comment.parentCommentId);
+            const topLevelComments = organizedComments.filter((comment: { parentCommentId: any; }) => !comment.parentCommentId);
             
             setComments(prev => ({
               ...prev,

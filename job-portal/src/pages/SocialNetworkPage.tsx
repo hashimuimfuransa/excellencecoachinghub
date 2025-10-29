@@ -92,6 +92,7 @@ import {
   Settings,
   Help,
   CheckCircle,
+  Psychology,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -728,6 +729,129 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
     { icon: <Notifications />, label: 'Notifications', value: 'notifications' },
     { icon: <Chat />, label: 'Messages', value: 'messages' },
   ];
+
+  const jobPreparationServices = [
+    {
+      id: 'psychometric',
+      title: 'Psychometric Tests',
+      description: 'Discover strengths with tailored assessments',
+      icon: Psychology,
+      onClick: () => handlePsychometricTests(),
+      gradient: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)'
+    },
+    {
+      id: 'smart-exams',
+      title: 'Smart Exams',
+      description: 'Practice adaptive tests for top performance',
+      icon: TrendingUp,
+      onClick: () => handleSmartExams(),
+      gradient: 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)'
+    },
+    {
+      id: 'ai-interviews',
+      title: 'AI Interviews',
+      description: 'Rehearse interviews with instant analytics',
+      icon: VideoCall,
+      onClick: () => handleInterviewPrep(),
+      gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)'
+    },
+    {
+      id: 'cv-builder',
+      title: 'CV Builder',
+      description: 'Craft tailored CVs for every opportunity',
+      icon: Article,
+      onClick: () => handleCVBuilder(),
+      gradient: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)'
+    },
+    {
+      id: 'career-guidance',
+      title: 'Career Guidance',
+      description: 'Get expert advice for your next move',
+      icon: TrendingUp,
+      onClick: () => handleCareerGuidance(),
+      gradient: 'linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)'
+    }
+  ];
+
+  const renderJobPreparationColumn = () => (
+    <Box sx={{ position: 'sticky', top: theme.spacing(2), display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Card sx={{ borderRadius: 3, background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)', color: 'white', boxShadow: '0 12px 30px rgba(17, 24, 39, 0.35)', px: 2, py: 3 }}>
+        <Typography variant="overline" sx={{ letterSpacing: 1.5, opacity: 0.7 }}>
+          Preparation Hub
+        </Typography>
+        <Typography variant="h5" fontWeight={700} sx={{ mt: 1 }}>
+          Level up for your next role
+        </Typography>
+        <Typography variant="body2" sx={{ mt: 1.5, opacity: 0.8 }}>
+          Access premium tools to build confidence before applying.
+        </Typography>
+      </Card>
+      {jobPreparationServices.map((service) => {
+        const IconComponent = service.icon;
+        return (
+          <Card
+            key={service.id}
+            onClick={service.onClick}
+            sx={{
+              borderRadius: 3,
+              background: service.gradient,
+              color: 'white',
+              boxShadow: '0 10px 24px rgba(15, 23, 42, 0.25)',
+              cursor: 'pointer',
+              transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: '0 16px 30px rgba(15, 23, 42, 0.35)'
+              }
+            }}
+          >
+            <CardContent sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+              >
+                <IconComponent sx={{ fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700}>
+                  {service.title}
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.85 }}>
+                  {service.description}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    mt: 1.5,
+                    borderColor: 'rgba(255,255,255,0.5)',
+                    color: 'white',
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: 'white',
+                      backgroundColor: 'rgba(255,255,255,0.12)'
+                    }
+                  }}
+                >
+                  Explore
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </Box>
+  );
 
   const renderStories = () => {
     // Get user's own stories
@@ -2005,248 +2129,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
     </Box>
   );
 
-  const renderLeftSidebar = () => (
-    <Box sx={{ position: 'sticky', top: theme.spacing(2) }}>
-      {/* User Profile Section */}
-      <SidebarCard sx={{ 
-        background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
-        color: 'white',
-        mb: 2,
-      }}>
-        <CardContent sx={{ textAlign: 'center', py: 3 }}>
-          <Box sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
-            <Avatar
-              src={(user as any)?.profilePicture}
-              sx={{
-                width: 80,
-                height: 80,
-                border: '4px solid rgba(255,255,255,0.3)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-                background: 'rgba(255,255,255,0.1)',
-              }}
-            >
-              {user?.firstName?.charAt(0)?.toUpperCase()}
-            </Avatar>
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                background: 'rgba(255, 193, 7, 0.9)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '3px solid white',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-              }}
-            >
-              <Star sx={{ color: 'white', fontSize: 14 }} />
-            </Box>
-          </Box>
-          
-          <Typography variant="h6" fontWeight="700" sx={{ mb: 0.5, color: 'white' }}>
-            {user?.firstName} {user?.lastName}
-          </Typography>
-          
-          <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.8)' }}>
-            {user?.jobTitle || 'Professional'}
-          </Typography>
-          
-          <Button
-            variant="outlined"
-            sx={{
-              borderColor: 'rgba(255,255,255,0.5)',
-              color: 'white',
-              borderRadius: 3,
-              px: 3,
-              py: 1,
-              fontWeight: 600,
-              textTransform: 'none',
-              '&:hover': {
-                borderColor: 'white',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-              },
-            }}
-            onClick={() => navigate('/app/profile')}
-          >
-            View Profile
-          </Button>
-        </CardContent>
-      </SidebarCard>
-
-      {/* Quick Navigation */}
-      <SidebarCard sx={{ mb: 2 }}>
-        <CardContent>
-          <Typography variant="h6" fontWeight="600" sx={{ mb: 2, color: theme.palette.text.primary }}>
-            Quick Navigation
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Button
-              startIcon={<People sx={{ color: '#4caf50' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#4caf50',
-                color: '#4caf50',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                  borderColor: '#4caf50',
-                },
-              }}
-              onClick={() => navigate('/network')}
-            >
-              My Network
-            </Button>
-            <Button
-              startIcon={<Work sx={{ color: '#1877f2' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#1877f2',
-                color: '#1877f2',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(24, 119, 242, 0.1)',
-                  borderColor: '#1877f2',
-                },
-              }}
-              onClick={() => navigate('/app/jobs')}
-            >
-              Jobs
-            </Button>
-            <Button
-              startIcon={<Bookmark sx={{ color: '#9c27b0' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#9c27b0',
-                color: '#9c27b0',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(156, 39, 176, 0.1)',
-                  borderColor: '#9c27b0',
-                },
-              }}
-              onClick={() => navigate('/saved')}
-            >
-              Saved
-            </Button>
-            <Button
-              startIcon={<Event sx={{ color: '#e91e63' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#e91e63',
-                color: '#e91e63',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(233, 30, 99, 0.1)',
-                  borderColor: '#e91e63',
-                },
-              }}
-              onClick={() => navigate('/events')}
-            >
-              Events
-            </Button>
-          </Box>
-        </CardContent>
-      </SidebarCard>
-
-      {/* Additional Quick Actions */}
-      <SidebarCard>
-        <CardContent>
-          <Typography variant="h6" fontWeight="600" sx={{ mb: 2, color: theme.palette.text.primary }}>
-            More Actions
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Button
-              startIcon={<Article sx={{ color: '#2196f3' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#2196f3',
-                color: '#2196f3',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                  borderColor: '#2196f3',
-                },
-              }}
-              onClick={() => navigate('/articles')}
-            >
-              Articles
-            </Button>
-            <Button
-              startIcon={<TrendingUp sx={{ color: '#ff5722' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#ff5722',
-                color: '#ff5722',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 87, 34, 0.1)',
-                  borderColor: '#ff5722',
-                },
-              }}
-              onClick={() => navigate('/trending')}
-            >
-              Trending
-            </Button>
-            <Button
-              startIcon={<Article sx={{ color: '#795548' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#795548',
-                color: '#795548',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(121, 85, 72, 0.1)',
-                  borderColor: '#795548',
-                },
-              }}
-              onClick={() => handleCVBuilder()}
-            >
-              CV Builder
-            </Button>
-          </Box>
-        </CardContent>
-      </SidebarCard>
-    </Box>
-  );
 
   // Helper function to format distance to now
   const formatDistanceToNow = (date: Date) => {
@@ -2415,8 +2297,15 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
       <Container maxWidth="xl" sx={{ py: isMobile ? 1 : 3, px: { xs: 1, sm: 2, md: 3 } }}>
         <Box sx={{ display: 'flex', gap: 3 }}>
           
+          {/* Left Job Preparation Column */}
+          {!isMobile && (
+            <Box sx={{ width: { md: 260, lg: 280 } }}>
+              {renderJobPreparationColumn()}
+            </Box>
+          )}
+          
           {/* Main Content */}
-          <Box sx={{ flex: 1, maxWidth: { xs: '100%', md: '80%', lg: '75%' } }}>
+          <Box sx={{ flex: 1, maxWidth: { xs: '100%', md: '70%', lg: '60%' } }}>
             <Box sx={{ maxWidth: 680, mx: 'auto' }}>
               {/* Desktop Search Bar */}
               {!isMobile && (
@@ -2558,7 +2447,7 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
           {/* Right Sidebar - Desktop and Tablet */}
           {!isMobile && (
-            <Box sx={{ width: { xs: '100%', md: '20%', lg: '25%' } }}>
+            <Box sx={{ width: { xs: '100%', md: 260, lg: 300 } }}>
               {renderRightSidebar()}
             </Box>
           )}

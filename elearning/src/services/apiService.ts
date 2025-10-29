@@ -143,15 +143,29 @@ export const apiService = {
         responseType: 'blob',
       });
 
-      // Create blob link to download
       const blob = new Blob([response.data]);
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result;
+          if (typeof result === 'string') {
+            resolve(result);
+          } else {
+            reject(new Error('Failed to convert file for download'));
+          }
+        };
+        reader.onerror = () => {
+          reject(new Error('File conversion error'));
+        };
+        reader.readAsDataURL(blob);
+      });
+
       const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
+      link.href = dataUrl;
       link.download = filename || 'download';
+      document.body.appendChild(link);
       link.click();
-      
-      // Clean up
-      window.URL.revokeObjectURL(link.href);
+      document.body.removeChild(link);
     } catch (error: any) {
       throw new Error(error.response?.data?.message || error.message || 'Download failed');
     }

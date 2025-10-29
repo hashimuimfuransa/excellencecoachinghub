@@ -34,7 +34,9 @@ import {
   InfoOutlined,
   WarningAmber,
   Timer,
-  CalendarToday
+  CalendarToday,
+  Psychology,
+  Quiz
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import ResponsiveDashboard from '../../components/Layout/ResponsiveDashboard';
@@ -43,6 +45,11 @@ import { enrollmentService, IEnrollment } from '../../services/enrollmentService
 import { courseService, ICourse } from '../../services/courseService';
 import { announcementService, Announcement as IAnnouncement } from '../../services/announcementService';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
+import { progressService as userProgressService, IUserProgress } from '../../services/progressService';
+import { progressService as courseProgressService } from '../../services/weekService';
+import CareerGuidancePopup from '../../components/Career/CareerGuidancePopup';
+import { isJobSeekerRole, isProfessionalRole, isStudentRole } from '../../utils/roleUtils';
+import careerGuidanceService from '../../services/careerGuidanceService';
 
 const StatCard = styled(Card)(({ theme }) => ({
   borderRadius: theme.spacing(2),
@@ -132,6 +139,21 @@ const HeroSection = styled(Box)(({ theme }) => ({
   }
 }));
 
+const clampProgress = (value: number): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(value)));
+};
+
+const deriveEnrollmentProgress = (enrollment: IEnrollment): number => {
+  const total = typeof enrollment.progress?.totalProgress === 'number' ? enrollment.progress.totalProgress : 0;
+  if (!Array.isArray(enrollment.progress?.completedLessons) || enrollment.progress?.completedLessons.length === 0) {
+    return 0;
+  }
+  return clampProgress(total);
+};
+
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -146,6 +168,19 @@ const StudentDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState<Set<string>>(new Set());
   const [countdownTime, setCountdownTime] = useState<string>('');
+  const [courseProgressMap, setCourseProgressMap] = useState<Record<string, number>>({});
+  const [showCareerPopup, setShowCareerPopup] = useState(false);
+  const [hasCareerAssessmentData, setHasCareerAssessmentData] = useState(false);
+
+  const isCareerUser = useMemo(() => isJobSeekerRole(user?.role) || isProfessionalRole(user?.role), [user?.role]);
+
+  const getProgressForCourse = (courseId?: string, fallback: number = 0) => {
+    if (!courseId) {
+      return fallback;
+    }
+    const value = courseProgressMap[courseId];
+    return typeof value === 'number' ? value : fallback;
+  };
 
   const getAnnouncementIcon = (priority: string) => {
     switch (priority) {
@@ -203,6 +238,9 @@ const StudentDashboard = () => {
         setRelatedCourses([]);
         setAnnouncements([]);
         setUpcomingSessions([]);
+        setCourseProgressMap({});
+        setCountdownTime('');
+        setHasCareerAssessmentData(false);
         setLoading(false);
         return;
       }
@@ -211,13 +249,94 @@ const StudentDashboard = () => {
         setError(null);
         const enrollmentResponse = await enrollmentService.getMyEnrollments({ limit: 12 });
         const rawEnrollments = enrollmentResponse.enrollments || [];
-        const filteredEnrollments = rawEnrollments.filter(enrollment => enrollment?.course);
-        setEnrollments(filteredEnrollments);
+        const filteredEnrollments = rawEnrollments.filter(enrollment => {
+          if (!enrollment?.course) {
+            return false;
+          }
+          if (user?._id && enrollment.student && enrollment.student !== user._id) {
+            return false;
+          }
+          return true;
+        });
+        let normalizedEnrollments: IEnrollment[] = [];
+
+        if (filteredEnrollments.length === 0) {
+          setEnrollments([]);
+          setCourseProgressMap({});
+        } else {
+          normalizedEnrollments = filteredEnrollments.map(enrollment => ({
+            ...enrollment,
+            progress: {
+              ...enrollment.progress,
+              totalProgress: deriveEnrollmentProgress(enrollment)
+            }
+          }));
+          setEnrollments(normalizedEnrollments);
+
+          const progressMap: Record<string, number> = {};
+          try {
+            const detailedProgress = await Promise.all(
+              normalizedEnrollments.map(async enrollment => {
+                const courseId = enrollment.course?._id;
+                if (!courseId) {
+                  return null;
+                }
+                try {
+                  const response = await courseProgressService.getStudentCourseProgress(courseId);
+                  const total = response.weekProgresses?.reduce((sum, item) => sum + (typeof item.progressPercentage === 'number' ? item.progressPercentage : 0), 0) ?? 0;
+                  const count = response.weekProgresses?.length ?? 0;
+                  if (count > 0) {
+                    return { courseId, progress: total / count };
+                  }
+                } catch (courseProgressError) {
+                  console.warn('Unable to load course progress from unified service', courseProgressError);
+                }
+                return null;
+              })
+            );
+            detailedProgress.forEach(entry => {
+              if (entry && typeof entry.progress === 'number' && Number.isFinite(entry.progress)) {
+                progressMap[entry.courseId] = Math.max(0, Math.min(100, Math.round(entry.progress)));
+              }
+            });
+          } catch (unifiedProgressError) {
+            console.warn('Unable to load unified progress data', unifiedProgressError);
+          }
+          const enrollmentsMissing = normalizedEnrollments.filter(enrollment => {
+            const courseId = enrollment.course?._id;
+            return courseId && progressMap[courseId] === undefined;
+          });
+          if (enrollmentsMissing.length > 0) {
+            try {
+              const userProgressList = await userProgressService.getUserProgress();
+              userProgressList.forEach(item => {
+                const courseId = item.course?._id;
+                const percentage = item.progressPercentage;
+                if (courseId && progressMap[courseId] === undefined && typeof percentage === 'number' && Number.isFinite(percentage)) {
+                  progressMap[courseId] = Math.max(0, Math.min(100, Math.round(percentage)));
+                }
+              });
+            } catch (progressLoadError) {
+              console.warn('Unable to load legacy progress data', progressLoadError);
+            }
+          }
+          normalizedEnrollments.forEach(enrollment => {
+            const courseId = enrollment.course?._id;
+            if (!courseId) {
+              return;
+            }
+            if (progressMap[courseId] === undefined) {
+              const fallback = deriveEnrollmentProgress(enrollment);
+              progressMap[courseId] = Math.max(0, Math.min(100, Math.round(fallback)));
+            }
+          });
+          setCourseProgressMap(progressMap);
+        }
         
         let allAnnouncements: IAnnouncement[] = [];
-        if (filteredEnrollments.length > 0) {
+        if (normalizedEnrollments.length > 0) {
           try {
-            for (const enrollment of filteredEnrollments.slice(0, 5)) {
+            for (const enrollment of normalizedEnrollments.slice(0, 5)) {
               if (enrollment.course?._id) {
                 const courseAnnouncements = await announcementService.getCourseAnnouncements(enrollment.course._id, 5);
                 allAnnouncements = [...allAnnouncements, ...courseAnnouncements];
@@ -238,22 +357,47 @@ const StudentDashboard = () => {
           }
         }
 
-        try {
-          const sessionsResponse = await liveSessionService.getStudentSessions({ limit: 10 });
-          const allSessions = sessionsResponse.sessions || [];
-          const upcomingSessions = allSessions
-            .filter(session => liveSessionService.isSessionUpcoming(session))
-            .sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime())
-            .slice(0, 1);
-          setUpcomingSessions(upcomingSessions);
-        } catch (sessionError) {
-          console.warn('Unable to load live sessions', sessionError);
+        if (normalizedEnrollments.length > 0 && (isStudentRole(user?.role) || isCareerUser)) {
+          try {
+            const sessionsResponse = await liveSessionService.getStudentSessions({ limit: 10 });
+            const allSessions = sessionsResponse.sessions || [];
+            const upcomingSessions = allSessions
+              .filter(session => liveSessionService.isSessionUpcoming(session))
+              .sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime())
+              .slice(0, 1);
+            setUpcomingSessions(upcomingSessions);
+          } catch (sessionError: any) {
+            if (sessionError?.response?.status === 403) {
+              console.info('Live sessions unavailable for current user role');
+            } else {
+              console.warn('Unable to load live sessions', sessionError);
+            }
+            setUpcomingSessions([]);
+          }
+        } else {
           setUpcomingSessions([]);
         }
+
+        setCourseProgressMap(prev => {
+          if (normalizedEnrollments.length === 0) {
+            return {};
+          }
+          const map: Record<string, number> = { ...prev };
+          normalizedEnrollments.forEach(enrollment => {
+            const courseId = enrollment.course?._id;
+            if (!courseId) {
+              return;
+            }
+            if (map[courseId] === undefined) {
+              map[courseId] = deriveEnrollmentProgress(enrollment);
+            }
+          });
+          return map;
+        });
         
         let recommended: ICourse[] = [];
-        if (filteredEnrollments.length > 0) {
-          const primaryCategory = filteredEnrollments[0]?.course?.category;
+        if (normalizedEnrollments.length > 0) {
+          const primaryCategory = normalizedEnrollments[0]?.course?.category;
           if (primaryCategory) {
             try {
               const categoryResponse = await courseService.getPublicCourses({ limit: 6, category: primaryCategory });
@@ -273,7 +417,7 @@ const StudentDashboard = () => {
         }
         if (recommended.length > 0) {
           const enrolledIds = new Set(
-            filteredEnrollments
+            normalizedEnrollments
               .map(enrollment => enrollment.course?._id)
               .filter((id): id is string => Boolean(id))
           );
@@ -281,12 +425,26 @@ const StudentDashboard = () => {
         } else {
           setRelatedCourses([]);
         }
+        if (isCareerUser) {
+          try {
+            const assessmentSummary = await careerGuidanceService.getCareerAssessments();
+            const hasData = Array.isArray(assessmentSummary.assessments) && assessmentSummary.assessments.some(assessment => assessment.type === 'career_discovery');
+            setHasCareerAssessmentData(hasData);
+          } catch (careerError) {
+            console.warn('Unable to load career assessments', careerError);
+            setHasCareerAssessmentData(false);
+          }
+        } else {
+          setHasCareerAssessmentData(false);
+        }
       } catch (loadError) {
         console.warn('Unable to load student dashboard data', loadError);
         setEnrollments([]);
         setRelatedCourses([]);
         setAnnouncements([]);
         setUpcomingSessions([]);
+        setCourseProgressMap({});
+        setHasCareerAssessmentData(false);
       } finally {
         setLoading(false);
       }
@@ -318,21 +476,26 @@ const StudentDashboard = () => {
       };
     }
     const total = enrollments.length;
-    const completed = enrollments.filter(item => item.progress?.totalProgress >= 100).length;
-    const inProgress = enrollments.filter(item => (item.progress?.totalProgress || 0) > 0 && (item.progress?.totalProgress || 0) < 100).length;
-    const averageProgress = Math.round(
-      enrollments.reduce((sum, item) => sum + (item.progress?.totalProgress || 0), 0) / total
-    );
+    const completed = enrollments.filter(item => getProgressForCourse(item.course?._id, item.progress?.totalProgress ?? 0) >= 100).length;
+    const inProgress = enrollments.filter(item => {
+      const progress = getProgressForCourse(item.course?._id, item.progress?.totalProgress ?? 0);
+      return progress > 0 && progress < 100;
+    }).length;
+    const averageProgressRaw = enrollments.reduce((sum, item) => sum + getProgressForCourse(item.course?._id, item.progress?.totalProgress ?? 0), 0) / total;
+    const averageProgress = Number.isFinite(averageProgressRaw) ? Math.round(averageProgressRaw) : 0;
     return { total, completed, inProgress, averageProgress };
-  }, [enrollments]);
+  }, [enrollments, courseProgressMap]);
 
   const activeEnrollment = useMemo(() => {
     if (enrollments.length === 0) {
       return undefined;
     }
-    const next = enrollments.find(item => item.progress?.totalProgress !== undefined && item.progress.totalProgress < 100 && item.isActive);
+    const next = enrollments.find(item => {
+      const progress = getProgressForCourse(item.course?._id, item.progress?.totalProgress ?? 0);
+      return progress < 100 && item.isActive;
+    });
     return next || enrollments[0];
-  }, [enrollments]);
+  }, [enrollments, courseProgressMap]);
 
   const visibleAnnouncements = announcements.filter(a => !dismissedAnnouncements.has(a._id));
 
@@ -355,6 +518,29 @@ const StudentDashboard = () => {
           
           {/* Hero Section */}
           <HeroSection sx={{ position: 'relative', zIndex: 1 }}>
+            {isCareerUser && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: { xs: 12, sm: 16 },
+                  right: { xs: 12, sm: 16 },
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  borderRadius: 999,
+                  px: 2,
+                  py: 1,
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.3)' 
+                }}
+              >
+                <Psychology sx={{ fontSize: 20, color: 'warning.light' }} />
+                <Typography variant="caption" sx={{ color: 'common.white', fontWeight: 600 }}>
+                  Ready for a career breakthrough?
+                </Typography>
+              </Box>
+            )}
             <Stack spacing={2.5} sx={{ position: 'relative', zIndex: 2 }}>
               <Typography 
                 variant={isMobile ? 'h5' : 'h4'} 
@@ -375,8 +561,10 @@ const StudentDashboard = () => {
                 }}
               >
                 {activeEnrollment
-                  ? `Continue your journey in ${activeEnrollment.course.title}. You're ${activeEnrollment.progress?.totalProgress || 0}% through!`
-                  : 'Explore courses and start learning today. Your next breakthrough is waiting.'}
+                  ? `Continue your journey in ${activeEnrollment.course.title}. You're ${getProgressForCourse(activeEnrollment.course?._id, activeEnrollment.progress?.totalProgress || 0)}% through!`
+                  : isCareerUser
+                    ? 'Jumpstart your career with personalized assessments and targeted upskilling.'
+                    : 'Explore courses and start learning today. Your next breakthrough is waiting.'}
               </Typography>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1 }}>
                 <Button
@@ -386,6 +574,8 @@ const StudentDashboard = () => {
                   onClick={() => {
                     if (activeEnrollment) {
                       navigate(`/course/${activeEnrollment.course._id}/learn`);
+                    } else if (isCareerUser) {
+                      setShowCareerPopup(true);
                     } else {
                       navigate('/courses');
                     }
@@ -403,7 +593,7 @@ const StudentDashboard = () => {
                     }
                   }}
                 >
-                  {activeEnrollment ? 'Continue Learning' : 'Start Learning'}
+                  {activeEnrollment ? 'Continue Learning' : isCareerUser ? 'Take Career Test' : 'Start Learning'}
                 </Button>
                 {upcomingSessions.length > 0 && (
                   <Button
@@ -709,7 +899,7 @@ const StudentDashboard = () => {
                 {enrollments.slice(0, 3).map(enrollment => {
                   const course = enrollment.course;
                   if (!course) return null;
-                  const progress = enrollment.progress?.totalProgress || 0;
+                  const progress = getProgressForCourse(course._id, enrollment.progress?.totalProgress ?? 0);
                   const chipColor = progress >= 100 ? 'success' : progress > 0 ? 'primary' : 'default';
                   const chipLabel = progress >= 100 ? '✓ Completed' : progress > 0 ? 'In Progress' : 'Not Started';
                   
@@ -776,7 +966,7 @@ const StudentDashboard = () => {
                             variant="contained"
                             size="small"
                             startIcon={<PlayArrow fontSize="small" />}
-                            onClick={() => navigate(`/dashboard/student/course/${course._id}`)}
+                            onClick={() => navigate(progress >= 100 ? `/dashboard/student/course/${course._id}` : `/course/${course._id}/learn`)}
                             sx={{ borderRadius: 2, mt: 'auto', fontWeight: 600 }}
                           >
                             {progress >= 100 ? 'View Certificate' : 'Continue'}
@@ -796,11 +986,93 @@ const StudentDashboard = () => {
               Quick Actions
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6} sm={3}>
+              {isCareerUser && (
+                <>
+                  <Grid item xs={12} md={6} lg={4}>
+                    <Paper
+                      onClick={() => window.open('https://exjobnet.com', '_blank', 'noopener,noreferrer')}
+                      sx={{
+                        p: 3,
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1.5,
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        borderRadius: 3,
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        transition: 'all 0.3s ease',
+                        background: hasCareerAssessmentData
+                          ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.12), rgba(129, 199, 132, 0.24))'
+                          : 'linear-gradient(135deg, rgba(255, 152, 0, 0.12), rgba(255, 193, 7, 0.24))',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: hasCareerAssessmentData
+                            ? '0 12px 28px rgba(76, 175, 80, 0.35)'
+                            : '0 12px 28px rgba(255, 193, 7, 0.35)'
+                        }
+                      }}
+                    >
+                      <Psychology sx={{ fontSize: 36, color: hasCareerAssessmentData ? 'success.main' : 'warning.main' }} />
+                      <Stack spacing={0.5} alignItems="center">
+                        <Typography variant="subtitle1" fontWeight={700}>
+                          {hasCareerAssessmentData ? 'Explore Psychometric Insights' : 'Launch Psychometric Test'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Discover strengths and personalized career matches.
+                        </Typography>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={6} lg={4}>
+                    <Paper
+                      onClick={() => window.open('https://exjobnet.com', '_blank', 'noopener,noreferrer')}
+                      sx={{
+                        p: 3,
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1.5,
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        borderRadius: 3,
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        transition: 'all 0.3s ease',
+                        background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.12), rgba(3, 169, 244, 0.24))',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 12px 28px rgba(3, 169, 244, 0.3)'
+                        }
+                      }}
+                    >
+                      <Quiz sx={{ fontSize: 36, color: 'info.main' }} />
+                      <Stack spacing={0.5} alignItems="center">
+                        <Typography variant="subtitle1" fontWeight={700}>
+                          Job Exam Centre
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Prepare with role-specific assessments and mock tests.
+                        </Typography>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                </>
+              )}
+              <Grid item xs={6} sm={3} md={3}>
                 <Paper
                   onClick={() => navigate('/dashboard/student/live-sessions')}
                   sx={{
                     p: 2.5,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 0.75,
                     textAlign: 'center',
                     cursor: 'pointer',
                     borderRadius: 2,
@@ -812,17 +1084,23 @@ const StudentDashboard = () => {
                     }
                   }}
                 >
-                  <LiveTv sx={{ fontSize: 28, color: 'error.main', mb: 1 }} />
+                  <LiveTv sx={{ fontSize: 28, color: 'error.main' }} />
                   <Typography variant="caption" fontWeight={600} sx={{ display: 'block', lineHeight: 1.4 }}>
                     Live Sessions
                   </Typography>
                 </Paper>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid item xs={6} sm={3} md={3}>
                 <Paper
                   onClick={() => navigate('/dashboard/student/courses')}
                   sx={{
                     p: 2.5,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 0.75,
                     textAlign: 'center',
                     cursor: 'pointer',
                     borderRadius: 2,
@@ -834,17 +1112,23 @@ const StudentDashboard = () => {
                     }
                   }}
                 >
-                  <BookmarkBorder sx={{ fontSize: 28, color: 'primary.main', mb: 1 }} />
+                  <BookmarkBorder sx={{ fontSize: 28, color: 'primary.main' }} />
                   <Typography variant="caption" fontWeight={600} sx={{ display: 'block', lineHeight: 1.4 }}>
                     All Courses
                   </Typography>
                 </Paper>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid item xs={6} sm={3} md={3}>
                 <Paper
                   onClick={() => navigate('/dashboard/student/assessments')}
                   sx={{
                     p: 2.5,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 0.75,
                     textAlign: 'center',
                     cursor: 'pointer',
                     borderRadius: 2,
@@ -856,17 +1140,23 @@ const StudentDashboard = () => {
                     }
                   }}
                 >
-                  <Assessment sx={{ fontSize: 28, color: 'success.main', mb: 1 }} />
+                  <Assessment sx={{ fontSize: 28, color: 'success.main' }} />
                   <Typography variant="caption" fontWeight={600} sx={{ display: 'block', lineHeight: 1.4 }}>
                     Assessments
                   </Typography>
                 </Paper>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid item xs={6} sm={3} md={3}>
                 <Paper
                   onClick={() => navigate('/community/feed')}
                   sx={{
                     p: 2.5,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 0.75,
                     textAlign: 'center',
                     cursor: 'pointer',
                     borderRadius: 2,
@@ -878,7 +1168,7 @@ const StudentDashboard = () => {
                     }
                   }}
                 >
-                  <Groups sx={{ fontSize: 28, color: 'info.main', mb: 1 }} />
+                  <Groups sx={{ fontSize: 28, color: 'info.main' }} />
                   <Typography variant="caption" fontWeight={600} sx={{ display: 'block', lineHeight: 1.4 }}>
                     Community
                   </Typography>

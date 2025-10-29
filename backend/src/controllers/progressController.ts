@@ -7,7 +7,7 @@ import { asyncHandler } from '../middleware/asyncHandler';
 export const markMaterialCompleted = asyncHandler(async (req: Request, res: Response) => {
   const { weekId, materialId } = req.params;
   const { timeSpent, score } = req.body;
-  const studentId = req.user?.id;
+  const studentId = req.user?._id || req.user?.id;
   
   if (!studentId) {
     return res.status(401).json({
@@ -53,12 +53,19 @@ export const markMaterialCompleted = asyncHandler(async (req: Request, res: Resp
 // Get student progress for a course
 export const getStudentCourseProgress = asyncHandler(async (req: Request, res: Response) => {
   const { courseId } = req.params;
-  const studentId = req.user?.id;
+  const studentId = req.user?._id || req.user?.id;
   
   if (!studentId) {
     return res.status(401).json({
       success: false,
       message: 'User not authenticated'
+    });
+  }
+
+  if (!courseId) {
+    return res.status(400).json({
+      success: false,
+      message: 'Course ID is required'
     });
   }
   
@@ -82,7 +89,7 @@ export const getStudentCourseProgress = asyncHandler(async (req: Request, res: R
 // Get student progress for a specific week
 export const getStudentWeekProgress = asyncHandler(async (req: Request, res: Response) => {
   const { weekId } = req.params;
-  const studentId = req.user?.id;
+  const studentId = req.user?._id || req.user?.id;
   
   if (!studentId) {
     return res.status(401).json({
@@ -116,7 +123,7 @@ export const getStudentWeekProgress = asyncHandler(async (req: Request, res: Res
 export const markAssessmentCompleted = asyncHandler(async (req: Request, res: Response) => {
   const { weekId } = req.params;
   const { score } = req.body;
-  const studentId = req.user?.id;
+  const studentId = req.user?._id || req.user?.id;
   
   if (!studentId) {
     return res.status(401).json({
@@ -152,7 +159,7 @@ export const markAssessmentCompleted = asyncHandler(async (req: Request, res: Re
 // Mark assignment as completed
 export const markAssignmentCompleted = asyncHandler(async (req: Request, res: Response) => {
   const { weekId } = req.params;
-  const studentId = req.user?.id;
+  const studentId = req.user?._id || req.user?.id;
   
   if (!studentId) {
     return res.status(401).json({
@@ -220,7 +227,7 @@ async function updateWeekProgress(studentId: string, courseId: string, weekId: s
 export const syncProgressWithServer = asyncHandler(async (req: Request, res: Response) => {
   const { courseId } = req.params;
   const { progressData } = req.body;
-  const studentId = req.user?.id;
+  const studentId = req.user?._id || req.user?.id;
   
   if (!studentId) {
     return res.status(401).json({

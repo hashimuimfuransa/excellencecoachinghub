@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -12,11 +12,6 @@ import {
   Chip,
   Grid,
   Paper,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Divider,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -29,7 +24,8 @@ import {
   alpha,
   styled,
   Collapse,
-  Alert
+  Alert,
+  InputAdornment
 } from '@mui/material';
 import {
   Add,
@@ -42,10 +38,8 @@ import {
   Bookmark,
   MoreVert,
   DeleteForever,
-  Send,
   Image,
   VideoCall,
-  Poll,
   School,
   Group,
   TrendingUp,
@@ -57,16 +51,11 @@ import {
   Tag,
   FilterList,
   Search,
-  Sort,
-  Refresh,
   AttachFile,
-  CloudUpload,
   Delete,
   PlayArrow,
   KeyboardArrowDown,
   KeyboardArrowUp,
-  UnfoldLess,
-  UnfoldMore,
   Work
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
@@ -94,8 +83,84 @@ const CreatePostCard = styled(Card)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.primary.main, 0.02),
 }));
 
+const PageWrapper = styled(Box)(({ theme }) => ({
+  minHeight: '100vh',
+  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.12)} 0%, ${alpha(theme.palette.background.default, 0.96)} 100%)`,
+  padding: theme.spacing(4, 2, 6),
+}));
+
+const ContentContainer = styled(Box)(() => ({
+  maxWidth: 1200,
+  margin: '0 auto',
+  width: '100%',
+}));
+
+const HeroCard = styled(Paper)(({ theme }) => ({
+  position: 'relative',
+  overflow: 'hidden',
+  borderRadius: theme.spacing(3),
+  padding: theme.spacing(5),
+  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.secondary.main, 0.12)} 100%)`,
+  boxShadow: theme.shadows[6],
+}));
+
+const HeroBackdrop = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  inset: 0,
+  background: `radial-gradient(circle at top right, ${alpha(theme.palette.primary.light, 0.25)} 0%, transparent 55%)`,
+  pointerEvents: 'none',
+}));
+
+const SidebarCard = styled(Paper)(({ theme }) => ({
+  borderRadius: theme.spacing(3),
+  padding: theme.spacing(3),
+  backgroundColor: alpha(theme.palette.background.paper, 0.85),
+  backdropFilter: 'blur(10px)',
+  boxShadow: theme.shadows[3],
+}));
+
+const StatCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: theme.spacing(3),
+  backgroundColor: alpha(theme.palette.background.paper, 0.92),
+  boxShadow: theme.shadows[2],
+}));
+
+const FeedBadge = styled(Chip)(({ theme }) => ({
+  borderRadius: theme.spacing(2),
+  fontWeight: 600,
+}));
+
 // Use IPost from communityService
 type Post = IPost;
+
+type FeedFilter = 'all' | 'text' | 'achievement' | 'question' | 'announcement';
+
+const FILTER_OPTIONS: { label: string; value: FeedFilter }[] = [
+  { label: 'All Posts', value: 'all' },
+  { label: 'Discussions', value: 'text' },
+  { label: 'Achievements', value: 'achievement' },
+  { label: 'Questions', value: 'question' },
+  { label: 'Announcements', value: 'announcement' },
+];
+
+const UPCOMING_SESSIONS = [
+  {
+    title: 'Live Coding Lab',
+    time: 'Today · 16:00',
+    location: 'Virtual Room 3',
+  },
+  {
+    title: 'Career Mentorship Circle',
+    time: 'Thu · 18:30',
+    location: 'Community Hub',
+  },
+  {
+    title: 'Study Sprint · Project Planning',
+    time: 'Sat · 10:00',
+    location: 'Collab Space',
+  },
+];
 
 interface CommunityFeedProps {}
 
@@ -112,6 +177,8 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
     tags: [] as string[],
     attachments: [] as File[]
   });
+  const [selectedFilter, setSelectedFilter] = useState<FeedFilter>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState<string | null>(null);
@@ -153,8 +220,8 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
     loadPosts();
   }, [user]);
 
-  const goToDashboard = () => {
-    navigate('/dashboard/student');
+  const goToLearningHub = () => {
+    navigate('/courses');
   };
 
   // Handle post actions
@@ -495,369 +562,497 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
     }
   };
 
+  const formatMetric = (value: number) => {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}m`;
+    }
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}k`;
+    }
+    return value.toString();
+  };
+
+  const filteredPosts = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return posts.filter((post) => {
+      const matchesFilter = selectedFilter === 'all' || post.type === selectedFilter;
+      if (!matchesFilter) {
+        return false;
+      }
+      if (!term) {
+        return true;
+      }
+      const contentMatch = post.content.toLowerCase().includes(term);
+      const authorMatch = post.author.name.toLowerCase().includes(term);
+      const tagMatch = post.tags?.some((tag) => tag.toLowerCase().includes(term));
+      return contentMatch || authorMatch || tagMatch;
+    });
+  }, [posts, selectedFilter, searchTerm]);
+
+  const feedMetrics = useMemo(() => {
+    const uniqueAuthors = new Set(posts.map((post) => post.author.id));
+    const totals = posts.reduce(
+      (acc, post) => ({
+        likes: acc.likes + (post.likes || 0),
+        shares: acc.shares + (post.shares || 0),
+        comments: acc.comments + (post.comments || 0),
+      }),
+      { likes: 0, shares: 0, comments: 0 }
+    );
+
+    return [
+      { label: 'Active Posts', value: posts.length, icon: <Chat color="primary" /> },
+      { label: 'Reactions', value: totals.likes, icon: <Favorite color="error" /> },
+      { label: 'Contributors', value: uniqueAuthors.size, icon: <Group color="secondary" /> },
+      { label: 'Conversations', value: totals.comments + totals.shares, icon: <TrendingUp color="success" /> },
+    ];
+  }, [posts]);
+
+  const trendingTags = useMemo(() => {
+    const counts = new Map<string, { count: number; label: string }>();
+    posts.forEach((post) => {
+      post.tags?.forEach((tag) => {
+        const key = tag.toLowerCase();
+        const entry = counts.get(key);
+        if (entry) {
+          entry.count += 1;
+        } else {
+          counts.set(key, { count: 1, label: tag });
+        }
+      });
+    });
+
+    return Array.from(counts.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [posts]);   
+
+  const topVoices = useMemo(() => {
+    const counts = new Map<string, { id: string; name: string; avatar?: string; role: string; posts: number }>();
+    posts.forEach((post) => {
+      const existing = counts.get(post.author.id);
+      if (existing) {
+        existing.posts += 1;
+      } else {
+        counts.set(post.author.id, {
+          id: post.author.id,
+          name: post.author.name,
+          avatar: post.author.avatar,
+          role: post.author.role,
+          posts: 1,
+        });
+      }
+    });
+
+    return Array.from(counts.values())
+      .sort((a, b) => b.posts - a.posts)
+      .slice(0, 4);
+  }, [posts]);
+
   return (
-    <Box sx={{ 
-      p: { xs: 1, sm: 2, md: 3 }, 
-      maxWidth: 800, 
-      mx: 'auto',
-      width: '100%'
-    }}>
-      {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
-            Community Feed
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Connect with fellow learners and share your journey
-          </Typography>
-        </Box>
-        <Button variant="outlined" startIcon={<School />} onClick={goToDashboard}>
-          Back to Dashboard
-        </Button>
-      </Box>
-
-      {/* Opportunities Card - Shown for learners with 40%+ profile completion */}
-      {isLearnerRole(user?.role) && (
-        <Card sx={{ mb: 2, borderRadius: 2, border: `1px solid ${theme.palette.success.light}`, background: alpha(theme.palette.success.main, 0.05) }}>
-          <CardContent>
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
-              <Work color="success" />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>Career Opportunities</Typography>
-            </Stack>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Explore job opportunities on ExJobNet matched to your completed courses. Requires 40% profile completion and age 18+.
-            </Typography>
-            <Button variant="contained" color="success" onClick={() => navigate('/dashboard/student/opportunities')}>
-              View Opportunities
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Create Post */}
-      <CreatePostCard>
-        <CardContent>
-          <Stack 
-            direction={{ xs: 'column', sm: 'row' }} 
-            spacing={{ xs: 1.5, sm: 2 }} 
-            alignItems={{ xs: 'stretch', sm: 'center' }}
-          >
-            <Avatar 
-              src={user?.profilePicture}
-              sx={{ width: { xs: 36, sm: 40 }, height: { xs: 36, sm: 40 } }}
-
-            >
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
-            </Avatar>
-            <TextField
-              placeholder="What's on your mind? Share your learning journey..."
-              fullWidth
-              multiline
-              maxRows={3}
-              size="small"
-              onClick={() => setCreatePostOpen(true)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 3,
-                  backgroundColor: 'background.paper',
-                }
-              }}
-            />
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setCreatePostOpen(true)}
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
-            >
-              Post
-            </Button>
-          </Stack>
-        </CardContent>
-      </CreatePostCard>
-
-      {/* Posts */}
-      {loading ? (
-        <Box display="flex" justifyContent="center" py={4}>
-          <Typography>Loading posts...</Typography>
-        </Box>
-      ) : (
-        posts.map((post) => (
-          <PostCard key={post.id}>
-            <CardContent>
-              {/* Post Header */}
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                <Avatar src={post.author.avatar} sx={{ width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 } }}>
-                  {post.author.name.split(' ').map(n => n[0]).join('')}
-                </Avatar>
-                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-                      {post.author.name}
-                    </Typography>
-                    {post.author.verified && (
-                      <CheckCircle color="primary" sx={{ fontSize: { xs: 14, sm: 16 } }} />
-                    )}
-                    <Chip
-                      label={post.author.role}
-                      size="small"
-                      color={post.author.role === 'teacher' ? 'primary' : 'default'}
-                      variant="outlined"
-                      sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                    />
-                    <Chip
-                      icon={getPostTypeIcon(post.type)}
-                      label={post.type}
-                      size="small"
-                      color={getPostTypeColor(post.type) as any}
-                      variant="outlined"
-                      sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                    />
-                  </Stack>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-                    {formatTimestamp(post.timestamp)}
-                  </Typography>
-                </Box>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  {(user && (user._id === post.author.id || user.role === 'admin')) && (
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleDeletePost(post.id);
-                      }}
-                      title="Delete post"
-                    >
-                      <DeleteForever />
-                    </IconButton>
-                  )}
-                  <IconButton size="small">
-                    <MoreVert />
-                  </IconButton>
+    <PageWrapper>
+      <ContentContainer>
+        <Grid container spacing={4}>
+          <Grid item xs={12}>
+            <HeroCard>
+              <HeroBackdrop />
+              <Stack spacing={3} sx={{ position: 'relative' }}>
+                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                  <FeedBadge color="primary" label="Community" variant="filled" />
+                  <FeedBadge color="secondary" label="Learning Hub" variant="outlined" />
+                  <FeedBadge color="default" label="Grow Together" variant="outlined" />
                 </Stack>
+                <Typography variant="h4" sx={{ fontWeight: 700, maxWidth: { xs: '100%', md: '70%' } }}>
+                  Share wins, spark discussions, and connect with peers across the Excellence community.
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ maxWidth: { xs: '100%', md: '65%' } }}>
+                  Discover trending conversations, celebrate milestones, and collaborate with mentors and classmates in one vibrant feed.
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Button variant="contained" startIcon={<Add />} onClick={() => setCreatePostOpen(true)}>
+                    Share an update
+                  </Button>
+                  <Button variant="outlined" startIcon={<School />} onClick={goToLearningHub}>
+                    Back to Learning Hub
+                  </Button>
+                </Stack>
+                <Grid container spacing={2}>
+                  {feedMetrics.map((metric) => (
+                    <Grid item xs={6} sm={3} key={metric.label}>
+                      <StatCard sx={{ height: '100%' }}>
+                        <Stack direction="row" spacing={1.5} alignItems="center">
+                          {metric.icon}
+                          <Box>
+                            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1 }}>{metric.label}</Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatMetric(metric.value)}</Typography>
+                          </Box>
+                        </Stack>
+                      </StatCard>
+                    </Grid>
+                  ))}
+                </Grid>
               </Stack>
+            </HeroCard>
+          </Grid>
 
-              {/* Achievement Badge */}
-              {post.achievement && (
-                <Paper sx={{ p: 2, mb: 2, bgcolor: 'success.main', color: 'white' }}>
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <Typography variant="h4">{post.achievement.icon}</Typography>
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        🎉 Achievement Unlocked!
-                      </Typography>
-                      <Typography variant="body2">
-                        {post.achievement.title} - {post.achievement.points} points
-                      </Typography>
-                    </Box>
+          <Grid item xs={12} md={8}>
+            <Stack spacing={3}>
+              <CreatePostCard>
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Stack direction="row" spacing={2} alignItems="flex-start">
+                      <Avatar
+                        src={user?.profilePicture}
+                        sx={{ width: 48, height: 48 }}
+                      >
+                        {user?.firstName?.[0]}{user?.lastName?.[0]}
+                      </Avatar>
+                      <Box flex={1}>
+                        <TextField
+                          placeholder="Start a conversation or celebrate a win..."
+                          fullWidth
+                          multiline
+                          minRows={2}
+                          onFocus={() => setCreatePostOpen(true)}
+                          value={newPost.content}
+                          onChange={(e) => setNewPost((prev) => ({ ...prev, content: e.target.value }))}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 3,
+                              backgroundColor: 'background.paper',
+                            },
+                          }}
+                        />
+                      </Box>
+                    </Stack>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="space-between">
+                      <Stack direction="row" spacing={1.5} flexWrap="wrap">
+                        <Button variant="text" startIcon={<Image />} onClick={() => setCreatePostOpen(true)}>
+                          Media
+                        </Button>
+                        <Button variant="text" startIcon={<VideoCall />} onClick={() => setCreatePostOpen(true)}>
+                          Live session
+                        </Button>
+                        <Button variant="text" startIcon={<Tag />} onClick={() => setCreatePostOpen(true)}>
+                          Tag topic
+                        </Button>
+                      </Stack>
+                      <Button variant="contained" onClick={handleCreatePost} disabled={(!newPost.content.trim() && newPost.attachments.length === 0) || uploading}>
+                        {uploading ? `Posting... ${uploadProgress}%` : 'Post'}
+                      </Button>
+                    </Stack>
                   </Stack>
+                </CardContent>
+              </CreatePostCard>
+
+              <Paper sx={{ p: 3, borderRadius: 3, backgroundColor: alpha(theme.palette.background.paper, 0.9), boxShadow: theme.shadows[1] }}>
+                <Stack spacing={2}>
+                  <TextField
+                    placeholder="Search posts, people, or topics"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                    {FILTER_OPTIONS.map((option) => (
+                      <FeedBadge
+                        key={option.value}
+                        label={option.label}
+                        color={selectedFilter === option.value ? 'primary' : 'default'}
+                        variant={selectedFilter === option.value ? 'filled' : 'outlined'}
+                        onClick={() => setSelectedFilter(option.value)}
+                        clickable
+                      />
+                    ))}
+                  </Stack>
+                </Stack>
+              </Paper>
+
+              {loading ? (
+                <Paper sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
+                  <Typography variant="body1">Loading feed...</Typography>
                 </Paper>
-              )}
-
-              {/* Post Content */}
-              <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
-                {post.content}
-              </Typography>
-
-              {/* Tags */}
-              {post.tags.length > 0 && (
-                <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                  {post.tags.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={`#${tag}`}
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                    />
-                  ))}
-                </Stack>
-              )}
-
-              {/* Attachments */}
-              {post.attachments && post.attachments.length > 0 && (
-                <Box sx={{ mb: 2 }}>
-                  {post.attachments.map((attachment, index) => (
-                    <Box key={index} sx={{ mb: 2 }}>
-                      {attachment.type === 'image' ? (
-                        <Box
-                          component="img"
-                          src={attachment.url}
-                          alt={attachment.name}
-                          sx={{
-                            width: '100%',
-                            maxHeight: 400,
-                            objectFit: 'cover',
-                            borderRadius: 2,
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => window.open(attachment.url, '_blank')}
-                        />
-                      ) : attachment.type === 'video' ? (
-                        <Box
-                          component="video"
-                          src={attachment.url}
-                          controls
-                          sx={{
-                            width: '100%',
-                            maxHeight: 400,
-                            borderRadius: 2
-                          }}
-                        />
-                      ) : (
-                        <Paper sx={{ p: 2, mb: 1 }}>
-                          <Stack direction="row" alignItems="center" spacing={2}>
-                            <Image />
-                            <Typography variant="body2">{attachment.name}</Typography>
+              ) : filteredPosts.length === 0 ? (
+                <Alert severity="info" sx={{ borderRadius: 3 }}>
+                  No posts found for your filters yet. Be the first to start the conversation!
+                </Alert>
+              ) : (
+                filteredPosts.map((post) => (
+                  <PostCard key={post.id}>
+                    <CardContent>
+                      <Stack spacing={2}>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Avatar src={post.author.avatar} sx={{ width: { xs: 44, sm: 52 }, height: { xs: 44, sm: 52 } }}>
+                            {post.author.name.split(' ').map((n) => n[0]).join('')}
+                          </Avatar>
+                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
+                                {post.author.name}
+                              </Typography>
+                              {post.author.verified && (
+                                <CheckCircle color="primary" sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                              )}
+                              <FeedBadge
+                                label={post.author.role}
+                                size="small"
+                                color={post.author.role === 'teacher' ? 'primary' : 'default'}
+                                variant="outlined"
+                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                              />
+                              <FeedBadge
+                                icon={getPostTypeIcon(post.type)}
+                                label={post.type}
+                                size="small"
+                                color={getPostTypeColor(post.type) as any}
+                                variant="outlined"
+                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                              />
+                            </Stack>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                              {formatTimestamp(post.timestamp)}
+                            </Typography>
+                          </Box>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            {(user && (user._id === post.author.id || user.role === 'admin')) && (
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleDeletePost(post.id);
+                                }}
+                                title="Delete post"
+                              >
+                                <DeleteForever />
+                              </IconButton>
+                            )}
+                            <IconButton size="small">
+                              <MoreVert />
+                            </IconButton>
                           </Stack>
-                        </Paper>
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-              )}
+                        </Stack>
 
-              {/* Post Actions */}
-              <Stack direction="row" spacing={1} sx={{ pt: 1, borderTop: 1, borderColor: 'divider', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                  <IconButton
-                    color={post.isLiked ? 'error' : 'default'}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleLike(post.id);
-                    }}
-                    sx={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      borderRadius: 2,
-                      px: 1,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: post.isLiked ? 'error.light' : 'grey.100',
-                        transform: 'scale(1.05)'
-                      }
-                    }}
-                  >
-                    {post.isLiked ? (
-                      <Favorite sx={{ fontSize: 20, color: 'error.main' }} />
-                    ) : (
-                      <FavoriteBorder sx={{ fontSize: 20 }} />
-                    )}
-                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                      {post.likes || 0}
-                    </Typography>
-                  </IconButton>
+                        {post.achievement && (
+                          <Paper sx={{ p: 2.5, bgcolor: alpha(theme.palette.success.main, 0.12), borderRadius: 3 }}>
+                            <Stack direction="row" alignItems="center" spacing={2}>
+                              <Typography variant="h4">{post.achievement.icon}</Typography>
+                              <Box>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                  Achievement unlocked
+                                </Typography>
+                                <Typography variant="body2">
+                                  {post.achievement.title} · {post.achievement.points} points
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </Paper>
+                        )}
 
-                  <IconButton
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleStartChat(post.author.id, post.author.name);
-                    }}
-                    sx={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      borderRadius: 2,
-                      px: 1,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: 'info.light',
-                        color: 'info.main',
-                        transform: 'scale(1.05)'
-                      }
-                    }}
-                  >
-                    <Chat sx={{ fontSize: 20 }} />
-                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                      Chat
-                    </Typography>
-                  </IconButton>
+                        <Typography variant="body1" sx={{ lineHeight: 1.65 }}>
+                          {post.content}
+                        </Typography>
 
-                  <IconButton
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleToggleComments(post.id);
-                    }}
-                    sx={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      borderRadius: 2,
-                      px: 1,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: 'primary.light',
-                        color: 'primary.main',
-                        transform: 'scale(1.05)'
-                      }
-                    }}
-                  >
-                    <ChatBubbleOutline sx={{ fontSize: 20 }} />
-                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                      {post.comments || 0}
-                    </Typography>
-                  </IconButton>
+                        {post.tags.length > 0 && (
+                          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+                            {post.tags.map((tag) => (
+                              <FeedBadge
+                                key={tag}
+                                label={`#${tag}`}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                            ))}
+                          </Stack>
+                        )}
 
-                  <IconButton
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleShare(post);
-                    }}
-                    sx={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      borderRadius: 2,
-                      px: 1,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: 'success.light',
-                        color: 'success.main',
-                        transform: 'scale(1.05)'
-                      }
-                    }}
-                  >
-                    <Share sx={{ fontSize: 20 }} />
-                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                      {post.shares || 0}
-                    </Typography>
-                  </IconButton>
-                </Stack>
+                        {post.attachments && post.attachments.length > 0 && (
+                          <Box>
+                            {post.attachments.map((attachment, index) => (
+                              <Box key={`${attachment.url}-${index}`} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {attachment.type === 'image' ? (
+                                  <Box
+                                    component="img"
+                                    src={attachment.url}
+                                    alt={attachment.name}
+                                    sx={{
+                                      width: '100%',
+                                      maxHeight: 420,
+                                      objectFit: 'cover',
+                                      borderRadius: 3,
+                                      cursor: 'pointer',
+                                    }}
+                                    onClick={() => window.open(attachment.url, '_blank')}
+                                  />
+                                ) : attachment.type === 'video' ? (
+                                  <Box
+                                    component="video"
+                                    src={attachment.url}
+                                    controls
+                                    sx={{
+                                      width: '100%',
+                                      maxHeight: 420,
+                                      borderRadius: 3,
+                                    }}
+                                  />
+                                ) : (
+                                  <Paper sx={{ p: 2, borderRadius: 2 }}>
+                                    <Stack direction="row" alignItems="center" spacing={2}>
+                                      <Image />
+                                      <Typography variant="body2">{attachment.name}</Typography>
+                                    </Stack>
+                                  </Paper>
+                                )}
+                              </Box>
+                            ))}
+                          </Box>
+                        )}
 
-                <IconButton
-                  color={post.isBookmarked ? 'warning' : 'default'}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleBookmark(post.id);
-                  }}
-                  sx={{ 
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      backgroundColor: post.isBookmarked ? 'warning.light' : 'grey.100',
-                      transform: 'scale(1.05)'
-                    }
-                  }}
-                >
-                  {post.isBookmarked ? (
-                    <Bookmark sx={{ fontSize: 20, color: 'warning.main' }} />
-                  ) : (
-                    <BookmarkBorder sx={{ fontSize: 20 }} />
-                  )}
-                </IconButton>
-              </Stack>
+                      <Stack direction="row" spacing={1.5} sx={{ pt: 1.5, borderTop: 1, borderColor: 'divider', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                          <IconButton
+                            color={post.isLiked ? 'error' : 'default'}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleLike(post.id);
+                            }}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              borderRadius: 2,
+                              px: 1,
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: post.isLiked ? 'error.light' : 'grey.100',
+                                transform: 'scale(1.05)',
+                              },
+                            }}
+                          >
+                            {post.isLiked ? (
+                              <Favorite sx={{ fontSize: 20, color: 'error.main' }} />
+                            ) : (
+                              <FavoriteBorder sx={{ fontSize: 20 }} />
+                            )}
+                            <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                              {post.likes || 0}
+                            </Typography>
+                          </IconButton>
 
-              {/* Comments Section */}
-              <Collapse in={commentsOpen === post.id}>
-                <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-                  {/* Comment Input */}
+                          <IconButton
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleStartChat(post.author.id, post.author.name);
+                            }}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              borderRadius: 2,
+                              px: 1,
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: 'info.light',
+                                color: 'info.main',
+                                transform: 'scale(1.05)',
+                              },
+                            }}
+                          >
+                            <Chat sx={{ fontSize: 20 }} />
+                            <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                              Chat
+                            </Typography>
+                          </IconButton>
+
+                          <IconButton
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleToggleComments(post.id);
+                            }}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              borderRadius: 2,
+                              px: 1,
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: 'primary.light',
+                                color: 'primary.main',
+                                transform: 'scale(1.05)',
+                              },
+                            }}
+                          >
+                            <ChatBubbleOutline sx={{ fontSize: 20 }} />
+                            <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                              {post.comments || 0}
+                            </Typography>
+                          </IconButton>
+
+                          <IconButton
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleShare(post);
+                            }}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              borderRadius: 2,
+                              px: 1,
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: 'success.light',
+                                color: 'success.main',
+                                transform: 'scale(1.05)',
+                              },
+                            }}
+                          >
+                            <Share sx={{ fontSize: 20 }} />
+                            <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                              {post.shares || 0}
+                            </Typography>
+                          </IconButton>
+                        </Stack>
+
+                        <IconButton
+                          color={post.isBookmarked ? 'warning' : 'default'}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleBookmark(post.id);
+                          }}
+                          sx={{
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              backgroundColor: post.isBookmarked ? 'warning.light' : 'grey.100',
+                              transform: 'scale(1.05)',
+                            },
+                          }}
+                        >
+                          {post.isBookmarked ? (
+                            <Bookmark sx={{ fontSize: 20, color: 'warning.main' }} />
+                          ) : (
+                            <BookmarkBorder sx={{ fontSize: 20 }} />
+                          )}
+                        </IconButton>
+                      </Stack>
+
+                      <Collapse in={commentsOpen === post.id}>
+                        <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                          {/* Comment Input */}
                   <Box sx={{ mb: 2 }}>
                     <TextField
                       fullWidth
@@ -1176,8 +1371,9 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                   )}
                 </Box>
               </Collapse>
-            </CardContent>
-          </PostCard>
+            </Stack>
+          </CardContent>
+        </PostCard>
         ))
       )}
 
@@ -1350,7 +1546,11 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
           <Button onClick={() => setShareDialogOpen(false)}>Cancel</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Stack>
+          </Grid>
+        </Grid>
+      </ContentContainer>
+    </PageWrapper>
   );
 };
 

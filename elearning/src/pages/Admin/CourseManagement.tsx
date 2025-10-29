@@ -108,7 +108,11 @@ const CourseManagement: React.FC = () => {
         courseService.getCourseStats()
       ]);
 
-      setCourses(coursesResponse.courses);
+      const normalizedCourses = coursesResponse.courses.map((course) => ({
+        ...course,
+        instructor: course.instructor || { _id: '', firstName: '', lastName: '', email: '' }
+      }));
+      setCourses(normalizedCourses as ICourse[]);
       setCourseStats(statsResponse);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load courses');
@@ -505,7 +509,7 @@ const CourseManagement: React.FC = () => {
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>{course.instructor.firstName} {course.instructor.lastName}</TableCell>
+                    <TableCell>{[course.instructor?.firstName, course.instructor?.lastName].filter(Boolean).join(' ') || 'Unknown Instructor'}</TableCell>
                     <TableCell>{course.category}</TableCell>
                     <TableCell>
                       <Chip

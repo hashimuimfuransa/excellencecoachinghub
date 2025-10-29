@@ -4,7 +4,7 @@ export interface ICertificate extends Document {
   studentId: mongoose.Types.ObjectId;
   courseId: mongoose.Types.ObjectId;
   teacherId: mongoose.Types.ObjectId;
-  assessmentId: mongoose.Types.ObjectId;
+  assessmentId?: mongoose.Types.ObjectId | null;
   
   // Certificate details
   certificateNumber: string;
@@ -61,7 +61,7 @@ const certificateSchema = new Schema<ICertificate>({
   assessmentId: {
     type: Schema.Types.ObjectId,
     ref: 'Assessment',
-    required: true,
+    default: null,
     index: true
   },
   

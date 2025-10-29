@@ -53,7 +53,7 @@ export const authorizeRoles = (allowedRoles: string[]) => {
 // Specific role authorization functions for convenience
 export const requireAdmin = authorizeRoles(['admin', 'super_admin']);
 export const requireTeacher = authorizeRoles(['teacher', 'admin', 'super_admin']);
-export const requireStudent = authorizeRoles(['student', 'teacher', 'admin', 'super_admin']);
+export const requireStudent = authorizeRoles(['student', 'job_seeker', 'professional', 'teacher', 'admin', 'super_admin']);
 
 // Check if user owns the resource or has admin/teacher privileges
 export const authorizeOwnerOrRole = (allowedRoles: string[] = ['admin', 'teacher', 'super_admin']) => {

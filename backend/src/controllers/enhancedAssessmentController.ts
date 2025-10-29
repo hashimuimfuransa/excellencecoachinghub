@@ -1,14 +1,18 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { Assessment, IAssessment } from '../models/Assessment';
-import { Certificate, ICertificate } from '../models/Certificate';
+import Certificate, { ICertificate } from '../models/Certificate';
 import { Course } from '../models/Course';
 import { User } from '../models/User';
 import { UserProgress } from '../models/UserProgress';
 import { Attendance } from '../models/Attendance';
 import { LiveSession } from '../models/LiveSession';
+import { Enrollment } from '../models/Enrollment';
+import { CourseEnrollment } from '../models/CourseEnrollment';
 import aiDocumentService from '../services/aiDocumentService';
 import { uploadDocumentToCloudinary } from '../config/cloudinary';
+import { generateCertificatePDF } from '../services/certificatePdfService';
 
 // Upload assessment document and extract questions
 export const uploadAssessmentDocument = asyncHandler(async (req: Request, res: Response) => {
@@ -242,10 +246,10 @@ export const submitAssessmentForGrading = asyncHandler(async (req: Request, res:
 // Generate certificate for course completion
 export const generateCertificate = asyncHandler(async (req: Request, res: Response) => {
   const { courseId, studentId } = req.params;
-  const teacherId = req.user?._id;
+  const requesterId = req.user?._id;
+  const requesterRole = req.user?.role;
 
-  // Verify teacher owns the course
-  const course = await Course.findOne({ _id: courseId, teacherId });
+  const course = await Course.findById(courseId);
   if (!course) {
     return res.status(404).json({
       success: false,
@@ -253,7 +257,17 @@ export const generateCertificate = asyncHandler(async (req: Request, res: Respon
     });
   }
 
-  // Check if student has completed all requirements
+  if (!requesterRole || (requesterRole === 'student' && requesterId?.toString() !== studentId)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Students can only generate their own certificates.'
+    });
+  }
+
+  if (!course.certificateRequirements || course.certificateRequirements.length === 0) {
+    course.certificateRequirements = ['Complete all course modules'];
+  }
+
   const student = await User.findById(studentId);
   if (!student) {
     return res.status(404).json({
@@ -262,54 +276,120 @@ export const generateCertificate = asyncHandler(async (req: Request, res: Respon
     });
   }
 
-  // Get final assessment
-  const finalAssessment = await Assessment.findOne({
-    courseId,
-    type: 'final',
-    status: 'published'
+  console.log('🔍 Looking for enrollment:', { 
+    studentId: studentId.toString(), 
+    courseId: courseId.toString() 
   });
 
-  if (!finalAssessment) {
+  let courseEnrollment = await CourseEnrollment.findOne({
+    student: new mongoose.Types.ObjectId(studentId),
+    course: new mongoose.Types.ObjectId(courseId),
+    isActive: true
+  });
+
+  if (!courseEnrollment) {
+    console.log('❌ No CourseEnrollment found');
     return res.status(400).json({
       success: false,
-      message: 'No final assessment found for this course'
+      message: 'Student is not enrolled in this course. Please enroll first.'
     });
   }
 
-  // Check if certificate already exists
+  console.log('✅ Found enrollment:', {
+    paymentStatus: courseEnrollment.paymentStatus,
+    enrollmentType: courseEnrollment.enrollmentType,
+    progress: courseEnrollment.progress?.totalProgress
+  });
+
+  const finalAssessment = await Assessment.findOne({
+    courseId,
+    type: 'final'
+  }).sort({ updatedAt: -1 });
+
+  console.log('📝 Final assessment:', finalAssessment ? 'Found' : 'Not found');
+
   const existingCertificate = await Certificate.findOne({
     studentId,
     courseId
   });
 
   if (existingCertificate) {
-    return res.status(400).json({
-      success: false,
-      message: 'Certificate already exists for this student and course'
+    return res.status(200).json({
+      success: true,
+      message: 'Certificate already exists',
+      data: {
+        certificateId: existingCertificate._id,
+        certificateNumber: existingCertificate.certificateNumber,
+        verificationCode: existingCertificate.verificationCode,
+        grade: existingCertificate.grade,
+        score: existingCertificate.score,
+        issueDate: existingCertificate.issueDate
+      }
     });
   }
 
-  // Get student's final assessment submission (you'll need to implement this)
-  // For now, we'll create a placeholder certificate
+  let defaultScore = Math.round(courseEnrollment.progress?.totalProgress || 0);
+  
+  if (!finalAssessment && defaultScore > 0) {
+    console.log('📝 No final assessment found. Awarding 100% for course completion.');
+    defaultScore = 100;
+  } else if (!finalAssessment && defaultScore === 0) {
+    console.log('⚠️ No final assessment and no progress found. Checking course completion status...');
+    const completedLessons = courseEnrollment.progress?.completedLessons?.length || 0;
+    const completedAssignments = courseEnrollment.progress?.completedAssignments?.length || 0;
+    
+    if (completedLessons > 0 || completedAssignments > 0) {
+      console.log('✅ Student has completed course content. Awarding 100% score.');
+      defaultScore = 100;
+    }
+  }
+  
+  const year = new Date().getFullYear();
+  const count = await Certificate.countDocuments({
+    issueDate: {
+      $gte: new Date(year, 0, 1),
+      $lt: new Date(year + 1, 0, 1)
+    }
+  });
+  const certificateNumber = `CERT-${year}-${String(count + 1).padStart(6, '0')}`;
+  const verificationCode = `VERIFY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+  
+  let grade: string;
+  if (defaultScore >= 90) {
+    grade = 'A';
+  } else if (defaultScore >= 80) {
+    grade = 'B';
+  } else if (defaultScore >= 70) {
+    grade = 'C';
+  } else if (defaultScore >= 60) {
+    grade = 'D';
+  } else {
+    grade = 'F';
+  }
+  
   const certificate = new Certificate({
     studentId,
     courseId,
-    teacherId,
-    assessmentId: finalAssessment._id,
-    grade: 'Pass', // This should come from actual assessment result
-    score: 85, // This should come from actual assessment result
-    totalPoints: finalAssessment.totalPoints,
-    earnedPoints: Math.floor(finalAssessment.totalPoints * 0.85),
-    sessionsAttended: 10, // This should come from actual attendance data
-    totalSessions: 12, // This should come from course requirements
-    assessmentsCompleted: 5, // This should come from actual completion data
-    totalAssessments: 5, // This should come from course requirements
+    teacherId: course.instructor,
+    assessmentId: finalAssessment?._id || null,
+    certificateNumber,
+    verificationCode,
+    grade: grade,
+    score: defaultScore,
+    totalPoints: finalAssessment?.totalPoints || 100,
+    earnedPoints: Math.round((finalAssessment?.totalPoints || 100) * (defaultScore / 100)),
+    sessionsAttended: courseEnrollment.progress?.completedLessons?.length || 0,
+    totalSessions: Array.isArray(course.chapters) ? course.chapters.reduce((sum, chapter) => sum + (Array.isArray(chapter.lessons) ? chapter.lessons.length : 0), 0) : 0,
+    assessmentsCompleted: courseEnrollment.progress?.completedAssignments?.length || 0,
+    totalAssessments: course.content?.filter(item => item.type === 'quiz' || item.type === 'assignment')?.length || 0,
     status: 'issued',
     isVerified: true,
-    issuedBy: teacherId
+    issuedBy: requesterId
   });
 
   await certificate.save();
+
+  console.log('✅ Certificate created:', certificate._id);
 
   res.status(201).json({
     success: true,
@@ -323,6 +403,92 @@ export const generateCertificate = asyncHandler(async (req: Request, res: Respon
       issueDate: certificate.issueDate
     }
   });
+});
+
+// Get certificate by ID
+export const getCertificateById = asyncHandler(async (req: Request, res: Response) => {
+  const { certificateId } = req.params;
+  const userId = req.user?._id;
+  const userRole = req.user?.role;
+
+  const certificate = await Certificate.findById(certificateId)
+    .populate('studentId', 'firstName lastName email')
+    .populate('courseId', 'title')
+    .populate('teacherId', 'firstName lastName');
+
+  if (!certificate) {
+    return res.status(404).json({
+      success: false,
+      message: 'Certificate not found'
+    });
+  }
+
+  if (userRole === 'student' && certificate.studentId._id.toString() !== userId?.toString()) {
+    return res.status(403).json({
+      success: false,
+      message: 'You can only view your own certificates'
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: certificate
+  });
+});
+
+// Download certificate PDF
+export const downloadCertificatePDF = asyncHandler(async (req: Request, res: Response) => {
+  const { certificateId } = req.params;
+  const userId = req.user?._id;
+  const userRole = req.user?.role;
+
+  const certificate = await Certificate.findById(certificateId)
+    .populate('studentId', 'firstName lastName')
+    .populate('courseId', 'title')
+    .populate('teacherId', 'firstName lastName');
+
+  if (!certificate) {
+    return res.status(404).json({
+      success: false,
+      message: 'Certificate not found'
+    });
+  }
+
+  if (userRole === 'student' && certificate.studentId._id.toString() !== userId?.toString()) {
+    return res.status(403).json({
+      success: false,
+      message: 'You can only download your own certificates'
+    });
+  }
+
+  try {
+    const studentName = `${certificate.studentId.firstName} ${certificate.studentId.lastName}`;
+    const courseName = certificate.courseId.title;
+    
+    const pdfBuffer = await generateCertificatePDF({
+      certificate,
+      studentName,
+      courseName,
+      completionDate: certificate.completionDate,
+      grade: certificate.grade,
+      score: certificate.score,
+      certificateNumber: certificate.certificateNumber,
+      verificationCode: certificate.verificationCode
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Certificate_${studentName.replace(/\s+/g, '_')}_${new Date().getFullYear()}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('❌ Error downloading certificate PDF:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate certificate PDF',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 // Get assessment statistics
@@ -464,19 +630,19 @@ export const getCourseAssessments = asyncHandler(async (req: Request, res: Respo
 
 // Get comprehensive student progress for a course
 export const getStudentCourseProgress = asyncHandler(async (req: Request, res: Response) => {
-  const { courseId } = req.params;
-  const studentId = req.user?._id;
+  const { courseId, studentId: paramStudentId } = req.params;
+  const userId = req.user?._id;
   const userRole = req.user?.role;
 
   // Verify access permissions
-  if (userRole === 'student' && studentId !== req.params.studentId) {
+  if (userRole === 'student' && paramStudentId && userId?.toString() !== paramStudentId) {
     return res.status(403).json({
       success: false,
       message: 'You can only view your own progress'
     });
   }
 
-  const targetStudentId = req.params.studentId || studentId;
+  const targetStudentId = paramStudentId || userId;
 
   // Get course details
   const course = await Course.findById(courseId);

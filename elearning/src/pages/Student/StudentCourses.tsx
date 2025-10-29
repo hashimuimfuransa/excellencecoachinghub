@@ -1429,7 +1429,7 @@ const StudentCourses: React.FC = () => {
                               variant="contained"
                               size={buttonSize}
                               startIcon={progress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                              onClick={() => navigate(`/course/${course._id}/learn`)}
+                              onClick={() => navigate(progress >= 100 ? `/dashboard/student/course/${course._id}` : `/course/${course._id}/learn`)}
                               sx={{ 
                                 bgcolor: progress >= 100 ? 'success.main' : 'primary.main',
                                 '&:hover': {
@@ -1958,7 +1958,7 @@ const StudentCourses: React.FC = () => {
                                 variant="contained"
                                 size={buttonSize}
                                 startIcon={enrollmentProgress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                                onClick={() => navigate(`/course/${course._id}/learn`)}
+                                onClick={() => navigate(enrollmentProgress >= 100 ? `/dashboard/student/course/${course._id}` : `/course/${course._id}/learn`)}
                                 sx={{ 
                                   bgcolor: enrollmentProgress >= 100 ? 'success.main' : 'primary.main',
                                   '&:hover': {

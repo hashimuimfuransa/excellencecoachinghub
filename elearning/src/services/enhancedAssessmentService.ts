@@ -224,7 +224,14 @@ class EnhancedAssessmentService {
   // Get student certificates
   async getStudentCertificates(): Promise<ICertificate[]> {
     const response = await apiService.get('/enhanced-assessments/certificates');
-    return response.data;
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (Array.isArray(data?.certificates)) {
+      return data.certificates;
+    }
+    return [];
   }
 
   // Get certificate by ID

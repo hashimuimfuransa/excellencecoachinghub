@@ -4,6 +4,8 @@ import {
   uploadAssessmentDocument,
   submitAssessmentForGrading,
   generateCertificate,
+  getCertificateById,
+  downloadCertificatePDF,
   getAssessmentStatistics,
   updateAssessmentConfig,
   getCourseAssessments,
@@ -99,8 +101,22 @@ router.post(
 router.post(
   '/course/:courseId/student/:studentId/certificate',
   auth,
-  authorizeRoles(['teacher']),
+  authorizeRoles(['student', 'teacher', 'admin']),
   generateCertificate
+);
+
+// Get certificate by ID
+router.get(
+  '/certificates/:certificateId',
+  auth,
+  getCertificateById
+);
+
+// Download certificate PDF
+router.get(
+  '/certificates/:certificateId/pdf',
+  auth,
+  downloadCertificatePDF
 );
 
 // Get assessment statistics (teachers only)

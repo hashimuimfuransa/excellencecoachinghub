@@ -297,6 +297,7 @@ const App: React.FC = () => {
           <Route path="courses" element={<StudentCourses />} />
           <Route path="course-content" element={<CourseContent />} />
           <Route path="course-content/:id" element={<CourseContent />} />
+          <Route path="course/:id" element={<CertificatePage />} />
           <Route path="course/:id/weeks" element={<StudentCourseView />} />
           <Route path="course/:id/enroll" element={<CourseEnrollmentSystem courseId="" onEnrollmentComplete={() => {}} />} />
           <Route path="course/:id/material" element={<CourseMaterialPage />} />

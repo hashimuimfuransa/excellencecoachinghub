@@ -1080,8 +1080,8 @@ const Navbar: React.FC = () => {
             right: 0,
             bottom: 0,
             background: mode === 'dark' 
-              ? 'linear-gradient(135deg, rgba(30, 58, 138, 0.95) 0%, rgba(59, 130, 246, 0.9) 30%, rgba(34, 197, 94, 0.85) 70%, rgba(22, 163, 74, 0.9) 100%)'
-              : 'linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(34, 197, 94, 0.9) 50%, rgba(22, 163, 74, 0.95) 100%)',
+              ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 40%, rgba(13, 148, 136, 0.75) 100%)'
+              : 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(34, 197, 94, 0.85) 60%, rgba(16, 185, 129, 0.8) 100%)',
             zIndex: -1,
           },
           '&::after': {
@@ -1092,8 +1092,8 @@ const Navbar: React.FC = () => {
             right: 0,
             bottom: 0,
             background: mode === 'dark'
-              ? 'radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.12) 0%, transparent 50%)'
-              : 'radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.08) 0%, transparent 50%)',
+              ? 'radial-gradient(circle at 15% 30%, rgba(79, 70, 229, 0.2) 0%, transparent 55%), radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.18) 0%, transparent 55%)'
+              : 'radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.1) 0%, transparent 50%)',
             zIndex: -1,
           }
         }}

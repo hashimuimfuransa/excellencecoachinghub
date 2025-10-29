@@ -469,7 +469,7 @@ const SmartJobSearch: React.FC<SmartJobSearchProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 0.5,
-                    py: size === 'small' ? 1 : size === 'large' ? 1.5 : 1.25
+                    py: size === 'small' ? 0.6 : size === 'large' ? 1.2 : 0.9
                   }
                 }}
               >
@@ -535,6 +535,7 @@ const SmartJobSearch: React.FC<SmartJobSearchProps> = ({
                 backgroundColor: alpha(theme.palette.background.paper, 0.9),
                 backdropFilter: 'blur(8px)',
                 transition: 'all 0.3s ease',
+                minHeight: size === 'small' ? 44 : size === 'large' ? 58 : 50,
                 '&:hover': {
                   backgroundColor: theme.palette.background.paper,
                   boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`
@@ -548,8 +549,9 @@ const SmartJobSearch: React.FC<SmartJobSearchProps> = ({
                   }
                 }
               },
-              '& input': {
-                fontSize: size === 'large' ? '1.1rem' : size === 'small' ? '0.875rem' : '1rem'
+              '& .MuiOutlinedInput-input': {
+                py: size === 'small' ? 0.8 : size === 'large' ? 1.2 : 1,
+                fontSize: size === 'large' ? '1.05rem' : size === 'small' ? '0.85rem' : '0.95rem'
               }
             }}
           />

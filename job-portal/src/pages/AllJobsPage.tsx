@@ -720,12 +720,14 @@ const AllJobsPage: React.FC = () => {
       }}>
         {/* Hero Section */}
         <Box sx={{
-          minHeight: { xs: '20vh', sm: '25vh', md: '30vh' },
-          background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 50%, #14532d 100%)',
+          minHeight: { xs: '16vh', sm: '20vh', md: '24vh' },
+          background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.9) 45%, rgba(16, 185, 129, 0.6) 100%)'
+            : 'linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%)',
           position: 'relative',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          py: { xs: 2, sm: 3, md: 6 },
+          py: { xs: 1.5, sm: 2, md: 3.5 },
           px: { xs: 1, sm: 2, md: 0 },
           borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           '&::before': {
@@ -735,11 +737,9 @@ const AllJobsPage: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: `
-              radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-              radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-              radial-gradient(circle at 40% 80%, rgba(120, 219, 226, 0.3) 0%, transparent 50%)
-            `,
+            background: theme.palette.mode === 'dark'
+              ? 'radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.18) 0%, transparent 45%), radial-gradient(circle at 80% 30%, rgba(16, 185, 129, 0.18) 0%, transparent 52%), radial-gradient(circle at 50% 80%, rgba(147, 197, 253, 0.15) 0%, transparent 55%)'
+              : 'radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.25) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.2) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(120, 219, 226, 0.2) 0%, transparent 50%)',
             zIndex: 0,
           },
           '&::after': {
@@ -753,7 +753,7 @@ const AllJobsPage: React.FC = () => {
             backgroundRepeat: 'no-repeat',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            opacity: 0.1,
+            opacity: theme.palette.mode === 'dark' ? 0.08 : 0.12,
             zIndex: 0,
           }
         }}>
@@ -961,7 +961,7 @@ const AllJobsPage: React.FC = () => {
               onSearchChange={updateSearchTerm}
               onSearchTypeChange={updateSearchType}
               placeholder={isMobile ? `Search ${getCurrentContentType()}...` : undefined}
-              size={isMobile ? 'small' : 'medium'}
+              size="small"
               showSearchType={!isMobile}
               recentSearches={searchSuggestions.recentSearches}
               trendingSearches={searchSuggestions.trendingSearches}

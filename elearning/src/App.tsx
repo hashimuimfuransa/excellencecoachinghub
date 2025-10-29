@@ -178,6 +178,7 @@ const App: React.FC = () => {
         <Route index element={user ? <Navigate to="/dashboard" replace /> : <HomePage />} />
         <Route path="courses" element={<CoursesPage />} />
         <Route path="courses/:id" element={<CourseDetailPage />} />
+        <Route path="course-preview/:id" element={<CourseDetailPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="past-papers" element={<PastPapersPage />} />

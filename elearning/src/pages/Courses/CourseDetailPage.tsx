@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { UserRole } from '../../shared/types';
+import { isLearnerRole } from '../../utils/roleUtils';
 import {
   Container,
   Typography,
@@ -68,12 +70,12 @@ const CourseDetailPage: React.FC = () => {
       const courseData = await courseService.getPublicCourseById(id);
       setCourse(courseData);
 
-      // Check enrollment status if user is logged in and is a student
-      if (user && user.role === 'student') {
+      // Check enrollment status if user is logged in and is a learner role
+      if (user && isLearnerRole(user.role as UserRole)) {
         const enrollmentData = await enrollmentService.getEnrollmentDetailsQuietly(id);
         setEnrollment(enrollmentData);
       } else {
-        // User is not logged in or not a student
+        // User is not logged in or not eligible to enroll
         setEnrollment(null);
       }
     } catch (err) {
@@ -90,7 +92,7 @@ const CourseDetailPage: React.FC = () => {
   // Additional effect to refresh enrollment status when user changes
   useEffect(() => {
     const refreshEnrollmentStatus = async () => {
-      if (user && user.role === 'student' && id) {
+      if (user && id && isLearnerRole(user.role as UserRole)) {
         try {
           console.log('🔄 Refreshing enrollment status for course:', id);
           const enrollmentData = await enrollmentService.getEnrollmentDetailsQuietly(id);
@@ -102,7 +104,7 @@ const CourseDetailPage: React.FC = () => {
           setEnrollment(null);
         }
       } else {
-        console.log('👤 User not logged in or not a student, clearing enrollment');
+        console.log('👤 User not logged in or not eligible, clearing enrollment');
         setEnrollment(null);
       }
     };
@@ -113,7 +115,7 @@ const CourseDetailPage: React.FC = () => {
   // Check for pending enrollment after login
   useEffect(() => {
     const checkPendingEnrollment = async () => {
-      if (user && user.role === 'student' && id) {
+      if (user && id && isLearnerRole(user.role as UserRole)) {
         const pendingCourseId = localStorage.getItem('pendingEnrollment');
         console.log('🔍 Checking pending enrollment:', { pendingCourseId, currentCourseId: id });
         
@@ -506,9 +508,9 @@ const CourseDetailPage: React.FC = () => {
                   >
                     🚀 Login to Enroll
                   </Button>
-                ) : user.role !== 'student' ? (
+                ) : user.role && !isLearnerRole(user.role as UserRole) ? (
                   <Alert severity="info" sx={{ maxWidth: 400 }}>
-                    Only students can enroll in courses
+                    Only learner accounts can enroll in courses
                   </Alert>
                 ) : enrollment ? (
                   <>

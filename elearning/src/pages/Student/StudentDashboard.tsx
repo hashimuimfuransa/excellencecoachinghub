@@ -453,6 +453,12 @@ const StudentDashboard = () => {
   }, [user]);
 
   useEffect(() => {
+    if (!loading && user && enrollments.length === 0) {
+      navigate('/dashboard/student/courses', { replace: true });
+    }
+  }, [loading, user, enrollments, navigate]);
+
+  useEffect(() => {
     if (upcomingSessions.length === 0) return;
 
     const updateCountdown = () => {

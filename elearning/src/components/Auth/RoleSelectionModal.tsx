@@ -127,7 +127,7 @@ const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
 
             <Box 
               sx={{
-                border: selectedRole === UserRole.JOB_SEEKER ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                border: selectedRole === UserRole.PROFESSIONAL ? '2px solid #1976d2' : '1px solid #e0e0e0',
                 borderRadius: 2,
                 p: 2,
                 mb: 2,
@@ -137,14 +137,14 @@ const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
                   backgroundColor: '#f5f5f5'
                 }
               }}
-              onClick={() => setSelectedRole(UserRole.JOB_SEEKER)}
+              onClick={() => setSelectedRole(UserRole.PROFESSIONAL)}
             >
               <FormControlLabel
-                value={UserRole.JOB_SEEKER}
+                value={UserRole.PROFESSIONAL}
                 control={<Radio />}
                 label={
                   <Box display="flex" alignItems="center" gap={1}>
-                    <Work color={selectedRole === UserRole.JOB_SEEKER ? 'primary' : 'action'} />
+                    <Work color={selectedRole === UserRole.PROFESSIONAL ? 'primary' : 'action'} />
                     <Box>
                       <Typography variant="subtitle1" fontWeight="medium">
                         Job Seeker

@@ -194,7 +194,7 @@ const RegisterPage: React.FC = () => {
   const roles = [
     { value: 'student', label: 'Student' },
     { value: 'teacher', label: 'Teacher' },
-    { value: 'job_seeker', label: 'Job Seeker' },
+    { value: 'professional', label: 'Job Seeker' },
     { value: 'employer', label: 'Employer' },
   ];
 

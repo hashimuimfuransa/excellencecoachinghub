@@ -15,6 +15,7 @@ import {
 } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
+import { UserRole } from '../types';
 
 const router = Router();
 
@@ -108,8 +109,8 @@ const googleRegistrationValidation = [
     .isLength({ min: 1, max: 50 })
     .withMessage('Last name must be between 1 and 50 characters'),
   body('role')
-    .isIn(['student', 'teacher', 'admin'])
-    .withMessage('Role must be student, teacher, or admin'),
+    .isIn(Object.values(UserRole) as string[])
+    .withMessage('Role must be a valid user role'),
   body('googleId')
     .notEmpty()
     .withMessage('Google ID is required'),

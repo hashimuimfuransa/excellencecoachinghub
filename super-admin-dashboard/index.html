@@ -9,6 +9,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Make Uploadcare key available at runtime for the widget
+      window.UPLOADCARE_PUBLIC_KEY = window.UPLOADCARE_PUBLIC_KEY || "%REACT_APP_UPLOADCARE_PUBLIC_KEY%" || "%VITE_UPLOADCARE_PUBLIC_KEY%";
+
+      // Configure Uploadcare for large file uploads
+      window.UPLOADCARE_LOCALE = "en";
+      window.UPLOADCARE_TABS = "file url";
+      window.UPLOADCARE_PUBLIC_KEY = window.UPLOADCARE_PUBLIC_KEY;
+
+      // Configure for large file uploads
+      window.UPLOADCARE_SETTINGS = {
+        multiple: false,
+        tabs: "file url",
+        previewStep: false,
+        crop: "disabled",
+        multipartMinSize: 10485760, // 10MB
+        multipartChunkSize: 5242880, // 5MB chunks
+        maxSize: 10737418240 // 10GB max
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

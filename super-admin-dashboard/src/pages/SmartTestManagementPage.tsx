@@ -300,7 +300,7 @@ const SmartTestManagementPage: React.FC = () => {
   };
 
   const validateFileSize = (file: File): boolean => {
-    const maxSize = 10 * 1024 * 1024; // 10MB limit
+    const maxSize = 10 * 1024 * 1024 * 1024; // 10GB limit
     return file.size <= maxSize;
   };
 
@@ -315,7 +315,7 @@ const SmartTestManagementPage: React.FC = () => {
     if (!validateFileSize(file)) {
       return { 
         isValid: false, 
-        error: 'File too large. Maximum file size is 10MB.' 
+        error: 'File too large. Maximum file size is 10GB.' 
       };
     }
     

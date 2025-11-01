@@ -115,6 +115,9 @@ import CareerAssessmentFlow from './pages/Career/CareerAssessmentFlow';
 import CareerAssessmentResults from './pages/CareerAssessment/CareerAssessmentResults';
 import StudentOpportunitiesPage from './pages/Student/StudentOpportunities';
 
+// Video Pages
+import VideoLibrary from './pages/Video/VideoLibrary';
+import PublicVideoViewer from './pages/Video/PublicVideoViewer';
 
 // Import hooks
 import { useAuth } from './hooks/useAuth';
@@ -182,6 +185,8 @@ const App: React.FC = () => {
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="past-papers" element={<PastPapersPage />} />
+        <Route path="video-library" element={<VideoLibrary />} />
+        <Route path="video-library/:shareToken" element={<PublicVideoViewer />} />
         <Route path="help" element={<div>Help Center - Coming Soon</div>} />
         <Route path="privacy" element={<div>Privacy Policy - Coming Soon</div>} />
         <Route path="terms" element={<div>Terms of Service - Coming Soon</div>} />

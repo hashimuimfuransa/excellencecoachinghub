@@ -20,6 +20,7 @@
     "@mui/x-date-pickers": "^8.10.0",
     "@types/react-router-dom": "^5.3.3",
     "@types/recharts": "^1.8.29",
+    "@uploadcare/react-widget": "^3.0.0",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",

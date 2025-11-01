@@ -27,6 +27,7 @@ import PerformanceReportsPage from './pages/SuperAdmin/PerformanceReportsPage';
 import UsageStatisticsPage from './pages/SuperAdmin/UsageStatisticsPage';
 import CompanyProfileApprovalPage from './pages/SuperAdmin/CompanyProfileApprovalPage';
 import EmailEventsPage from './pages/SuperAdmin/EmailEventsPage';
+import VideoManagementPage from './pages/SuperAdmin/VideoManagementPage';
 
 function App() {
   // EmailJS removed - now using backend SendGrid service
@@ -62,6 +63,7 @@ function App() {
               <Route path="ai-interviews" element={<AIInterviewManagementPage />} />
               <Route path="past-papers" element={<PastPapersManagementPage />} />
               <Route path="certificates" element={<CertificatesManagementPage />} />
+              <Route path="videos" element={<VideoManagementPage />} />
               
               {/* System Management */}
               <Route path="system-analytics" element={<SystemAnalyticsPage />} />

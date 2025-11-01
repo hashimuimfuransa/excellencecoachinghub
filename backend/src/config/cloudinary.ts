@@ -72,7 +72,7 @@ const storage = multer.memoryStorage();
 export const uploadAvatar = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 100 * 1024 * 1024, // 100MB limit
   },
   fileFilter: (req, file, cb) => {
     // Check file type
@@ -687,7 +687,7 @@ export const deleteDocumentFromCloudinary = async (documentUrl: string): Promise
 export const uploadDocument = multer({
   storage: storage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB limit for documents
+    fileSize: 10 * 1024 * 1024 * 1024, // 10GB limit for documents
   },
   fileFilter: (req, file, cb) => {
     // Check file type
@@ -715,7 +715,7 @@ export const uploadDocument = multer({
 export const uploadSmartTestFile = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit for smart test files
+    fileSize: 10 * 1024 * 1024 * 1024, // 10GB limit for smart test files
   },
   fileFilter: (req, file, cb) => {
     // Check file type for smart test uploads

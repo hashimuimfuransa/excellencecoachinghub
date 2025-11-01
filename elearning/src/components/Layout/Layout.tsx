@@ -257,6 +257,7 @@ const Layout: React.FC = () => {
   const getNavigationItems = (): NavigationItem[] => {
     const commonItems: NavigationItem[] = [
       { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
+      { text: 'Video Library', icon: <VideoLibrary />, path: '/video-library' },
     ];
 
     const roleSpecificItems: NavigationItem[] = [];

@@ -24,6 +24,7 @@ export { default as Feedback, IFeedback } from './Feedback';
 export { default as VideoProvider, IVideoProvider } from './VideoProvider';
 export { default as Certificate, ICertificate } from './Certificate';
 export { default as RecordedSession, IRecordedSession } from './RecordedSession';
+export { default as UploadedVideo, IUploadedVideo } from './UploadedVideo';
 export { Assignment, AssignmentSubmission, IAssignment, IAssignmentSubmission } from './Assignment';
 export { EmailEvent, IEmailEvent } from './EmailEvent';
 export { default as EmailTracker, IEmailTracker, EmailType } from './EmailTracker';

@@ -193,9 +193,9 @@ class FileUploadService {
 
   // Validate file before upload
   validateFile(
-    file: File, 
-    allowedTypes: string[] = [], 
-    maxSizeInMB: number = 10
+    file: File,
+    allowedTypes: string[] = [],
+    maxSizeInMB: number = 10240
   ): { isValid: boolean; error?: string } {
     // Check file size
     const maxSizeInBytes = maxSizeInMB * 1024 * 1024;

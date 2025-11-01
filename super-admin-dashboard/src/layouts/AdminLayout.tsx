@@ -49,7 +49,8 @@ import {
   ManageAccounts,
   QuestionAnswer,
   Business,
-  Email
+  Email,
+  VideoLibrary
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
@@ -82,6 +83,7 @@ const navigationItems: NavigationItem[] = [
   { text: 'AI Interviews', icon: <RecordVoiceOver />, path: '/ai-interviews', category: 'Content Management' },
   { text: 'Past Papers', icon: <Assessment />, path: '/past-papers', category: 'Content Management' },
   { text: 'Certificates', icon: <CardMembership />, path: '/certificates', category: 'Content Management' },
+  { text: 'Videos Management', icon: <VideoLibrary />, path: '/videos', category: 'Content Management' },
   
   // System Management
   { text: 'System Analytics', icon: <TrendingUp />, path: '/system-analytics', category: 'System Management' },

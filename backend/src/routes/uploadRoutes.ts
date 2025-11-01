@@ -4,6 +4,7 @@ import { uploadExam } from '../controllers/uploadExamController';
 import { auth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import { uploadDocument } from '../controllers/documentProcessorController';
+import multer from 'multer';
 
 const router = express.Router();
 
@@ -18,5 +19,7 @@ router.delete('/material/:publicId', auth, requireRole(['teacher', 'admin']), de
 
 // Upload exam file for assignments and assessments
 router.post('/exam', uploadDocument.single('file'), auth, requireRole(['teacher', 'admin']), uploadExam);
+
+
 
 export default router;

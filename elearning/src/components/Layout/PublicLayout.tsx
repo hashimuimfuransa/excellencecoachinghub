@@ -87,6 +87,7 @@ const PublicLayout: React.FC = () => {
   const navigationItems = [
     { label: 'Home', path: '/' },
     { label: 'Courses', path: '/courses' },
+    { label: 'Videos', path: '/video-library' },
     { label: 'Past Papers', path: '/past-papers' },
     { label: 'About', path: '/about' },
     { label: 'Contact', path: '/contact' }

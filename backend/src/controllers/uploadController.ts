@@ -3,7 +3,6 @@ import multer from 'multer';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { auth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
-import { isUploadcareUrl } from '../services/uploadcareService';
 
 // Try to import cloudinary, but don't fail if it's not installed
 let cloudinary: any = null;
@@ -27,7 +26,7 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024 * 1024, // 10GB limit
+    fileSize: 100 * 1024 * 1024, // 100MB limit
   },
   fileFilter: (req, file, cb) => {
     // Allow common file types
@@ -68,7 +67,7 @@ const uploadWithRetry = async (fileBuffer: Buffer, options: any, maxRetries: num
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.v2.uploader.upload_stream(
           options,
-          (error, result) => {
+          (error: { message: any; }, result: unknown) => {
             if (error) {
               console.error(`❌ Upload attempt ${attempt} failed:`, error.message);
               reject(error);
@@ -80,7 +79,7 @@ const uploadWithRetry = async (fileBuffer: Buffer, options: any, maxRetries: num
         );
         
         // Handle stream errors
-        uploadStream.on('error', (error) => {
+        uploadStream.on('error', (error: { message: any; }) => {
           console.error(`❌ Stream error on attempt ${attempt}:`, error.message);
           reject(error);
         });
@@ -120,7 +119,7 @@ const uploadWithRetry = async (fileBuffer: Buffer, options: any, maxRetries: num
 
 // Upload media file (images and videos)
 export const uploadMedia = asyncHandler(async (req: Request, res: Response) => {
-  const { title, description, type, courseId, weekId, videoUrl } = req.body;
+  const { title, description, type, courseId, weekId } = req.body;
 
   console.log('📤 Media upload request received:', {
     user: req.user?.email,
@@ -132,53 +131,8 @@ export const uploadMedia = asyncHandler(async (req: Request, res: Response) => {
     description,
     type,
     courseId,
-    weekId,
-    videoUrl
+    weekId
   });
-
-  // Check if user is super admin and uploading a video
-  const isSuperAdmin = req.user?.role === 'super_admin';
-  const isVideoUpload = req.file?.mimetype?.startsWith('video/') || type === 'video';
-
-  if (isSuperAdmin && isVideoUpload) {
-    // For super admin video uploads, only accept UploadCare URLs
-    if (!videoUrl) {
-      console.error('❌ No video URL provided for super admin video upload');
-      return res.status(400).json({
-        success: false,
-        message: 'Video URL is required for super admin video uploads. Please upload via UploadCare widget.'
-      });
-    }
-
-    if (!isUploadcareUrl(videoUrl)) {
-      console.error('❌ Invalid video URL for super admin upload - not from UploadCare');
-      return res.status(400).json({
-        success: false,
-        message: 'Only UploadCare URLs are allowed for super admin video uploads.'
-      });
-    }
-
-    // For super admin video uploads via UploadCare, return success with the URL
-    console.log('✅ Super admin video uploaded via UploadCare:', videoUrl);
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        url: videoUrl,
-        publicId: `uploadcare_${Date.now()}_${req.user?._id}`,
-        title: title || 'Uploaded Video',
-        description: description || '',
-        type: 'video',
-        size: 0, // Size not available from URL
-        format: 'mp4', // Assume mp4 for UploadCare videos
-        metadata: {
-          width: null,
-          height: null,
-          duration: null
-        }
-      }
-    });
-  }
 
   if (!req.file) {
     console.error('❌ No file uploaded');
@@ -201,12 +155,12 @@ export const uploadMedia = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  // Validate file size (10GB for media)
-  const maxSize = 10 * 1024 * 1024 * 1024; // 10GB
+  // Validate file size (500MB for media)
+  const maxSize = 500 * 1024 * 1024; // 500MB
   if (req.file.size > maxSize) {
     return res.status(400).json({
       success: false,
-      message: `File size exceeds maximum allowed size of 10GB`
+      message: `File size exceeds maximum allowed size of 500MB`
     });
   }
 
@@ -352,9 +306,9 @@ export const uploadMaterial = asyncHandler(async (req: Request, res: Response) =
       resource_type: 'auto',
       use_filename: true,
       unique_filename: true,
-      // Add timeout and chunk size for better reliability with large files
-      timeout: 300000, // 5 minutes timeout for large files
-      chunk_size: 10000000, // 10MB chunks for faster uploads
+      // Add timeout and chunk size for better reliability
+      timeout: 60000, // 60 seconds timeout
+      chunk_size: 2000000, // 2MB chunks
     });
 
     res.status(200).json({

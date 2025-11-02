@@ -2,6 +2,8 @@ import api from './api';
 
 // Interfaces
 export interface IPost {
+  success: any;
+  data: IPost;
   id: string;
   author: {
     id: string;
@@ -148,6 +150,8 @@ export interface IChatContact {
 
 // API Response Types
 export interface PostsResponse {
+  data: any;
+  success: any;
   posts: IPost[];
   total: number;
   page: number;

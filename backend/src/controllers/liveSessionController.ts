@@ -901,17 +901,24 @@ export const joinLiveSession = async (req: Request, res: Response, next: NextFun
       return;
     }
 
-    // Check if student is enrolled in the course
-    const { UserProgress } = require('../models/UserProgress');
-    const enrollment = await UserProgress.findOne({
-      user: studentId,
-      course: session.course
-    });
+    // Check if student is enrolled in the course with proper permissions
+    const { CourseEnrollment } = await import('../models/CourseEnrollment');
+    
+    console.log('joinLiveSession - Checking enrollment with courseId:', session.course._id);
+    
+    const hasAccess = await CourseEnrollment.checkAccess(
+      studentId,
+      session.course._id.toString(),
+      'live_sessions'
+    );
 
-    if (!enrollment) {
+    console.log('joinLiveSession - Access check result:', hasAccess);
+
+    if (!hasAccess) {
+      console.log('joinLiveSession - Student does not have access to live sessions for this course');
       res.status(403).json({
         success: false,
-        error: 'You are not enrolled in this course'
+        error: 'You do not have access to live sessions in this course. Please complete your enrollment and payment.'
       });
       return;
     }

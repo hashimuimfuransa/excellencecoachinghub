@@ -8,8 +8,8 @@ import { asyncHandler } from '../middleware/asyncHandler';
 // Validation rules for token generation
 export const generateTokenValidation = [
   body('role')
-    .isIn(['student', 'teacher', 'admin'])
-    .withMessage('Role must be student, teacher, or admin'),
+    .isIn(['student', 'teacher', 'admin', 'professional'])
+    .withMessage('Role must be student, teacher, admin, or professional'),
   body('userName')
     .trim()
     .isLength({ min: 1, max: 50 })
@@ -48,6 +48,14 @@ export const generateToken = asyncHandler(async (req: Request, res: Response, ne
     const { role, userName, sessionId, isRecorder = false } = req.body;
     const userId = req.user?.id || req.user?._id?.toString();
 
+    console.log('📹 Video Token Request:', {
+      role,
+      userName,
+      sessionId: sessionId ? 'provided' : 'missing',
+      userId: userId ? 'authenticated' : 'not authenticated',
+      isRecorder
+    });
+
     if (!userId) {
       res.status(401).json({
         success: false,
@@ -59,6 +67,7 @@ export const generateToken = asyncHandler(async (req: Request, res: Response, ne
     // Verify user has permission for the requested role
     const user = await User.findById(userId);
     if (!user) {
+      console.log('❌ User not found:', userId);
       res.status(404).json({
         success: false,
         error: 'User not found'
@@ -66,11 +75,19 @@ export const generateToken = asyncHandler(async (req: Request, res: Response, ne
       return;
     }
 
+    console.log(`🔍 User ${userId} role: '${user.role}', requested role: '${role}'`);
+
     // Check role permissions
     if (!isValidRoleForUser(user.role, role as UserRole)) {
+      console.log(`❌ Role validation failed: User role '${user.role}' cannot request '${role}' role`);
       res.status(403).json({
         success: false,
-        error: 'Insufficient permissions for requested role'
+        error: 'Insufficient permissions for requested role',
+        details: {
+          userRole: user.role,
+          requestedRole: role,
+          reason: 'Your user role does not have permission to use this role'
+        }
       });
       return;
     }
@@ -93,6 +110,42 @@ export const generateToken = asyncHandler(async (req: Request, res: Response, ne
           error: 'You are not the instructor for this session'
         });
         return;
+      }
+
+      // For students and professionals, validate enrollment in the course
+      if (role === 'student' || role === 'professional') {
+        try {
+          const CourseEnrollment = require('../models/CourseEnrollment').CourseEnrollment;
+          const courseId = session.course.toString();
+          
+          console.log(`🔐 Checking enrollment for ${role} user ${userId} in course ${courseId}`);
+          
+          const hasAccess = await CourseEnrollment.checkAccess(userId, courseId, 'live_sessions');
+          if (!hasAccess) {
+            console.log(`❌ ${role} user ${userId} does NOT have access to live sessions for course ${courseId}`);
+            res.status(403).json({
+              success: false,
+              error: 'You do not have access to live sessions in this course. Please complete your enrollment and payment.',
+              details: {
+                userId,
+                courseId,
+                reason: 'Enrollment validation failed - payment may be incomplete or enrollment expired'
+              }
+            });
+            return;
+          }
+          console.log(`✅ ${role} user ${userId} has access to live sessions for course ${courseId}`);
+        } catch (error) {
+          console.error('❌ Error checking enrollment for video token:', error);
+          res.status(500).json({
+            success: false,
+            error: 'Error validating access to live session',
+            details: {
+              message: error instanceof Error ? error.message : 'Unknown error'
+            }
+          });
+          return;
+        }
       }
 
     }
@@ -558,6 +611,8 @@ function isValidRoleForUser(userRole: string, requestedRole: UserRole): boolean 
       return ['teacher', 'student'].includes(requestedRole); // Teachers can be teachers or students
     case 'student':
       return requestedRole === 'student'; // Students can only be students
+    case 'professional':
+      return ['professional', 'student'].includes(requestedRole); // Professionals can join as students or professionals
     default:
       return false;
   }

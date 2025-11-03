@@ -28,8 +28,9 @@ const LiveClassPage: React.FC = () => {
   const [inRoom, setInRoom] = useState(false);
 
   // Get user role from URL params or user data
-  const userRole = (searchParams.get('role') as 'student' | 'teacher' | 'admin') || 
-                   (user?.role === 'admin' ? 'admin' : user?.role === 'teacher' ? 'teacher' : 'student');
+  const userRole = (searchParams.get('role') as 'student' | 'teacher' | 'admin' | 'professional') || 
+                   (user?.role as 'student' | 'teacher' | 'admin' | 'professional') || 
+                   'student';
 
   // Fetch session details
   useEffect(() => {
@@ -86,10 +87,11 @@ const LiveClassPage: React.FC = () => {
     // Navigate back to appropriate dashboard
     if (userRole === 'teacher') {
       navigate('/dashboard/teacher/live-sessions');
-    } else if (userRole === 'student') {
-      navigate('/dashboard/student/live-sessions');
-    } else {
+    } else if (userRole === 'admin') {
       navigate('/dashboard/admin');
+    } else {
+      // Both student and professional use student dashboard
+      navigate('/dashboard/student/live-sessions');
     }
   };
 
@@ -97,10 +99,11 @@ const LiveClassPage: React.FC = () => {
   const handleBack = () => {
     if (userRole === 'teacher') {
       navigate('/dashboard/teacher/live-sessions');
-    } else if (userRole === 'student') {
-      navigate('/dashboard/student/live-sessions');
-    } else {
+    } else if (userRole === 'admin') {
       navigate('/dashboard/admin');
+    } else {
+      // Both student and professional use student dashboard
+      navigate('/dashboard/student/live-sessions');
     }
   };
 

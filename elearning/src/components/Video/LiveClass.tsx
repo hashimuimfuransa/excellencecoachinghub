@@ -59,7 +59,7 @@ import ResponsiveVideoLayout from './ResponsiveVideoLayout';
 interface LiveClassProps {
   sessionId?: string;
   roomId?: string;
-  userRole: 'student' | 'teacher' | 'admin';
+  userRole: 'student' | 'teacher' | 'admin' | 'professional';
   onLeave?: () => void;
 }
 

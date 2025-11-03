@@ -72,7 +72,7 @@ interface UploadedVideo {
   updatedAt: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const VideoManagementPage: React.FC = () => {
   const [videos, setVideos] = useState<UploadedVideo[]>([]);
@@ -154,7 +154,7 @@ const VideoManagementPage: React.FC = () => {
   const loadVideos = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE}/api/uploaded-videos`, {
+      const response = await axios.get(`${API_BASE}/uploaded-videos`, {
         params: {
           page: page + 1,
           limit: rowsPerPage,
@@ -232,7 +232,7 @@ const VideoManagementPage: React.FC = () => {
       setUploading(true);
       setAlert(null);
 
-      const response = await axios.post(`${API_BASE}/api/uploaded-videos`, {
+      const response = await axios.post(`${API_BASE}/uploaded-videos`, {
         title: uploadForm.title,
         description: uploadForm.description,
         videoUrl: uploadForm.videoUrl,
@@ -266,7 +266,7 @@ const VideoManagementPage: React.FC = () => {
     }
 
     try {
-      await axios.delete(`${API_BASE}/api/uploaded-videos/${videoId}`, {
+      await axios.delete(`${API_BASE}/uploaded-videos/${videoId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -282,7 +282,7 @@ const VideoManagementPage: React.FC = () => {
 
   const handleTogglePublic = async (video: UploadedVideo) => {
     try {
-      const response = await axios.patch(`${API_BASE}/api/uploaded-videos/${video._id}/toggle-public`, {}, {
+      const response = await axios.patch(`${API_BASE}/uploaded-videos/${video._id}/toggle-public`, {}, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

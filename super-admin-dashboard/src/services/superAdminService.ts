@@ -583,16 +583,16 @@ class SuperAdminService {
       if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
       if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-      const result = await apiGet(`/jobs/admin/all?${queryParams.toString()}`);
+      const result = await apiGet(`/admin/jobs?${queryParams.toString()}`);
       console.log('✅ SuperAdminService: Successfully loaded jobs from database:', result);
       
-      // Handle the specific response format from /jobs/admin/all endpoint
-      if (result && result.success && result.data && result.pagination) {
+      // Handle the specific response format from /admin/jobs endpoint
+      if (result && result.success && result.data) {
         return {
-          jobs: result.data,
-          total: result.pagination.total,
-          page: result.pagination.current,
-          totalPages: result.pagination.pages
+          jobs: result.data.jobs || [],
+          total: result.data.total || 0,
+          page: result.data.page || 1,
+          totalPages: result.data.totalPages || 1
         };
       }
       
@@ -1163,6 +1163,17 @@ class SuperAdminService {
 
       const result = await apiGet(`/admin/applications?${queryParams.toString()}`);
       console.log('✅ SuperAdminService: Successfully loaded applications from database:', result);
+      
+      // Handle the specific response format from /admin/applications endpoint
+      if (result && result.success && result.data) {
+        return {
+          applications: result.data.applications || [],
+          total: result.data.total || 0,
+          page: result.data.page || 1,
+          totalPages: result.data.totalPages || 1
+        };
+      }
+      
       return this.extractApiData(result);
     } catch (error) {
       console.warn('❌ SuperAdminService: Database API not available for applications, using fallback data:', error);
@@ -1242,6 +1253,17 @@ class SuperAdminService {
 
       const result = await apiGet(`/admin/courses?${queryParams.toString()}`);
       console.log('✅ SuperAdminService: Successfully loaded courses from database:', result);
+      
+      // Handle the specific response format from /admin/courses endpoint
+      if (result && result.success && result.data) {
+        return {
+          courses: result.data.courses || [],
+          total: result.data.total || 0,
+          page: result.data.page || 1,
+          totalPages: result.data.totalPages || 1
+        };
+      }
+      
       return this.extractApiData(result);
     } catch (error) {
       console.warn('❌ SuperAdminService: Database API not available for courses, using empty result:', error);
@@ -1292,6 +1314,17 @@ class SuperAdminService {
 
       const result = await apiGet(`/admin/tests?${queryParams.toString()}`);
       console.log('✅ SuperAdminService: Successfully loaded tests from database:', result);
+      
+      // Handle the specific response format from /admin/tests endpoint
+      if (result && result.success && result.data) {
+        return {
+          tests: result.data.tests || [],
+          total: result.data.total || 0,
+          page: result.data.page || 1,
+          totalPages: result.data.totalPages || 1
+        };
+      }
+      
       return this.extractApiData(result);
     } catch (error) {
       console.warn('❌ SuperAdminService: Database API not available for tests, using empty result:', error);

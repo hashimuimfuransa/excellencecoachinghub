@@ -31,7 +31,9 @@ import {
   Rating,
   useTheme,
   alpha,
-  styled
+  styled,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   School,
@@ -212,6 +214,8 @@ import {
   MoreVert
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { communityService, ITeacher } from '../../services/communityService';
 
 // Styled Components
@@ -241,19 +245,23 @@ interface CommunityTeachersProps {}
 const CommunityTeachers: React.FC<CommunityTeachersProps> = () => {
   const theme = useTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [teacherDialogOpen, setTeacherDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [specialtyFilter, setSpecialtyFilter] = useState('');
+  const [followingLoading, setFollowingLoading] = useState<string | null>(null);
 
   // Load teachers
   useEffect(() => {
     const loadTeachers = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Check if user is authenticated
         if (!user) {
@@ -263,12 +271,26 @@ const CommunityTeachers: React.FC<CommunityTeachersProps> = () => {
         }
 
         console.log('Loading teachers for user:', user);
-        const response = await communityService.getTeachers(1, 12, searchTerm, specialtyFilter);
-        if (response.success) {
-          setTeachers(response.data.teachers);
+        
+        // Use searchTeachers for search term, otherwise use getTeachers with filters
+        let response;
+        if (searchTerm) {
+          response = await communityService.searchTeachers(searchTerm, 1, 12);
+          console.log('Teachers search results:', response);
+        } else {
+          response = await communityService.getTeachers(1, 12, {
+            specialty: specialtyFilter || undefined
+          });
+          console.log('Teachers filter results:', response);
+        }
+        
+        if (response?.teachers) {
+          setTeachers(response.teachers);
         }
       } catch (error) {
         console.error('Error loading teachers:', error);
+        setError('Failed to load teachers. Please try again.');
+        toast.error('Failed to load teachers');
       } finally {
         setLoading(false);
       }
@@ -277,11 +299,22 @@ const CommunityTeachers: React.FC<CommunityTeachersProps> = () => {
     loadTeachers();
   }, [user, searchTerm, specialtyFilter]);
 
+  // Handle chat with teacher
+  const handleChatWithTeacher = (teacher: Teacher) => {
+    console.log('💬 Navigating to chat with teacher:', teacher.name, teacher.id);
+    // Store teacher info in session/local storage if needed
+    sessionStorage.setItem('selectedChatTeacher', JSON.stringify(teacher));
+    navigate('/community/chat', { state: { teacherId: teacher.id } });
+    setTeacherDialogOpen(false);
+  };
+
   // Handle teacher actions
   const handleFollowTeacher = async (teacherId: string) => {
     try {
       const teacher = teachers.find(t => t.id === teacherId);
       if (!teacher) return;
+
+      setFollowingLoading(teacherId);
 
       if (teacher.isFollowing) {
         await communityService.unfollowTeacher(teacherId);
@@ -290,6 +323,8 @@ const CommunityTeachers: React.FC<CommunityTeachersProps> = () => {
             ? { ...t, isFollowing: false }
             : t
         ));
+        toast.success(`Unfollowed ${teacher.name}`);
+        console.log('✅ Unfollowed teacher:', teacher.name);
       } else {
         await communityService.followTeacher(teacherId);
         setTeachers(prev => prev.map(t => 
@@ -297,9 +332,19 @@ const CommunityTeachers: React.FC<CommunityTeachersProps> = () => {
             ? { ...t, isFollowing: true }
             : t
         ));
+        toast.success(`Following ${teacher.name}`);
+        console.log('✅ Following teacher:', teacher.name);
+      }
+      
+      // Update selectedTeacher if it's the one being followed
+      if (selectedTeacher?.id === teacherId) {
+        setSelectedTeacher(prev => prev ? { ...prev, isFollowing: !prev.isFollowing } : null);
       }
     } catch (error) {
       console.error('Error following teacher:', error);
+      toast.error('Failed to update follow status');
+    } finally {
+      setFollowingLoading(null);
     }
   };
 
@@ -440,15 +485,16 @@ const CommunityTeachers: React.FC<CommunityTeachersProps> = () => {
             variant="contained"
             startIcon={<Message />}
             fullWidth
-            onClick={() => {/* Navigate to chat */}}
+            onClick={() => handleChatWithTeacher(teacher)}
             sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
           >
             Message
           </Button>
           <Button
             variant="outlined"
-            startIcon={teacher.isFollowing ? <Star /> : <StarBorder />}
+            startIcon={followingLoading === teacher.id ? <CircularProgress size={20} /> : (teacher.isFollowing ? <Star /> : <StarBorder />)}
             onClick={() => handleFollowTeacher(teacher.id)}
+            disabled={followingLoading === teacher.id}
             color={teacher.isFollowing ? 'warning' : 'inherit'}
             sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
           >
@@ -528,10 +574,24 @@ const CommunityTeachers: React.FC<CommunityTeachersProps> = () => {
         <Tab label="Top Rated" />
       </Tabs>
 
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
       {/* Teachers Grid */}
       {loading ? (
-        <Box display="flex" justifyContent="center" py={4}>
-          <Typography>Loading teachers...</Typography>
+        <Box display="flex" justifyContent="center" py={8}>
+          <Stack alignItems="center" spacing={2}>
+            <CircularProgress />
+            <Typography color="text.secondary">Loading teachers...</Typography>
+          </Stack>
+        </Box>
+      ) : filteredTeachers.length === 0 ? (
+        <Box display="flex" justifyContent="center" py={8}>
+          <Typography color="text.secondary">No teachers found. Try adjusting your search or filters.</Typography>
         </Box>
       ) : (
         <Grid container spacing={{ xs: 2, sm: 3 }}>
@@ -541,23 +601,47 @@ const CommunityTeachers: React.FC<CommunityTeachersProps> = () => {
             </Grid>
           ))}
           
-          {activeTab === 1 && teachers.filter(t => t.isFollowing).map((teacher) => (
+          {activeTab === 1 && filteredTeachers.filter(t => t.isFollowing).map((teacher) => (
             <Grid item xs={12} sm={6} md={4} key={teacher.id}>
               {renderTeacherCard(teacher)}
             </Grid>
           ))}
           
-          {activeTab === 2 && teachers.filter(t => t.isOnline).map((teacher) => (
+          {activeTab === 2 && filteredTeachers.filter(t => t.isOnline).map((teacher) => (
             <Grid item xs={12} sm={6} md={4} key={teacher.id}>
               {renderTeacherCard(teacher)}
             </Grid>
           ))}
           
-          {activeTab === 3 && teachers.sort((a, b) => b.rating - a.rating).map((teacher) => (
+          {activeTab === 3 && filteredTeachers.sort((a, b) => b.rating - a.rating).map((teacher) => (
             <Grid item xs={12} sm={6} md={4} key={teacher.id}>
               {renderTeacherCard(teacher)}
             </Grid>
           ))}
+          
+          {activeTab === 0 && filteredTeachers.length === 0 && (
+            <Grid item xs={12}>
+              <Box textAlign="center" py={4}>
+                <Typography color="text.secondary">No teachers found. Try adjusting your search.</Typography>
+              </Box>
+            </Grid>
+          )}
+          
+          {activeTab === 1 && filteredTeachers.filter(t => t.isFollowing).length === 0 && (
+            <Grid item xs={12}>
+              <Box textAlign="center" py={4}>
+                <Typography color="text.secondary">You aren't following any teachers yet.</Typography>
+              </Box>
+            </Grid>
+          )}
+          
+          {activeTab === 2 && filteredTeachers.filter(t => t.isOnline).length === 0 && (
+            <Grid item xs={12}>
+              <Box textAlign="center" py={4}>
+                <Typography color="text.secondary">No teachers are online right now.</Typography>
+              </Box>
+            </Grid>
+          )}
         </Grid>
       )}
 
@@ -681,14 +765,15 @@ const CommunityTeachers: React.FC<CommunityTeachersProps> = () => {
           <Button
             variant="contained"
             startIcon={<Message />}
-            onClick={() => {/* Navigate to chat */}}
+            onClick={() => selectedTeacher && handleChatWithTeacher(selectedTeacher)}
           >
             Send Message
           </Button>
           <Button
             variant="outlined"
-            startIcon={selectedTeacher?.isFollowing ? <Star /> : <StarBorder />}
+            startIcon={followingLoading === selectedTeacher?.id ? <CircularProgress size={20} /> : (selectedTeacher?.isFollowing ? <Star /> : <StarBorder />)}
             onClick={() => selectedTeacher && handleFollowTeacher(selectedTeacher.id)}
+            disabled={followingLoading === selectedTeacher?.id}
             color={selectedTeacher?.isFollowing ? 'warning' : 'inherit'}
           >
             {selectedTeacher?.isFollowing ? 'Following' : 'Follow'}

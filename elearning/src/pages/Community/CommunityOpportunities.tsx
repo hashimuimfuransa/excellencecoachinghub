@@ -11,6 +11,7 @@ import {
 import { Work, OpenInNew } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { isLearnerRole } from '../../utils/roleUtils';
 
 const CommunityOpportunities: React.FC = () => {
   const navigate = useNavigate();
@@ -64,11 +65,11 @@ const CommunityOpportunities: React.FC = () => {
         </CardContent>
       </Card>
 
-      {user?.role !== 'student' && (
+      {!isLearnerRole(user?.role as any) && (
         <Card sx={{ backgroundColor: 'info.light', borderRadius: 2 }}>
           <CardContent>
             <Typography color="info.contrastText">
-              Opportunities are available for students only.
+              Opportunities are available for students, job seekers, and professionals.
             </Typography>
           </CardContent>
         </Card>

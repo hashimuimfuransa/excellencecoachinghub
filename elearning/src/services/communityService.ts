@@ -345,7 +345,18 @@ class CommunityService {
     if (filters?.following !== undefined) params.append('following', filters.following.toString());
 
     const response = await api.get(`/community/teachers?${params.toString()}`);
-    return response.data;
+    const payload = response.data?.data || response.data;
+    
+    // Normalize to TeachersResponse shape { teachers, total, page, limit }
+    if (payload?.teachers && payload?.pagination) {
+      return {
+        teachers: payload.teachers,
+        total: payload.pagination.total,
+        page: payload.pagination.page,
+        limit: payload.pagination.limit,
+      };
+    }
+    return payload;
   }
 
   async followTeacher(teacherId: string): Promise<any> {
@@ -426,7 +437,18 @@ class CommunityService {
 
   async searchTeachers(query: string, page = 1, limit = 20): Promise<TeachersResponse> {
     const response = await api.get(`/community/search/teachers?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`);
-    return response.data;
+    const payload = response.data?.data || response.data;
+    
+    // Normalize to TeachersResponse shape { teachers, total, page, limit }
+    if (payload?.teachers && payload?.pagination) {
+      return {
+        teachers: payload.teachers,
+        total: payload.pagination.total,
+        page: payload.pagination.page,
+        limit: payload.pagination.limit,
+      };
+    }
+    return payload;
   }
 
   // Notifications

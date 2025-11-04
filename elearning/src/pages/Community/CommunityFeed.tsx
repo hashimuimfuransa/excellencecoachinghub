@@ -86,22 +86,42 @@ const CreatePostCard = styled(Card)(({ theme }) => ({
 const PageWrapper = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
   background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.12)} 0%, ${alpha(theme.palette.background.default, 0.96)} 100%)`,
-  padding: theme.spacing(4, 2, 6),
+  padding: theme.spacing(2, 1.5, 6),
+  [theme.breakpoints.up('sm')]: {
+    padding: theme.spacing(3, 2, 6),
+  },
+  [theme.breakpoints.up('md')]: {
+    padding: theme.spacing(4, 2, 6),
+  },
 }));
 
-const ContentContainer = styled(Box)(() => ({
+const ContentContainer = styled(Box)(({ theme }) => ({
   maxWidth: 1200,
   margin: '0 auto',
   width: '100%',
+  padding: theme.spacing(0, 1),
+  [theme.breakpoints.up('sm')]: {
+    padding: theme.spacing(0, 2),
+  },
+  [theme.breakpoints.up('md')]: {
+    padding: 0,
+  },
 }));
 
 const HeroCard = styled(Paper)(({ theme }) => ({
   position: 'relative',
   overflow: 'hidden',
-  borderRadius: theme.spacing(3),
-  padding: theme.spacing(5),
+  borderRadius: theme.spacing(2),
+  padding: theme.spacing(3),
   background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.secondary.main, 0.12)} 100%)`,
   boxShadow: theme.shadows[6],
+  [theme.breakpoints.up('sm')]: {
+    borderRadius: theme.spacing(3),
+    padding: theme.spacing(4),
+  },
+  [theme.breakpoints.up('md')]: {
+    padding: theme.spacing(5),
+  },
 }));
 
 const HeroBackdrop = styled(Box)(({ theme }) => ({
@@ -451,33 +471,47 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    const validFiles = files.filter(file => {
+    const validFiles = [];
+    let invalidCount = 0;
+    let oversizeCount = 0;
+    let invalidTypeCount = 0;
+
+    files.forEach(file => {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
-      const maxSize = 10 * 1024 * 1024; // 10MB for faster uploads
-      
+      const maxSize = 10 * 1024 * 1024; // 10MB maximum
+
       if (!isImage && !isVideo) {
-        alert('Please select only image or video files');
-        return false;
+        invalidTypeCount++;
+        return;
       }
-      
+
       if (file.size > maxSize) {
-        alert('File size must be less than 10MB for faster uploads');
-        return false;
+        oversizeCount++;
+        toast.warning(`"${file.name}" exceeds 10MB limit`);
+        return;
       }
-      
-      return true;
+
+      validFiles.push(file);
     });
-    
-    if (validFiles.length > 3) {
-      alert('Maximum 3 files allowed per post');
-      return;
+
+    if (invalidTypeCount > 0) {
+      toast.error(`${invalidTypeCount} file(s) rejected. Only images and videos are allowed.`);
     }
 
-    setNewPost(prev => ({
-      ...prev,
-      attachments: [...prev.attachments, ...validFiles]
-    }));
+    const totalAttachments = newPost.attachments.length + validFiles.length;
+    if (totalAttachments > 3) {
+      toast.warning(`Maximum 3 files allowed. You can upload ${3 - newPost.attachments.length} more file(s).`);
+      validFiles.splice(3 - newPost.attachments.length);
+    }
+
+    if (validFiles.length > 0) {
+      setNewPost(prev => ({
+        ...prev,
+        attachments: [...prev.attachments, ...validFiles]
+      }));
+      toast.success(`${validFiles.length} file(s) added successfully`);
+    }
   };
 
   const removeAttachment = (index: number) => {
@@ -488,7 +522,10 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
   };
 
   const handleCreatePost = async () => {
-    if (!newPost.content.trim() && newPost.attachments.length === 0) return;
+    if (!newPost.content.trim() && newPost.attachments.length === 0) {
+      toast.warning('Please add some content or attachments to your post');
+      return;
+    }
 
     setUploading(true);
     setUploadProgress(0);
@@ -501,6 +538,9 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
         if (uploadResponse.success) {
           uploadedAttachments = uploadResponse.data;
           setUploadProgress(75);
+        } else {
+          toast.error('Failed to upload files. Please try again.');
+          return;
         }
       }
 
@@ -516,11 +556,14 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
         setPosts(prev => [response.data, ...prev]);
         setNewPost({ content: '', type: 'text', tags: [], attachments: [] });
         setCreatePostOpen(false);
+        toast.success('Post created successfully!');
         console.log('✅ Post created successfully:', response.data.id);
+      } else {
+        toast.error('Failed to create post. Please try again.');
       }
     } catch (error) {
       console.error('Error creating post:', error);
-      alert('Failed to create post. Please try again.');
+      toast.error('Failed to create post. Please try again.');
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -650,6 +693,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
   }, [posts]);
 
   return (
+    <>
     <PageWrapper>
       <ContentContainer>
         <Grid container spacing={4}>
@@ -662,29 +706,81 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                   <FeedBadge color="secondary" label="Learning Hub" variant="outlined" />
                   <FeedBadge color="default" label="Grow Together" variant="outlined" />
                 </Stack>
-                <Typography variant="h4" sx={{ fontWeight: 700, maxWidth: { xs: '100%', md: '70%' } }}>
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    maxWidth: { xs: '100%', md: '70%' },
+                    fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' }
+                  }}
+                >
                   Share wins, spark discussions, and connect with peers across the Excellence community.
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ maxWidth: { xs: '100%', md: '65%' } }}>
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary" 
+                  sx={{ 
+                    maxWidth: { xs: '100%', md: '65%' },
+                    fontSize: { xs: '0.9rem', sm: '1rem', md: '1rem' }
+                  }}
+                >
                   Discover trending conversations, celebrate milestones, and collaborate with mentors and classmates in one vibrant feed.
                 </Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  <Button variant="contained" startIcon={<Add />} onClick={() => setCreatePostOpen(true)}>
+                <Stack 
+                  direction={{ xs: 'column', sm: 'row' }} 
+                  spacing={2}
+                  sx={{
+                    '& .MuiButton-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      py: { xs: 1, sm: 1.25 },
+                    }
+                  }}
+                >
+                  <Button 
+                    variant="contained" 
+                    startIcon={<Add />} 
+                    onClick={() => setCreatePostOpen(true)}
+                    fullWidth={{ xs: true, sm: false }}
+                  >
                     Share an update
                   </Button>
-                  <Button variant="outlined" startIcon={<School />} onClick={goToLearningHub}>
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<School />} 
+                    onClick={goToLearningHub}
+                    fullWidth={{ xs: true, sm: false }}
+                  >
                     Back to Learning Hub
                   </Button>
                 </Stack>
-                <Grid container spacing={2}>
+                <Grid container spacing={1.5} sx={{ mt: 0 }}>
                   {feedMetrics.map((metric) => (
                     <Grid item xs={6} sm={3} key={metric.label}>
-                      <StatCard sx={{ height: '100%' }}>
-                        <Stack direction="row" spacing={1.5} alignItems="center">
-                          {metric.icon}
-                          <Box>
-                            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1 }}>{metric.label}</Typography>
-                            <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatMetric(metric.value)}</Typography>
+                      <StatCard sx={{ height: '100%', p: { xs: 1.5, sm: 2, md: 3 } }}>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+                          <Box sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' } }}>
+                            {metric.icon}
+                          </Box>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography 
+                              variant="overline" 
+                              color="text.secondary" 
+                              sx={{ 
+                                letterSpacing: 0.5,
+                                fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' }
+                              }}
+                            >
+                              {metric.label}
+                            </Typography>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 700,
+                                fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' }
+                              }}
+                            >
+                              {formatMetric(metric.value)}
+                            </Typography>
                           </Box>
                         </Stack>
                       </StatCard>
@@ -695,19 +791,23 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
             </HeroCard>
           </Grid>
 
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12} md={8} sx={{ minWidth: 0 }}>
             <Stack spacing={3}>
               <CreatePostCard>
                 <CardContent>
                   <Stack spacing={2}>
-                    <Stack direction="row" spacing={2} alignItems="flex-start">
+                    <Stack direction="row" spacing={1.5} alignItems="flex-start">
                       <Avatar
                         src={user?.profilePicture}
-                        sx={{ width: 48, height: 48 }}
+                        sx={{ 
+                          width: { xs: 40, sm: 48 },
+                          height: { xs: 40, sm: 48 },
+                          flexShrink: 0
+                        }}
                       >
                         {user?.firstName?.[0]}{user?.lastName?.[0]}
                       </Avatar>
-                      <Box flex={1}>
+                      <Box flex={1} minWidth={0}>
                         <TextField
                           placeholder="Start a conversation or celebrate a win..."
                           fullWidth
@@ -725,19 +825,62 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                         />
                       </Box>
                     </Stack>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="space-between">
-                      <Stack direction="row" spacing={1.5} flexWrap="wrap">
-                        <Button variant="text" startIcon={<Image />} onClick={() => setCreatePostOpen(true)}>
+                    <Stack 
+                      direction={{ xs: 'column', sm: 'row' }} 
+                      spacing={1} 
+                      alignItems={{ xs: 'stretch', sm: 'center' }} 
+                      justifyContent="space-between"
+                      sx={{
+                        '& .MuiButton-root': {
+                          fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                          py: { xs: 0.75, sm: 1 },
+                          px: { xs: 1, sm: 1.5 }
+                        }
+                      }}
+                    >
+                      <Stack 
+                        direction="row" 
+                        spacing={1} 
+                        flexWrap="wrap" 
+                        rowGap={1}
+                        sx={{
+                          '& .MuiButton-root': {
+                            minWidth: { xs: 'auto', sm: 'fit-content' },
+                            flex: { xs: '1 1 calc(50% - 4px)', sm: 'none' }
+                          }
+                        }}
+                      >
+                        <Button 
+                          variant="text" 
+                          startIcon={<Image sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
+                          onClick={() => setCreatePostOpen(true)}
+                          size="small"
+                        >
                           Media
                         </Button>
-                        <Button variant="text" startIcon={<VideoCall />} onClick={() => setCreatePostOpen(true)}>
+                        <Button 
+                          variant="text" 
+                          startIcon={<VideoCall sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
+                          onClick={() => setCreatePostOpen(true)}
+                          size="small"
+                        >
                           Live session
                         </Button>
-                        <Button variant="text" startIcon={<Tag />} onClick={() => setCreatePostOpen(true)}>
+                        <Button 
+                          variant="text" 
+                          startIcon={<Tag sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
+                          onClick={() => setCreatePostOpen(true)}
+                          size="small"
+                        >
                           Tag topic
                         </Button>
                       </Stack>
-                      <Button variant="contained" onClick={handleCreatePost} disabled={(!newPost.content.trim() && newPost.attachments.length === 0) || uploading}>
+                      <Button 
+                        variant="contained" 
+                        onClick={handleCreatePost} 
+                        disabled={(!newPost.content.trim() && newPost.attachments.length === 0) || uploading}
+                        fullWidth={{ xs: true, sm: false }}
+                      >
                         {uploading ? `Posting... ${uploadProgress}%` : 'Post'}
                       </Button>
                     </Stack>
@@ -745,12 +888,24 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                 </CardContent>
               </CreatePostCard>
 
-              <Paper sx={{ p: 3, borderRadius: 3, backgroundColor: alpha(theme.palette.background.paper, 0.9), boxShadow: theme.shadows[1] }}>
+              <Paper sx={{ 
+                p: { xs: 2, sm: 2.5, md: 3 }, 
+                borderRadius: 3, 
+                backgroundColor: alpha(theme.palette.background.paper, 0.9), 
+                boxShadow: theme.shadows[1] 
+              }}>
                 <Stack spacing={2}>
                   <TextField
                     placeholder="Search posts, people, or topics"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    size="small"
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: { xs: '0.875rem', sm: '1rem' }
+                      }
+                    }}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -759,7 +914,18 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                       ),
                     }}
                   />
-                  <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                  <Stack 
+                    direction="row" 
+                    spacing={{ xs: 0.5, sm: 1 }} 
+                    flexWrap="wrap" 
+                    rowGap={1}
+                    sx={{
+                      '& .MuiChip-root': {
+                        fontSize: { xs: '0.7rem', sm: '0.8rem' },
+                        height: { xs: 28, sm: 32 }
+                      }
+                    }}
+                  >
                     {FILTER_OPTIONS.map((option) => (
                       <FeedBadge
                         key={option.value}
@@ -787,24 +953,52 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                   <PostCard key={post.id}>
                     <CardContent>
                       <Stack spacing={2}>
-                        <Stack direction="row" spacing={2} alignItems="center">
-                          <Avatar src={post.author.avatar} sx={{ width: { xs: 44, sm: 52 }, height: { xs: 44, sm: 52 } }}>
+                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                          <Avatar 
+                            src={post.author.avatar} 
+                            sx={{ 
+                              width: { xs: 40, sm: 48, md: 52 }, 
+                              height: { xs: 40, sm: 48, md: 52 },
+                              flexShrink: 0
+                            }}
+                          >
                             {post.author.name.split(' ').map((n) => n[0]).join('')}
                           </Avatar>
                           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
+                            <Stack 
+                              direction="row" 
+                              alignItems="center" 
+                              spacing={0.5} 
+                              sx={{ 
+                                flexWrap: 'wrap', 
+                                gap: { xs: 0.3, sm: 0.5 },
+                                rowGap: 0.5
+                              }}
+                            >
+                              <Typography 
+                                variant="subtitle1" 
+                                sx={{ 
+                                  fontWeight: 600, 
+                                  fontSize: { xs: '0.85rem', sm: '0.95rem', md: '1rem' },
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
                                 {post.author.name}
                               </Typography>
                               {post.author.verified && (
-                                <CheckCircle color="primary" sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                                <CheckCircle color="primary" sx={{ fontSize: { xs: 14, sm: 16, md: 18 }, flexShrink: 0 }} />
                               )}
                               <FeedBadge
                                 label={post.author.role}
                                 size="small"
                                 color={post.author.role === 'teacher' ? 'primary' : 'default'}
                                 variant="outlined"
-                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                                sx={{ 
+                                  fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.75rem' },
+                                  height: { xs: 20, sm: 24 }
+                                }}
                               />
                               <FeedBadge
                                 icon={getPostTypeIcon(post.type)}
@@ -812,14 +1006,30 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                                 size="small"
                                 color={getPostTypeColor(post.type) as any}
                                 variant="outlined"
-                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                                sx={{ 
+                                  fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.75rem' },
+                                  height: { xs: 20, sm: 24 }
+                                }}
                               />
                             </Stack>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                            <Typography 
+                              variant="caption" 
+                              color="text.secondary" 
+                              sx={{ 
+                                fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
+                                display: 'block',
+                                mt: 0.5
+                              }}
+                            >
                               {formatTimestamp(post.timestamp)}
                             </Typography>
                           </Box>
-                          <Stack direction="row" spacing={1} alignItems="center">
+                          <Stack 
+                            direction="row" 
+                            spacing={0.5} 
+                            alignItems="center"
+                            sx={{ flexShrink: 0 }}
+                          >
                             {(user && (user._id === post.author.id || user.role === 'admin')) && (
                               <IconButton
                                 size="small"
@@ -916,8 +1126,35 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                           </Box>
                         )}
 
-                      <Stack direction="row" spacing={1.5} sx={{ pt: 1.5, borderTop: 1, borderColor: 'divider', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
-                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                      <Stack 
+                        direction="row" 
+                        spacing={1} 
+                        sx={{ 
+                          pt: { xs: 1, sm: 1.5 }, 
+                          borderTop: 1, 
+                          borderColor: 'divider', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          flexWrap: 'wrap', 
+                          rowGap: 1,
+                          '& .MuiIconButton-root': {
+                            fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                            padding: { xs: '6px', sm: '8px' }
+                          },
+                          '& .MuiTypography-caption': {
+                            fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                          }
+                        }}
+                      >
+                        <Stack 
+                          direction="row" 
+                          spacing={0.5} 
+                          sx={{ 
+                            flexWrap: 'wrap', 
+                            gap: { xs: 0.25, sm: 0.5 },
+                            rowGap: 0.5
+                          }}
+                        >
                           <IconButton
                             color={post.isLiked ? 'error' : 'default'}
                             onClick={(e) => {
@@ -1376,17 +1613,263 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
         </PostCard>
         ))
       )}
+            </Stack>
+          </Grid>
 
-      {/* Create Post Dialog */}
+          <Grid item xs={12} md={4} sx={{ minWidth: 0 }}>
+            <Stack spacing={3} sx={{ position: { md: 'sticky' }, top: { md: 100 } }}>
+              {/* Trending Tags Sidebar */}
+              <SidebarCard>
+                <Stack spacing={2}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700,
+                      fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}
+                  >
+                    <TrendingUp sx={{ fontSize: { xs: 20, md: 24 } }} />
+                    Trending Topics
+                  </Typography>
+                  <Stack spacing={1}>
+                    {trendingTags.length > 0 ? (
+                      trendingTags.map((tag, index) => (
+                        <Box
+                          key={tag.label}
+                          sx={{
+                            p: 1.5,
+                            borderRadius: 2,
+                            backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.primary.main, 0.12),
+                              borderColor: theme.palette.primary.main,
+                            }
+                          }}
+                        >
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 600,
+                                fontSize: { xs: '0.875rem', sm: '0.95rem' }
+                              }}
+                            >
+                              #{tag.label}
+                            </Typography>
+                            <Chip 
+                              label={tag.count} 
+                              size="small" 
+                              color="primary" 
+                              variant="outlined"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            />
+                          </Stack>
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                            sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
+                          >
+                            {tag.count} {tag.count === 1 ? 'post' : 'posts'}
+                          </Typography>
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        No trending topics yet
+                      </Typography>
+                    )}
+                  </Stack>
+                </Stack>
+              </SidebarCard>
+
+              {/* Top Voices Sidebar */}
+              <SidebarCard>
+                <Stack spacing={2}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700,
+                      fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}
+                  >
+                    <Star sx={{ fontSize: { xs: 20, md: 24 } }} />
+                    Top Voices
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    {topVoices.length > 0 ? (
+                      topVoices.map((voice) => (
+                        <Stack
+                          key={voice.id}
+                          direction="row"
+                          spacing={1.5}
+                          alignItems="center"
+                          sx={{
+                            p: 1.5,
+                            borderRadius: 2,
+                            backgroundColor: alpha(theme.palette.secondary.main, 0.05),
+                            border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`,
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.secondary.main, 0.12),
+                              borderColor: theme.palette.secondary.main,
+                            }
+                          }}
+                        >
+                          <Avatar
+                            src={voice.avatar}
+                            sx={{ 
+                              width: { xs: 36, sm: 40, md: 44 },
+                              height: { xs: 36, sm: 40, md: 44 },
+                              flexShrink: 0
+                            }}
+                          >
+                            {voice.name[0]}
+                          </Avatar>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography 
+                              variant="subtitle2" 
+                              sx={{ 
+                                fontWeight: 600,
+                                fontSize: { xs: '0.875rem', sm: '0.95rem' },
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {voice.name}
+                            </Typography>
+                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+                              <Chip 
+                                label={voice.role} 
+                                size="small" 
+                                color={voice.role === 'teacher' ? 'primary' : 'default'} 
+                                variant="outlined"
+                                sx={{ 
+                                  height: 20,
+                                  fontSize: { xs: '0.6rem', sm: '0.65rem' }
+                                }}
+                              />
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}
+                              >
+                                {voice.posts} posts
+                              </Typography>
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      ))
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        No top voices yet
+                      </Typography>
+                    )}
+                  </Stack>
+                </Stack>
+              </SidebarCard>
+
+              {/* Upcoming Sessions Sidebar */}
+              <SidebarCard>
+                <Stack spacing={2}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700,
+                      fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}
+                  >
+                    <Schedule sx={{ fontSize: { xs: 20, md: 24 } }} />
+                    Upcoming Sessions
+                  </Typography>
+                  <Stack spacing={1}>
+                    {UPCOMING_SESSIONS.map((session, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          backgroundColor: alpha(theme.palette.info.main, 0.05),
+                          border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.info.main, 0.12),
+                            borderColor: theme.palette.info.main,
+                          }
+                        }}
+                      >
+                        <Typography 
+                          variant="subtitle2" 
+                          sx={{ 
+                            fontWeight: 600,
+                            fontSize: { xs: '0.875rem', sm: '0.95rem' },
+                            mb: 0.5
+                          }}
+                        >
+                          {session.title}
+                        </Typography>
+                        <Stack spacing={0.5}>
+                          <Stack direction="row" spacing={0.5} alignItems="flex-start">
+                            <Schedule sx={{ fontSize: 14, mt: 0.25, flexShrink: 0 }} />
+                            <Typography 
+                              variant="caption"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
+                            >
+                              {session.time}
+                            </Typography>
+                          </Stack>
+                          <Stack direction="row" spacing={0.5} alignItems="flex-start">
+                            <LocationOn sx={{ fontSize: 14, mt: 0.25, flexShrink: 0 }} />
+                            <Typography 
+                              variant="caption"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
+                            >
+                              {session.location}
+                            </Typography>
+                          </Stack>
+                        </Stack>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Stack>
+              </SidebarCard>
+            </Stack>
+          </Grid>
+        </Grid>
+      </ContentContainer>
+    </PageWrapper>
+
+    {/* Create Post Dialog */}
       <Dialog 
         open={createPostOpen} 
-        onClose={() => setCreatePostOpen(false)} 
+        onClose={() => setCreatePostOpen(false)}
+        onBackdropClick={() => setCreatePostOpen(false)}
         maxWidth="sm" 
         fullWidth
-        fullScreen={window.innerWidth < 600}
+        fullScreen={typeof window !== 'undefined' && window.innerWidth < 600}
+        disableEscapeKeyDown={false}
+        PaperProps={{
+          sx: {
+            borderRadius: { xs: 0, sm: 2 },
+          }
+        }}
       >
-        <DialogTitle>Create New Post</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>Create New Post</DialogTitle>
+        <DialogContent sx={{ p: { xs: 1.5, sm: 2 } }}>
           <Stack spacing={3} sx={{ mt: 1 }}>
             <FormControl fullWidth>
               <InputLabel>Post Type</InputLabel>
@@ -1478,15 +1961,45 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
             </Box>
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreatePostOpen(false)}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={handleCreatePost}
-          disabled={(!newPost.content.trim() && newPost.attachments.length === 0) || uploading}
-        >
-          {uploading ? `Posting... ${uploadProgress}%` : 'Post'}
-        </Button>
+        <DialogActions sx={{ gap: 1, p: 2, justifyContent: 'flex-end' }}>
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setCreatePostOpen(false);
+            }}
+            sx={{
+              textTransform: 'none',
+              fontSize: '1rem',
+              px: 3,
+              py: 1,
+              borderColor: 'text.secondary',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'text.primary',
+                color: 'text.primary',
+                backgroundColor: 'action.hover',
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="contained"
+            onClick={handleCreatePost}
+            disabled={(!newPost.content.trim() && newPost.attachments.length === 0) || uploading}
+            sx={{
+              textTransform: 'none',
+              fontSize: '1rem',
+              px: 3,
+              py: 1,
+            }}
+          >
+            {uploading ? `Posting... ${uploadProgress}%` : 'Post'}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -1496,9 +2009,14 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
         onClose={() => setShareDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: { xs: 0, sm: 2 },
+          }
+        }}
       >
-        <DialogTitle>Share Post</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>Share Post</DialogTitle>
+        <DialogContent sx={{ p: { xs: 1.5, sm: 2 } }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Share this post on different platforms
           </Typography>
@@ -1546,11 +2064,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
           <Button onClick={() => setShareDialogOpen(false)}>Cancel</Button>
         </DialogActions>
       </Dialog>
-    </Stack>
-          </Grid>
-        </Grid>
-      </ContentContainer>
-    </PageWrapper>
+    </>
   );
 };
 

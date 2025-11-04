@@ -232,7 +232,7 @@ const StudentOpportunitiesPage: React.FC = () => {
 
   useEffect(() => {
     (async () => {
-      if (!user || user.role !== 'student') return;
+      if (!user || !isLearnerRole(user?.role)) return;
 
       let completedCourses: string[] = [];
       try {
@@ -653,10 +653,10 @@ const StudentOpportunitiesPage: React.FC = () => {
     return age >= 18;
   })();
 
-  if (!user || user.role !== 'student') {
+  if (!user || !isLearnerRole(user?.role)) {
     return (
       <ResponsiveDashboard>
-        <Alert severity='info'>Opportunities are available for students only.</Alert>
+        <Alert severity='info'>Opportunities are available for students, job seekers, and professionals.</Alert>
       </ResponsiveDashboard>
     );
   }

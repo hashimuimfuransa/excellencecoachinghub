@@ -36,27 +36,29 @@ router.get('/posts', protect, async (req: Request, res: Response) => {
     // Get total count
     const total = await Post.countDocuments(query);
 
-    // Format posts for frontend
-    const formattedPosts = posts.map(post => ({
-      id: post._id.toString(),
-      author: {
-        id: post.author._id.toString(),
-        name: `${post.author.firstName} ${post.author.lastName}`,
-        avatar: post.author.profilePicture,
-        role: post.author.role,
-        verified: post.author.isEmailVerified
-      },
-      content: post.content,
-      type: post.type,
-      timestamp: post.createdAt.toISOString(),
-      likes: post.likeCount,
-      comments: post.commentCount,
-      shares: post.shares,
-      isLiked: post.likes.includes(req.user!._id),
-      isBookmarked: post.bookmarks ? post.bookmarks.includes(req.user!._id) : false,
-      tags: post.tags,
-      attachments: post.attachments
-    }));
+    // Format posts for frontend - filter out posts with null authors
+    const formattedPosts = posts
+      .filter(post => post.author != null) // Exclude posts where author was deleted
+      .map(post => ({
+        id: post._id.toString(),
+        author: {
+          id: post.author._id.toString(),
+          name: `${post.author.firstName} ${post.author.lastName}`,
+          avatar: post.author.profilePicture,
+          role: post.author.role,
+          verified: post.author.isEmailVerified
+        },
+        content: post.content,
+        type: post.type,
+        timestamp: post.createdAt.toISOString(),
+        likes: post.likeCount,
+        comments: post.commentCount,
+        shares: post.shares,
+        isLiked: post.likes.includes(req.user!._id),
+        isBookmarked: post.bookmarks ? post.bookmarks.includes(req.user!._id) : false,
+        tags: post.tags,
+        attachments: post.attachments
+      }));
 
     res.json({
       success: true,
@@ -124,26 +126,29 @@ router.get('/trending', protect, async (req: Request, res: Response) => {
       })
       .limit(max);
 
-    const formattedPosts = posts.map(post => ({
-      id: post._id.toString(),
-      author: {
-        id: post.author._id.toString(),
-        name: `${post.author.firstName} ${post.author.lastName}`,
-        avatar: post.author.profilePicture,
-        role: post.author.role,
-        verified: post.author.isEmailVerified
-      },
-      content: post.content,
-      type: post.type,
-      timestamp: post.createdAt.toISOString(),
-      likes: post.likeCount,
-      comments: post.commentCount,
-      shares: post.shares,
-      isLiked: post.likes.includes(req.user!._id),
-      isBookmarked: post.bookmarks ? post.bookmarks.includes(req.user!._id) : false,
-      tags: post.tags,
-      attachments: post.attachments
-    }));
+    // Filter out posts with null authors and format
+    const formattedPosts = posts
+      .filter(post => post.author != null) // Exclude posts where author was deleted
+      .map(post => ({
+        id: post._id.toString(),
+        author: {
+          id: post.author._id.toString(),
+          name: `${post.author.firstName} ${post.author.lastName}`,
+          avatar: post.author.profilePicture,
+          role: post.author.role,
+          verified: post.author.isEmailVerified
+        },
+        content: post.content,
+        type: post.type,
+        timestamp: post.createdAt.toISOString(),
+        likes: post.likeCount,
+        comments: post.commentCount,
+        shares: post.shares,
+        isLiked: post.likes.includes(req.user!._id),
+        isBookmarked: post.bookmarks ? post.bookmarks.includes(req.user!._id) : false,
+        tags: post.tags,
+        attachments: post.attachments
+      }));
 
     // Trending groups: by memberCount and recent activity
     const groups = await Group.find({ isActive: true })
@@ -152,28 +157,30 @@ router.get('/trending', protect, async (req: Request, res: Response) => {
       .limit(max);
 
     const userId = req.user?.id;
-    const formattedGroups = groups.map(group => {
-      const userMember = group.members.find(member => member.userId.toString() === userId);
-      const isAdmin = group.createdBy._id.toString() === userId || userMember?.role === 'admin';
-      return {
-        id: group._id.toString(),
-        name: group.name,
-        description: group.description,
-        category: group.category,
-        avatar: group.avatar,
-        coverImage: group.cover_image,
-        memberCount: group.memberCount,
-        maxMembers: group.maxMembers,
-        isPrivate: group.isPrivate,
-        isJoined: !!userMember,
-        isAdmin,
-        isModerator: userMember?.role === 'moderator',
-        createdAt: group.createdAt.toISOString(),
-        lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
-        tags: group.tags,
-        rules: group.rules,
-      };
-    });
+    const formattedGroups = groups
+      .filter(group => group.createdBy != null) // Exclude groups where creator was deleted
+      .map(group => {
+        const userMember = group.members.find(member => member.userId.toString() === userId);
+        const isAdmin = group.createdBy._id.toString() === userId || userMember?.role === 'admin';
+        return {
+          id: group._id.toString(),
+          name: group.name,
+          description: group.description,
+          category: group.category,
+          avatar: group.avatar,
+          coverImage: group.cover_image,
+          memberCount: group.memberCount,
+          maxMembers: group.maxMembers,
+          isPrivate: group.isPrivate,
+          isJoined: !!userMember,
+          isAdmin,
+          isModerator: userMember?.role === 'moderator',
+          createdAt: group.createdAt.toISOString(),
+          lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
+          tags: group.tags,
+          rules: group.rules,
+        };
+      });
 
     res.json({
       success: true,
@@ -447,33 +454,35 @@ router.get('/groups', protect, async (req: Request, res: Response) => {
 
     const userGroupIds = new Set(userGroups.map(g => g._id.toString()));
 
-    // Format groups for frontend
-    const formattedGroups = groups.map(group => {
-      const userMember = group.members.find(member => member.userId.toString() === userId);
-      const isAdmin = group.createdBy._id.toString() === userId || userMember?.role === 'admin';
-      
-      return {
-        id: group._id.toString(),
-        name: group.name,
-        description: group.description,
-        category: group.category,
-        avatar: group.avatar,
-        coverImage: group.cover_image,
-        memberCount: group.memberCount,
-        maxMembers: group.maxMembers,
-        isPrivate: group.isPrivate,
-        isJoined: userGroupIds.has(group._id.toString()),
-        isAdmin: isAdmin,
-        isModerator: group.members.some(member => 
-          member.userId.toString() === userId && member.role === 'moderator'
-        ),
-        createdAt: group.createdAt.toISOString(),
-        lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
-        tags: group.tags,
-        rules: group.rules,
-        joinCode: group.joinCode
-      };
-    });
+    // Format groups for frontend - filter out groups where creator was deleted
+    const formattedGroups = groups
+      .filter(group => group.createdBy != null) // Exclude groups where creator was deleted
+      .map(group => {
+        const userMember = group.members.find(member => member.userId && member.userId.toString() === userId);
+        const isAdmin = group.createdBy._id.toString() === userId || userMember?.role === 'admin';
+        
+        return {
+          id: group._id.toString(),
+          name: group.name,
+          description: group.description,
+          category: group.category,
+          avatar: group.avatar,
+          coverImage: group.cover_image,
+          memberCount: group.memberCount,
+          maxMembers: group.maxMembers,
+          isPrivate: group.isPrivate,
+          isJoined: userGroupIds.has(group._id.toString()),
+          isAdmin: isAdmin,
+          isModerator: group.members.some(member => 
+            member.userId && member.userId.toString() === userId && member.role === 'moderator'
+          ),
+          createdAt: group.createdAt.toISOString(),
+          lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
+          tags: group.tags,
+          rules: group.rules,
+          joinCode: group.joinCode
+        };
+      });
 
     // Get total count
     const total = await Group.countDocuments(query);
@@ -699,39 +708,41 @@ router.get('/groups/my', protect, async (req: Request, res: Response) => {
       .populate('createdBy', 'firstName lastName profilePicture')
       .sort({ lastActivity: -1 });
 
-    const formattedGroups = groups.map(group => {
-      const currentUserMember = group.members.find(member => member.userId.toString() === userId);
-      const isAdmin = group.createdBy._id.toString() === userId || currentUserMember?.role === 'admin';
-      
-      console.log('User group admin check:', {
-        userId,
-        groupId: group._id.toString(),
-        groupName: group.name,
-        creatorId: group.createdBy._id.toString(),
-        userRole: currentUserMember?.role,
-        isAdmin
+    const formattedGroups = groups
+      .filter(group => group.createdBy != null) // Exclude groups where creator was deleted
+      .map(group => {
+        const currentUserMember = group.members.find(member => member.userId && member.userId.toString() === userId);
+        const isAdmin = group.createdBy._id.toString() === userId || currentUserMember?.role === 'admin';
+        
+        console.log('User group admin check:', {
+          userId,
+          groupId: group._id.toString(),
+          groupName: group.name,
+          creatorId: group.createdBy._id.toString(),
+          userRole: currentUserMember?.role,
+          isAdmin
+        });
+        
+        return {
+          id: group._id.toString(),
+          name: group.name,
+          description: group.description,
+          category: group.category,
+          avatar: group.avatar,
+          coverImage: group.cover_image,
+          memberCount: group.memberCount,
+          maxMembers: group.maxMembers,
+          isPrivate: group.isPrivate,
+          isJoined: true,
+          isAdmin: isAdmin,
+          isModerator: currentUserMember?.role === 'moderator',
+          createdAt: group.createdAt.toISOString(),
+          lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
+          tags: group.tags,
+          rules: group.rules,
+          joinCode: group.joinCode
+        };
       });
-      
-      return {
-        id: group._id.toString(),
-        name: group.name,
-        description: group.description,
-        category: group.category,
-        avatar: group.avatar,
-        coverImage: group.cover_image,
-        memberCount: group.memberCount,
-        maxMembers: group.maxMembers,
-        isPrivate: group.isPrivate,
-        isJoined: true,
-        isAdmin: isAdmin,
-        isModerator: currentUserMember?.role === 'moderator',
-        createdAt: group.createdAt.toISOString(),
-        lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
-        tags: group.tags,
-        rules: group.rules,
-        joinCode: group.joinCode
-      };
-    });
 
     res.json({
       success: true,
@@ -1296,7 +1307,12 @@ router.get('/achievements', protect, async (req: Request, res: Response) => {
     // Create a map for quick lookup
     const userAchievementMap = new Map();
     userAchievements.forEach(ua => {
-      userAchievementMap.set(ua.achievementId._id.toString(), ua);
+      if (ua.achievementId != null) { // Safely handle null achievements
+        const achievementId = ua.achievementId instanceof mongoose.Types.ObjectId 
+          ? ua.achievementId.toString() 
+          : (ua.achievementId as any)._id.toString();
+        userAchievementMap.set(achievementId, ua);
+      }
     });
 
     // Format achievements for frontend
@@ -1349,21 +1365,23 @@ router.get('/achievements/my', protect, async (req: Request, res: Response) => {
     const userAchievements = await UserAchievement.find({ userId })
       .populate('achievementId');
 
-    const formatted = userAchievements.map(ua => ({
-      id: ua.achievementId instanceof mongoose.Types.ObjectId ? ua.achievementId.toString() : (ua.achievementId as any)._id.toString(),
-      title: (ua as any).achievementId.title,
-      description: (ua as any).achievementId.description,
-      icon: (ua as any).achievementId.icon,
-      category: (ua as any).achievementId.category,
-      points: (ua as any).achievementId.points,
-      isUnlocked: ua.isUnlocked,
-      unlockedAt: ua.unlockedAt ? ua.unlockedAt.toISOString() : undefined,
-      progress: ua.progress,
-      requirements: (ua as any).achievementId.requirements,
-      rarity: (ua as any).achievementId.rarity,
-      sharedBy: ua.sharedBy || 0,
-      likes: ua.likes || 0
-    }));
+    const formatted = userAchievements
+      .filter(ua => ua.achievementId != null) // Exclude records where achievement was deleted
+      .map(ua => ({
+        id: ua.achievementId instanceof mongoose.Types.ObjectId ? ua.achievementId.toString() : (ua.achievementId as any)._id.toString(),
+        title: (ua as any).achievementId.title,
+        description: (ua as any).achievementId.description,
+        icon: (ua as any).achievementId.icon,
+        category: (ua as any).achievementId.category,
+        points: (ua as any).achievementId.points,
+        isUnlocked: ua.isUnlocked,
+        unlockedAt: ua.unlockedAt ? ua.unlockedAt.toISOString() : undefined,
+        progress: ua.progress,
+        requirements: (ua as any).achievementId.requirements,
+        rarity: (ua as any).achievementId.rarity,
+        sharedBy: ua.sharedBy || 0,
+        likes: ua.likes || 0
+      }));
 
     res.json({ success: true, data: formatted });
   } catch (error) {
@@ -1521,23 +1539,25 @@ router.get('/posts/:postId/comments', protect, async (req: Request, res: Respons
       .populate('author', 'firstName lastName profilePicture role isEmailVerified')
       .sort({ createdAt: -1 });
 
-    // Format all comments
-    const formattedAllComments = allComments.map(comment => ({
-      id: comment._id.toString(),
-      parentCommentId: comment.parentComment ? comment.parentComment.toString() : null,
-      author: {
-        id: comment.author._id.toString(),
-        name: `${comment.author.firstName} ${comment.author.lastName}`,
-        avatar: comment.author.profilePicture,
-        role: comment.author.role,
-        verified: comment.author.isEmailVerified
-      },
-      content: comment.content,
-      timestamp: comment.createdAt.toISOString(),
-      likes: comment.likeCount,
-      isLiked: comment.likes.includes(req.user!._id),
-      replyCount: allComments.filter(c => c.parentComment?.equals(comment._id)).length
-    }));
+    // Format all comments - filter out comments with null authors
+    const formattedAllComments = allComments
+      .filter(comment => comment.author != null) // Exclude comments where author was deleted
+      .map(comment => ({
+        id: comment._id.toString(),
+        parentCommentId: comment.parentComment ? comment.parentComment.toString() : null,
+        author: {
+          id: comment.author._id.toString(),
+          name: `${comment.author.firstName} ${comment.author.lastName}`,
+          avatar: comment.author.profilePicture,
+          role: comment.author.role,
+          verified: comment.author.isEmailVerified
+        },
+        content: comment.content,
+        timestamp: comment.createdAt.toISOString(),
+        likes: comment.likeCount,
+        isLiked: comment.likes.includes(req.user!._id),
+        replyCount: allComments.filter(c => c.parentComment?.equals(comment._id)).length
+      }));
 
     // Get top-level comments for pagination
     const topLevelComments = formattedAllComments.filter(comment => !comment.parentComment_id);

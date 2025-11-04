@@ -339,7 +339,7 @@ const ResponsiveVideoLayout: React.FC<ResponsiveVideoLayoutProps> = ({
       <Box
         sx={{
           position: 'absolute',
-          bottom: isMobile ? 80 : 100,
+          bottom: isMobile ? 160 : 100,
           right: isMobile ? 16 : 24,
           display: 'flex',
           flexDirection: 'column',
@@ -718,12 +718,12 @@ const ResponsiveVideoLayout: React.FC<ResponsiveVideoLayoutProps> = ({
         {participantsComponent}
       </PopupPanel>
 
-      {/* Bottom controls */}
+      {/* Bottom controls - positioned higher on mobile to avoid bottom navbar overlap */}
       <Slide direction="up" in={controlsVisible} mountOnEnter unmountOnExit>
         <Box
           sx={{
             position: 'fixed',
-            bottom: 0,
+            bottom: isMobile ? 70 : 0,
             left: 0,
             right: 0,
             zIndex: 1000,

@@ -937,13 +937,15 @@ export const getTeacherDashboardStats = async (req: Request, res: Response, next
     ).length;
     const earnings = totalEarnings.length > 0 ? totalEarnings[0].total : 0;
 
-    const formattedRecentActivity = recentActivity.map(enrollment => ({
-      type: 'enrollment',
-      message: `${enrollment.student.firstName} ${enrollment.student.lastName} enrolled in ${enrollment.course.title}`,
-      timestamp: enrollment.enrolledAt,
-      student: enrollment.student,
-      course: enrollment.course
-    }));
+    const formattedRecentActivity = recentActivity
+      .filter(enrollment => enrollment.student && enrollment.course)
+      .map(enrollment => ({
+        type: 'enrollment',
+        message: `${enrollment.student.firstName} ${enrollment.student.lastName} enrolled in ${enrollment.course.title}`,
+        timestamp: enrollment.enrolledAt,
+        student: enrollment.student,
+        course: enrollment.course
+      }));
 
     res.status(200).json({
       success: true,

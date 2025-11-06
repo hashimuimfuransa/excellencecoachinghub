@@ -599,7 +599,8 @@ const CategoriesSection: React.FC = () => {
       color: '#667eea',
       gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       count: '⭐ Popular',
-      description: 'Leadership, Executive, Project Management, CPA/CAT/ACCA'
+      description: 'Leadership, Executive, Project Management, CPA/CAT/ACCA',
+      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
     },
     {
       name: 'Business & Entrepreneurship Coaching',
@@ -608,7 +609,8 @@ const CategoriesSection: React.FC = () => {
       color: '#4facfe',
       gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
       count: '⭐ Popular',
-      description: 'Startup, Strategy, Finance, Marketing, Innovation'
+      description: 'Startup, Strategy, Finance, Marketing, Innovation',
+      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
     },
     {
       name: 'Academic Coaching',
@@ -617,7 +619,8 @@ const CategoriesSection: React.FC = () => {
       color: '#a8edea',
       gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
       count: 'All levels',
-      description: 'Primary, Secondary, University, Nursery, Exams, Research'
+      description: 'Primary, Secondary, University, Nursery, Exams, Research',
+      image: 'https://images.unsplash.com/photo-1573496359142-b8d87d7ce4a1?w=500&h=300&fit=crop'
     },
     {
       name: 'Language Coaching',
@@ -626,7 +629,8 @@ const CategoriesSection: React.FC = () => {
       color: '#fa709a',
       gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
       count: 'Fluency',
-      description: 'English, French, Kinyarwanda, Business Communication'
+      description: 'English, French, Kinyarwanda, Business Communication',
+      image: 'https://images.unsplash.com/photo-1516534775068-bb57b42fc91d?w=500&h=300&fit=crop'
     },
     {
       name: 'Technical & Digital Coaching',
@@ -635,7 +639,8 @@ const CategoriesSection: React.FC = () => {
       color: '#43e97b',
       gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
       count: 'In-demand',
-      description: 'AI, Data, Cybersecurity, Cloud, Dev, Digital Marketing'
+      description: 'AI, Data, Cybersecurity, Cloud, Dev, Digital Marketing',
+      image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&h=300&fit=crop'
     },
     {
       name: 'Job Seeker Coaching',
@@ -644,7 +649,8 @@ const CategoriesSection: React.FC = () => {
       color: '#ff9966',
       gradient: 'linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)',
       count: 'Career-ready',
-      description: 'Career choice, skills, exams, interview, resume'
+      description: 'Career choice, skills, exams, interview, resume',
+      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
     },
     {
       name: 'Personal & Corporate Development',
@@ -653,7 +659,8 @@ const CategoriesSection: React.FC = () => {
       color: '#b06ab3',
       gradient: 'linear-gradient(135deg, #b06ab3 0%, #4568dc 100%)',
       count: 'Growth',
-      description: 'Communication, EI, Time, Team, HR, Ethics'
+      description: 'Communication, EI, Time, Team, HR, Ethics',
+      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
     }
   ];
 
@@ -770,6 +777,31 @@ const CategoriesSection: React.FC = () => {
                   }
                 }}
               >
+                {/* Category Image */}
+                {(category as any).image && (
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: 180,
+                      backgroundImage: `url(${(category as any).image})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)',
+                        zIndex: 1
+                      }
+                    }}
+                  />
+                )}
+                
                 {/* Gradient Overlay */}
                 <Box
                   className="category-gradient"
@@ -1913,7 +1945,7 @@ const TestimonialsSection: React.FC = () => {
       name: 'John Uwimana',
       role: 'Business Development Manager',
       company: 'Local Enterprise, Kigali',
-      avatar: '/images/avatar1.jpg',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
       rating: 5,
       text: 'Excellence Coaching Hub transformed the way I learn — I finally completed a course that gave me practical confidence in my career. The weekly structure made learning manageable.',
       achievement: 'Career Growth: Leadership Role Promotion',
@@ -1923,7 +1955,7 @@ const TestimonialsSection: React.FC = () => {
       name: 'Marie Kamikazi',
       role: 'Digital Marketing Specialist',
       company: 'Tech Startup, Rwanda',
-      avatar: '/images/avatar2.jpg',
+      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop',
       rating: 5,
       text: 'Their weekly course structure made learning manageable and consistent. The expert instructors provided practical skills that I could immediately apply to my work.',
       achievement: 'Skills Gained: Digital Marketing Expertise',
@@ -1933,7 +1965,7 @@ const TestimonialsSection: React.FC = () => {
       name: 'James Nsabimana',
       role: 'Academic Coordinator',
       company: 'Professional Learner',
-      avatar: '/images/avatar3.jpg',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop',
       rating: 5,
       text: 'As a professional, I found the coaching approach incredibly effective. The cloud-based materials and progress tracking made continuous learning accessible anytime.',
       achievement: 'Impact: Improved teaching methodology',
@@ -2105,6 +2137,7 @@ const TestimonialsSection: React.FC = () => {
                   {/* Enhanced Avatar */}
                   <Avatar
                     className="testimonial-avatar"
+                    src={testimonial.avatar}
                     sx={{
                       width: 90,
                       height: 90,
@@ -2115,7 +2148,8 @@ const TestimonialsSection: React.FC = () => {
                       fontWeight: 700,
                       border: '3px solid rgba(255, 255, 255, 0.8)',
                       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                      transition: 'all 0.4s ease'
+                      transition: 'all 0.4s ease',
+                      objectFit: 'cover'
                     }}
                   >
                     {testimonial.name.split(' ').map(n => n[0]).join('')}
@@ -3185,10 +3219,13 @@ const PastPapersSection: React.FC = () => {
               sx={{
                 p: 4,
                 height: '100%',
-                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%), url(https://images.unsplash.com/photo-1546410531-bb4caa6b0e2b?w=500&h=400&fit=crop)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 border: '1px solid rgba(233, 30, 99, 0.1)',
                 borderRadius: 3,
                 transition: 'all 0.3s ease',
+                backgroundBlendMode: 'overlay',
                 '&:hover': {
                   transform: 'translateY(-8px)',
                   boxShadow: '0 20px 40px rgba(233, 30, 99, 0.15)',
@@ -3227,10 +3264,13 @@ const PastPapersSection: React.FC = () => {
               sx={{
                 p: 4,
                 height: '100%',
-                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%), url(https://images.unsplash.com/photo-1516321318423-f06b74b8c6f1?w=500&h=400&fit=crop)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 border: '1px solid rgba(102, 126, 234, 0.1)',
                 borderRadius: 3,
                 transition: 'all 0.3s ease',
+                backgroundBlendMode: 'overlay',
                 '&:hover': {
                   transform: 'translateY(-8px)',
                   boxShadow: '0 20px 40px rgba(102, 126, 234, 0.15)',
@@ -3269,10 +3309,13 @@ const PastPapersSection: React.FC = () => {
               sx={{
                 p: 4,
                 height: '100%',
-                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%), url(https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=400&fit=crop)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 border: '1px solid rgba(156, 39, 176, 0.1)',
                 borderRadius: 3,
                 transition: 'all 0.3s ease',
+                backgroundBlendMode: 'overlay',
                 '&:hover': {
                   transform: 'translateY(-8px)',
                   boxShadow: '0 20px 40px rgba(156, 39, 176, 0.15)',

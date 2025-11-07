@@ -65,6 +65,38 @@ import { recordedSessionService } from '../../services/recordedSessionService';
 import api from '../../services/api';
 import LiveSessionStatus from '../../components/Student/LiveSessionStatus';
 
+const normalizeYoutubeUrls = (url: string) => {
+  if (!url) {
+    return { embed: '', watch: '' };
+  }
+  const trimmed = url.trim();
+  const idMatch = trimmed.match(/(?:embed\/|watch\?v=|youtu\.be\/)([\w-]{11})/i);
+  const id = idMatch ? idMatch[1] : '';
+  if (id) {
+    return {
+      embed: `https://www.youtube.com/embed/${id}`,
+      watch: `https://www.youtube.com/watch?v=${id}`
+    };
+  }
+  return { embed: trimmed, watch: trimmed };
+};
+
+const getYoutubeUrlsFromSession = (session: any) => {
+  if (!session) {
+    return { embed: '', watch: '' };
+  }
+  const candidates = [session.youtubeEmbedUrl, session.meetingUrl];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const normalized = normalizeYoutubeUrls(candidate);
+    const { embed, watch } = normalized;
+    if ((embed && embed.includes('youtu')) || (watch && watch.includes('youtu'))) {
+      return normalized;
+    }
+  }
+  return { embed: '', watch: '' };
+};
+
 interface CourseProgressResponse {
   weekProgresses: any[];
   materialProgresses: any[];
@@ -234,8 +266,23 @@ const NurseryUnifiedLearningPage: React.FC = () => {
     navigate(`/material/${courseId}/${material._id}`);
   };
 
-  const handleLiveSessionClick = (sessionId: string) => {
-    navigate(`/dashboard/student/live-sessions/${sessionId}/room`);
+  const handleLiveSessionClick = (session: any) => {
+    if (!user) {
+      navigate('/login', { state: { returnTo: window.location.pathname } });
+      return;
+    }
+
+    const { embed, watch } = getYoutubeUrlsFromSession(session);
+    const isYoutubeStream = session?.streamProvider === 'youtube' || !!embed || !!watch;
+    const sessionId = session?._id || session?.id;
+
+    if (!sessionId) {
+      return;
+    }
+
+    navigate(`/dashboard/student/live-sessions/${sessionId}/room`, {
+      state: isYoutubeStream ? { focus: 'youtube' } : undefined
+    });
   };
 
   const handleRecordedSessionClick = (sessionId: string) => {
@@ -572,7 +619,7 @@ const NurseryUnifiedLearningPage: React.FC = () => {
                               transform: 'translateY(-5px)',
                             },
                           }}
-                          onClick={() => handleLiveSessionClick(session._id)}
+                          onClick={() => handleLiveSessionClick(session)}
                         >
                           <CardContent
                             sx={{
@@ -600,6 +647,18 @@ const NurseryUnifiedLearningPage: React.FC = () => {
                             >
                               {session.title}
                             </Typography>
+                            {(session.streamProvider === 'youtube' || session.youtubeEmbedUrl) && (
+                              <Chip
+                                icon={<Videocam sx={{ color: 'white !important' }} />}
+                                label="YouTube Livestream"
+                                sx={{
+                                  background: 'rgba(255, 255, 255, 0.2)',
+                                  color: 'white',
+                                  mb: 2,
+                                  '& .MuiChip-icon': { color: 'white !important' }
+                                }}
+                              />
+                            )}
                             <Stack
                               direction="row"
                               spacing={1}

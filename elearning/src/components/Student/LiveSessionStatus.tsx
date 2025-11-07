@@ -24,6 +24,35 @@ import {
 } from '@mui/icons-material';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
 
+const normalizeYoutubeUrls = (url: string) => {
+  if (!url) {
+    return { embed: '', watch: '' };
+  }
+  const trimmed = url.trim();
+  const idMatch = trimmed.match(/(?:embed\/|watch\?v=|youtu\.be\/)([\w-]{11})/i);
+  const id = idMatch ? idMatch[1] : '';
+  if (id) {
+    return {
+      embed: `https://www.youtube.com/embed/${id}`,
+      watch: `https://www.youtube.com/watch?v=${id}`
+    };
+  }
+  return { embed: trimmed, watch: trimmed };
+};
+
+const getYoutubeUrlsFromSession = (session: ILiveSession) => {
+  const sources = [session.youtubeEmbedUrl, session.meetingUrl];
+  for (const source of sources) {
+    if (!source) continue;
+    const normalized = normalizeYoutubeUrls(source);
+    const { embed, watch } = normalized;
+    if ((watch && watch.includes('youtu')) || (embed && embed.includes('youtu'))) {
+      return normalized;
+    }
+  }
+  return { embed: '', watch: '' };
+};
+
 interface LiveSessionStatusProps {
   courseId: string;
   compact?: boolean;
@@ -157,6 +186,8 @@ const LiveSessionStatus: React.FC<LiveSessionStatusProps> = ({
 
   // Provide display metadata for each state (live/upcoming/recent)
   const getStatusInfo = () => {
+    const youtubeUrls = getYoutubeUrlsFromSession(session);
+    const isYoutubeSession = session.streamProvider === 'youtube' || !!youtubeUrls.embed || !!youtubeUrls.watch;
     switch (type) {
       case 'live':
         return {
@@ -164,7 +195,7 @@ const LiveSessionStatus: React.FC<LiveSessionStatusProps> = ({
           icon: <VideoCall />,
           title: 'Live Session in Progress',
           message: `${session.title} is happening now!`,
-          actionText: 'Join Now',
+          actionText: isYoutubeSession ? 'Watch Stream' : 'Join Now',
           actionIcon: <PlayArrow />,
           color: 'success',
           bg: 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)'
@@ -207,9 +238,18 @@ const LiveSessionStatus: React.FC<LiveSessionStatusProps> = ({
 
   const handleAction = () => {
     switch (type) {
-      case 'live':
+      case 'live': {
+        const youtubeUrls = getYoutubeUrlsFromSession(session);
+        const isYoutubeSession = session.streamProvider === 'youtube' || !!youtubeUrls.embed || !!youtubeUrls.watch;
+        if (isYoutubeSession) {
+          navigate(`/dashboard/student/live-sessions/${session._id}/room`, {
+            state: { focus: 'youtube' }
+          });
+          break;
+        }
         navigate(`/dashboard/student/live-sessions/${session._id}/room`);
         break;
+      }
       case 'upcoming':
         navigate(`/dashboard/student/live-sessions?courseId=${courseId}`);
         break;

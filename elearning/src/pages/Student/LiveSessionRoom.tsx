@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -40,10 +40,30 @@ const normalizeYoutubeUrls = (url: string) => {
   return { embed: trimmed, watch: trimmed };
 };
 
+const getYoutubeUrlsFromSession = (session?: ILiveSession | null) => {
+  if (!session) {
+    return { embed: '', watch: '' };
+  }
+  const sources = [session.youtubeEmbedUrl, session.meetingUrl];
+  for (const source of sources) {
+    if (!source) continue;
+    const normalized = normalizeYoutubeUrls(source);
+    const { embed, watch } = normalized;
+    if ((watch && watch.includes('youtu')) || (embed && embed.includes('youtu'))) {
+      return normalized;
+    }
+  }
+  return { embed: '', watch: '' };
+};
+
 const StudentLiveSessionRoom: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  const focusTarget = (location.state as { focus?: 'youtube' } | null)?.focus;
+  const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
+  const hasAutoFocusedYoutube = useRef(false);
 
   // State management
   const [session, setSession] = useState<ILiveSession | null>(null);
@@ -51,8 +71,18 @@ const StudentLiveSessionRoom: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [inVideoRoom, setInVideoRoom] = useState(false);
 
-  const { embed: youtubeEmbedUrl, watch: youtubeWatchUrl } = normalizeYoutubeUrls(session?.youtubeEmbedUrl || '');
-  const isYoutubeStream = session?.streamProvider === 'youtube' || (!!youtubeEmbedUrl && youtubeEmbedUrl.includes('youtube.com'));
+  const { embed: youtubeEmbedUrl, watch: youtubeWatchUrl } = getYoutubeUrlsFromSession(session);
+  const isYoutubeStream = session?.streamProvider === 'youtube' || !!youtubeEmbedUrl || !!youtubeWatchUrl;
+
+  useEffect(() => {
+    if (!isYoutubeStream || hasAutoFocusedYoutube.current) {
+      return;
+    }
+    if (focusTarget === 'youtube' || session?.status === 'live') {
+      hasAutoFocusedYoutube.current = true;
+      youtubeContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [focusTarget, isYoutubeStream, session?.status]);
 
   // Load session data
   useEffect(() => {
@@ -65,8 +95,10 @@ const StudentLiveSessionRoom: React.FC = () => {
 
         const sessionData = await liveSessionService.joinSessionAsStudent(sessionId);
         setSession(sessionData);
+        hasAutoFocusedYoutube.current = false;
 
-        const isYoutube = sessionData.streamProvider === 'youtube' || !!sessionData.youtubeEmbedUrl;
+        const youtubeUrls = getYoutubeUrlsFromSession(sessionData);
+        const isYoutube = sessionData.streamProvider === 'youtube' || !!youtubeUrls.embed || !!youtubeUrls.watch;
         if (sessionData.status === 'live' && !isYoutube) {
           setInVideoRoom(true);
         } else {
@@ -86,9 +118,7 @@ const StudentLiveSessionRoom: React.FC = () => {
   // Handle joining video room
   const handleJoinVideoRoom = () => {
     if (isYoutubeStream) {
-      if (youtubeWatchUrl) {
-        window.open(youtubeWatchUrl, '_blank', 'noopener,noreferrer');
-      }
+      youtubeContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     setInVideoRoom(true);
@@ -214,6 +244,9 @@ const StudentLiveSessionRoom: React.FC = () => {
           <Typography variant="body2" sx={{ mb: 1 }}>
             <strong>Recording:</strong> {session.isRecorded ? 'Enabled' : 'Disabled'}
           </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Stream Type:</strong> {isYoutubeStream ? 'YouTube Livestream' : 'Interactive Video Room'}
+          </Typography>
           {/* Add to Google Calendar */}
           {(session.status === 'scheduled') && (
             <Button 
@@ -231,8 +264,9 @@ const StudentLiveSessionRoom: React.FC = () => {
         {session.status === 'scheduled' && (
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              This session is scheduled to start at {new Date(session.scheduledTime).toLocaleString()}.
-              You can start the session early if needed.
+              {isYoutubeStream
+                ? `This YouTube livestream starts at ${new Date(session.scheduledTime).toLocaleString()}.`
+                : `This session is scheduled to start at ${new Date(session.scheduledTime).toLocaleString()}.`}
             </Typography>
           </Alert>
         )}
@@ -240,7 +274,9 @@ const StudentLiveSessionRoom: React.FC = () => {
         {session.status === 'live' && (
           <Alert severity="success" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              This session is currently live! Click the button below to join the video room.
+              {isYoutubeStream
+                ? 'This session is streaming live on YouTube. Use the button below to watch the livestream.'
+                : 'This session is currently live! Click the button below to join the video room.'}
             </Typography>
           </Alert>
         )}
@@ -260,12 +296,12 @@ const StudentLiveSessionRoom: React.FC = () => {
             <Button
               variant="contained"
               size="large"
-              startIcon={<VideoCall />}
+              startIcon={isYoutubeStream ? <LiveTv /> : <VideoCall />}
               onClick={handleJoinVideoRoom}
               color="primary"
               sx={{ fontWeight: 'bold' }}
             >
-              {session.status === 'live' ? 'Join Live Session' : 'Start Session'}
+              {isYoutubeStream ? 'Watch Livestream' : session.status === 'live' ? 'Join Live Session' : 'Start Session'}
             </Button>
           )}
 
@@ -281,6 +317,35 @@ const StudentLiveSessionRoom: React.FC = () => {
             </Button>
           )}
         </Box>
+
+        {isYoutubeStream && youtubeEmbedUrl && (
+          <Box sx={{ mt: 4 }} ref={youtubeContainerRef}>
+            <Typography variant="h6" gutterBottom>
+              Livestream
+            </Typography>
+            <Box
+              component="iframe"
+              src={`${youtubeEmbedUrl}?rel=0`}
+              sx={{
+                width: '100%',
+                border: 0,
+                borderRadius: 2,
+                minHeight: { xs: 220, sm: 340 },
+                boxShadow: 3
+              }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+            <Button
+              variant="outlined"
+              startIcon={<PlayArrow />}
+              sx={{ mt: 2 }}
+              onClick={() => window.open(youtubeWatchUrl || youtubeEmbedUrl, '_blank', 'noopener,noreferrer')}
+            >
+              Watch on YouTube
+            </Button>
+          </Box>
+        )}
 
         {/* Enhanced Recording Section for Students */}
         {session.status === 'ended' && (

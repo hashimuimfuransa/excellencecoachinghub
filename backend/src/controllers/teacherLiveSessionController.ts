@@ -7,6 +7,22 @@ import { TeacherProfile } from '../models/TeacherProfile';
 import { notificationService } from '../services/notificationService';
 import { uploadFile } from '../utils/fileUpload';
 
+const normalizeYoutubeUrls = (url?: string) => {
+  if (!url) {
+    return { embed: '', watch: '' };
+  }
+  const trimmed = url.trim();
+  const match = trimmed.match(/(?:embed\/|watch\?v=|youtu\.be\/)([\w-]{11})/i);
+  if (!match) {
+    return { embed: trimmed, watch: trimmed };
+  }
+  const id = match[1];
+  return {
+    embed: `https://www.youtube.com/embed/${id}`,
+    watch: `https://www.youtube.com/watch?v=${id}`
+  };
+};
+
 // Create a new live session (Teacher only)
 export const createLiveSession = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -34,7 +50,9 @@ export const createLiveSession = async (req: Request, res: Response, next: NextF
       handRaiseEnabled,
       screenShareEnabled,
       attendanceRequired,
-      zoomFallbackLink
+      zoomFallbackLink,
+      streamProvider,
+      youtubeEmbedUrl
     } = req.body;
 
     // Verify teacher profile is approved
@@ -95,7 +113,9 @@ export const createLiveSession = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    // Create live session
+    const normalizedStreamProvider: 'internal' | 'youtube' = streamProvider === 'youtube' ? 'youtube' : 'internal';
+    const normalizedYoutubeUrls = normalizedStreamProvider === 'youtube' ? normalizeYoutubeUrls(youtubeEmbedUrl) : { embed: '', watch: '' };
+
     const liveSession = new LiveSession({
       title,
       description,
@@ -111,7 +131,10 @@ export const createLiveSession = async (req: Request, res: Response, next: NextF
       screenShareEnabled: screenShareEnabled !== false,
       attendanceRequired: attendanceRequired || false,
       zoomFallbackLink: zoomFallbackLink || '',
-      status: 'scheduled'
+      status: 'scheduled',
+      streamProvider: normalizedStreamProvider,
+      youtubeEmbedUrl: normalizedStreamProvider === 'youtube' ? normalizedYoutubeUrls.embed || null : null,
+      meetingUrl: normalizedStreamProvider === 'youtube' ? (normalizedYoutubeUrls.watch || normalizedYoutubeUrls.embed || null) : null
     });
 
     await liveSession.save();
@@ -201,7 +224,7 @@ export const getSessionById = async (req: Request, res: Response, next: NextFunc
 
     // Optimized query with lean() and selective field loading
     const session = await LiveSession.findOne({ _id: id, instructor: teacherId })
-      .select('title description course scheduledTime duration status actualStartTime actualEndTime meetingId meetingUrl isRecorded recordingUrl maxParticipants chatEnabled handRaiseEnabled screenShareEnabled attendanceRequired createdAt updatedAt participants attendees')
+      .select('title description course scheduledTime duration status actualStartTime actualEndTime meetingId meetingUrl streamProvider youtubeEmbedUrl isRecorded recordingUrl maxParticipants chatEnabled handRaiseEnabled screenShareEnabled attendanceRequired createdAt updatedAt participants attendees')
       .populate('course', 'title description')
       .lean(); // Convert to plain JS object for better performance
 
@@ -377,6 +400,33 @@ export const updateSession = async (req: Request, res: Response, next: NextFunct
       }
     });
 
+    let updatedStreamProvider: 'internal' | 'youtube' | undefined;
+    if (updates.streamProvider !== undefined) {
+      updatedStreamProvider = updates.streamProvider === 'youtube' ? 'youtube' : 'internal';
+      session.streamProvider = updatedStreamProvider;
+      if (updatedStreamProvider !== 'youtube') {
+        session.youtubeEmbedUrl = null;
+        if (session.meetingUrl && session.meetingUrl.includes('youtu')) {
+          session.meetingUrl = null;
+        }
+      }
+    }
+
+    if (updates.youtubeEmbedUrl !== undefined) {
+      const providerForYoutube = updatedStreamProvider ?? session.streamProvider ?? 'internal';
+      if (providerForYoutube === 'youtube') {
+        const normalizedYoutube = normalizeYoutubeUrls(updates.youtubeEmbedUrl);
+        session.youtubeEmbedUrl = normalizedYoutube.embed || null;
+        if (normalizedYoutube.watch) {
+          session.meetingUrl = normalizedYoutube.watch;
+        } else if (normalizedYoutube.embed) {
+          session.meetingUrl = normalizedYoutube.embed;
+        }
+      } else {
+        session.youtubeEmbedUrl = null;
+      }
+    }
+
     await session.save();
 
     await session.populate('course', 'title');
@@ -408,14 +458,15 @@ export const deleteSession = async (req: Request, res: Response, next: NextFunct
     }
 
     if (session.status === 'live') {
-      res.status(400).json({
-        success: false,
-        error: 'Cannot delete a live session'
-      });
-      return;
+      session.status = 'cancelled';
+      session.actualEndTime = new Date();
+      if (session.recordingStatus === 'recording') {
+        session.recordingStatus = 'failed';
+      }
+      await session.save();
     }
 
-    await LiveSession.findByIdAndDelete(id);
+    await LiveSession.deleteOne({ _id: id });
 
     res.status(200).json({
       success: true,

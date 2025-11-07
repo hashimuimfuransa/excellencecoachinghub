@@ -12,6 +12,8 @@ export interface ILiveSessionDocument extends Document {
   actualEndTime?: Date;
   meetingUrl?: string;
   meetingId?: string;
+  streamProvider?: 'internal' | 'youtube';
+  youtubeEmbedUrl?: string | null;
   // 100ms specific fields
   hmsRoomId?: string;
   hmsRecordingId?: string;
@@ -145,6 +147,15 @@ const liveSessionSchema = new Schema<ILiveSessionDocument>({
     default: null
   },
   meetingId: {
+    type: String,
+    default: null
+  },
+  streamProvider: {
+    type: String,
+    enum: ['internal', 'youtube'],
+    default: 'internal'
+  },
+  youtubeEmbedUrl: {
     type: String,
     default: null
   },

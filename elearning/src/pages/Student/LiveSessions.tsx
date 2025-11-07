@@ -153,6 +153,35 @@ const FilterCard = styled(Paper)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
 }));
 
+const normalizeYoutubeUrls = (url: string) => {
+  if (!url) {
+    return { embed: '', watch: '' };
+  }
+  const trimmed = url.trim();
+  const idMatch = trimmed.match(/(?:embed\/|watch\?v=|youtu\.be\/)([\w-]{11})/i);
+  const id = idMatch ? idMatch[1] : '';
+  if (id) {
+    return {
+      embed: `https://www.youtube.com/embed/${id}`,
+      watch: `https://www.youtube.com/watch?v=${id}`
+    };
+  }
+  return { embed: trimmed, watch: trimmed };
+};
+
+const getYoutubeUrlsFromSession = (session: ILiveSession) => {
+  const sources = [session.youtubeEmbedUrl, session.meetingUrl];
+  for (const source of sources) {
+    if (!source) continue;
+    const normalized = normalizeYoutubeUrls(source);
+    const { embed, watch } = normalized;
+    if ((watch && watch.includes('youtu')) || (embed && embed.includes('youtu'))) {
+      return normalized;
+    }
+  }
+  return { embed: '', watch: '' };
+};
+
 const StudentLiveSessions: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -252,8 +281,12 @@ const StudentLiveSessions: React.FC = () => {
   });
 
   // Handle join session
-  const handleJoinSession = (sessionId: string) => {
-    navigate(`/dashboard/student/live-sessions/${sessionId}/room`);
+  const handleJoinSession = (session: ILiveSession) => {
+    const youtubeUrls = getYoutubeUrlsFromSession(session);
+    const isYoutubeStream = session.streamProvider === 'youtube' || !!youtubeUrls.embed || !!youtubeUrls.watch;
+    navigate(`/dashboard/student/live-sessions/${session._id}/room`, {
+      state: isYoutubeStream ? { focus: 'youtube' } : undefined
+    });
   };
 
   // Handle play recording
@@ -979,6 +1012,8 @@ const StudentLiveSessions: React.FC = () => {
           <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
             {filteredSessions.map((session, index) => {
               const { date, time } = formatDateTime(session.scheduledTime);
+              const youtubeUrlsForSession = getYoutubeUrlsFromSession(session);
+              const isYoutubeSession = session.streamProvider === 'youtube' || !!youtubeUrlsForSession.embed || !!youtubeUrlsForSession.watch;
               const isLive = session.status === 'live';
               const hasRecording = session.status === 'ended' && session.recordingUrl;
 
@@ -1097,6 +1132,9 @@ const StudentLiveSessions: React.FC = () => {
 
                         {/* Features */}
                         <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+                          {isYoutubeSession ? (
+                            <Chip icon={<LiveTv />} label="🎬 YouTube" size="small" variant="outlined" color="primary" />
+                          ) : null}
                           {session.chatEnabled && (
                             <Chip icon={<Chat />} label="💬 Chat" size="small" variant="outlined" />
                           )}
@@ -1121,8 +1159,8 @@ const StudentLiveSessions: React.FC = () => {
                             variant="contained"
                             color="error"
                             size={isMobile ? 'small' : 'medium'}
-                            startIcon={<LiveTv />}
-                            onClick={() => handleJoinSession(session._id)}
+                            startIcon={isYoutubeSession ? <LiveTv /> : <Videocam />}
+                            onClick={() => handleJoinSession(session)}
                             sx={{ 
                               fontWeight: 'bold',
                               animation: 'pulse 2s infinite',
@@ -1132,7 +1170,7 @@ const StudentLiveSessions: React.FC = () => {
                               '&:hover': { bgcolor: 'error.dark', transform: 'translateY(-1px)' }
                             }}
                           >
-                            Join Live Session
+                            {isYoutubeSession ? 'Open YouTube Stream' : 'Join Live Session'}
                           </ActionButton>
                         ) : session.status === 'scheduled' ? (
                           <ActionButton
@@ -1143,7 +1181,7 @@ const StudentLiveSessions: React.FC = () => {
                             disabled
                             sx={{ fontSize: { xs: '0.85rem', sm: '0.95rem' } }}
                           >
-                            Starts at {time}
+                            {isYoutubeSession ? 'YouTube stream starts at ' : 'Starts at '}{time}
                           </ActionButton>
                         ) : hasRecording ? (
                           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: '100%' }}>

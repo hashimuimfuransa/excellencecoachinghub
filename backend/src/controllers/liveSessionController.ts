@@ -103,7 +103,7 @@ export const getSessionById = async (req: Request, res: Response, next: NextFunc
     
     // Optimized query with selective field loading and lean()
     const session = await LiveSession.findById(id)
-      .select('title description course instructor scheduledTime duration status actualStartTime actualEndTime meetingId meetingUrl isRecorded recordingUrl maxParticipants chatEnabled handRaiseEnabled screenShareEnabled attendanceRequired createdAt updatedAt participants attendees')
+      .select('title description course instructor scheduledTime duration status actualStartTime actualEndTime meetingId meetingUrl streamProvider youtubeEmbedUrl isRecorded recordingUrl maxParticipants chatEnabled handRaiseEnabled screenShareEnabled attendanceRequired createdAt updatedAt participants attendees')
       .populate('instructor', 'firstName lastName email')
       .populate('course', 'title description')
       .lean(); // Convert to plain JS object for better performance

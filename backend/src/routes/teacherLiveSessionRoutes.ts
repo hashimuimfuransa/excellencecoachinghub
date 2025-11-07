@@ -87,7 +87,23 @@ const createSessionValidation = [
   body('attendanceRequired')
     .optional()
     .isBoolean()
-    .withMessage('attendanceRequired must be a boolean')
+    .withMessage('attendanceRequired must be a boolean'),
+  body('streamProvider')
+    .optional()
+    .isIn(['internal', 'youtube'])
+    .withMessage('Invalid stream provider'),
+  body('youtubeEmbedUrl')
+    .optional()
+    .trim()
+    .custom((value, { req }) => {
+      const provider = req.body.streamProvider === 'youtube' ? 'youtube' : 'internal';
+      if (provider === 'youtube' && (!value || !value.trim())) {
+        throw new Error('YouTube URL is required for YouTube streams');
+      }
+      return true;
+    })
+    .isLength({ max: 500 })
+    .withMessage('YouTube URL cannot exceed 500 characters')
 ];
 
 const updateSessionValidation = [
@@ -156,7 +172,22 @@ const updateSessionValidation = [
   body('attendanceRequired')
     .optional()
     .isBoolean()
-    .withMessage('attendanceRequired must be a boolean')
+    .withMessage('attendanceRequired must be a boolean'),
+  body('streamProvider')
+    .optional()
+    .isIn(['internal', 'youtube'])
+    .withMessage('Invalid stream provider'),
+  body('youtubeEmbedUrl')
+    .optional()
+    .trim()
+    .custom((value, { req }) => {
+      if (req.body.streamProvider === 'youtube' && (!value || !value.trim())) {
+        throw new Error('YouTube URL is required for YouTube streams');
+      }
+      return true;
+    })
+    .isLength({ max: 500 })
+    .withMessage('YouTube URL cannot exceed 500 characters')
 ];
 
 const sessionIdValidation = [

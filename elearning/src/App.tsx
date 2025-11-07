@@ -56,6 +56,8 @@ import Assessments from './pages/Student/Assessments';
 import TakeAssessment from './pages/Student/TakeAssessment';
 import EnhancedAssessments from './pages/Student/EnhancedAssessments';
 import UnifiedLearningPage from './pages/Student/UnifiedLearningPage';
+import NurseryUnifiedLearningPage from './pages/Student/NurseryUnifiedLearningPage';
+import LearningPageRouter from './components/Learning/LearningPageRouter';
 import EventsAndAnnouncementsPage from './pages/Student/EventsAndAnnouncementsPage';
 import TeacherCourseDashboard from './pages/Teacher/TeacherCourseDashboard';
 import ContentStructureEditor from './pages/Teacher/ContentStructureEditor';
@@ -571,7 +573,7 @@ const App: React.FC = () => {
         path="/course/:id/learn"
         element={
           <LearnerProtectedRoute>
-            <UnifiedLearningPage />
+            <LearningPageRouter />
           </LearnerProtectedRoute>
         }
       />
@@ -580,7 +582,7 @@ const App: React.FC = () => {
         path="/course/:id/personalized"
         element={
           <LearnerProtectedRoute>
-            <UnifiedLearningPage />
+            <LearningPageRouter />
           </LearnerProtectedRoute>
         }
       />

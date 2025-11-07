@@ -235,6 +235,12 @@ const CoursesPage: React.FC = () => {
     if (categoryLower.includes('marketing') || categoryLower.includes('business')) return '📱';
     if (categoryLower.includes('design')) return '🎨';
     if (categoryLower.includes('language')) return '🗣️';
+    if (categoryLower.includes('nursery')) return '👶';
+    if (categoryLower.includes('professional')) return '💼';
+    if (categoryLower.includes('academic')) return '🎓';
+    if (categoryLower.includes('job') || categoryLower.includes('seeker')) return '💼';
+    if (categoryLower.includes('personal') || categoryLower.includes('corporate')) return '🚀';
+    if (categoryLower.includes('technical') || categoryLower.includes('digital')) return '💻';
     return '📚';
   };
 
@@ -246,6 +252,11 @@ const CoursesPage: React.FC = () => {
     if (categoryLower.includes('marketing') || categoryLower.includes('business')) return '#4facfe, #00f2fe';
     if (categoryLower.includes('design')) return '#43e97b, #38f9d7';
     if (categoryLower.includes('language')) return '#fa709a, #fee140';
+    if (categoryLower.includes('nursery')) return '#FFB6C1, #FFD700';
+    if (categoryLower.includes('professional')) return '#6c5ce7, #a29bfe';
+    if (categoryLower.includes('academic')) return '#0984e3, #6c5ce7';
+    if (categoryLower.includes('job') || categoryLower.includes('seeker')) return '#00b894, #55efc4';
+    if (categoryLower.includes('personal') || categoryLower.includes('corporate')) return '#fd79a8, #fdcb6e';
     return '#a8edea, #fed6e3';
   };
 
@@ -270,12 +281,13 @@ const CoursesPage: React.FC = () => {
     // Map learning categories to course categories
     const categoryMapping: { [key: string]: string } = {
       professional_coaching: 'Professional Coaching',
-      business_entrepreneurship: 'Business & Entrepreneurship Coaching',
+      business_entrepreneurship_coaching: 'Business & Entrepreneurship Coaching',
       academic_coaching: 'Academic Coaching',
+      nursery_coaching: 'Nursery Coaching',
       language_coaching: 'Language Coaching',
       technical_digital_coaching: 'Technical & Digital Coaching',
       job_seeker_coaching: 'Job Seeker Coaching',
-      personal_corporate_coaching: 'Personal & Corporate Development Coaching'
+      personal_corporate_development_coaching: 'Personal & Corporate Development Coaching'
     } as any;
     
     // Set category filter based on selected categories
@@ -464,8 +476,9 @@ const CoursesPage: React.FC = () => {
             borderRadius: 3
           }}
         >
-          <Grid container spacing={3} alignItems="center">
-            <Grid item xs={12} md={6}>
+          {/* Search Bar */}
+          <Grid container spacing={3} alignItems="center" sx={{ mb: 4 }}>
+            <Grid item xs={12} md={8}>
               <TextField
                 fullWidth
                 placeholder="Search courses, instructors, or topics..."
@@ -494,32 +507,7 @@ const CoursesPage: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={categoryFilter}
-                  label="Category"
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  sx={{
-                    borderRadius: 2,
-                    backgroundColor: 'white',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                  }}
-                >
-                  <MenuItem value="">All Categories</MenuItem>
-                  {categories.map((category) => (
-                    <MenuItem key={category} value={category}>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box sx={{ mr: 1 }}>{getCourseIcon(category)}</Box>
-                        {category}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth>
                 <InputLabel>Level</InputLabel>
                 <Select
@@ -555,6 +543,94 @@ const CoursesPage: React.FC = () => {
               </FormControl>
             </Grid>
           </Grid>
+
+          {/* Categories Section */}
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px' }}>📚</span> Categories
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setCategoryFilter('')}
+                  sx={{ 
+                    textTransform: 'none',
+                    color: 'primary.main',
+                    '&:hover': { backgroundColor: 'rgba(33, 150, 243, 0.08)' }
+                  }}
+                >
+                  Clear All
+                </Button>
+              </Box>
+            </Box>
+
+            {/* Category Pills */}
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: 1.5,
+              pb: 2
+            }}>
+              {/* All Categories Option */}
+              <Chip
+                icon={<Box sx={{ mr: 0.5 }}>📋</Box>}
+                label="All Categories"
+                onClick={() => setCategoryFilter('')}
+                variant={categoryFilter === '' ? 'filled' : 'outlined'}
+                sx={{
+                  borderRadius: 2,
+                  height: 40,
+                  fontSize: '0.95rem',
+                  fontWeight: categoryFilter === '' ? 600 : 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  backgroundColor: categoryFilter === '' ? 'primary.main' : 'transparent',
+                  color: categoryFilter === '' ? 'white' : 'inherit',
+                  borderColor: categoryFilter === '' ? 'primary.main' : 'rgba(0,0,0,0.12)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    backgroundColor: categoryFilter === '' ? 'primary.dark' : 'rgba(33, 150, 243, 0.08)'
+                  }
+                }}
+              />
+
+              {/* Individual Category Pills */}
+              {categories
+                .filter(cat => cat && cat.trim()) // Filter out empty strings
+                .sort() // Sort alphabetically for consistency
+                .map((category) => (
+                  <Chip
+                    key={category}
+                    label={`${getCourseIcon(category)} ${category}`}
+                    onClick={() => setCategoryFilter(category)}
+                    variant={categoryFilter === category ? 'filled' : 'outlined'}
+                    sx={{
+                      borderRadius: 2,
+                      height: 40,
+                      fontSize: '0.95rem',
+                      fontWeight: categoryFilter === category ? 600 : 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      backgroundColor: categoryFilter === category ? 'primary.main' : 'transparent',
+                      color: categoryFilter === category ? 'white' : 'inherit',
+                      borderColor: categoryFilter === category ? 'primary.main' : 'rgba(0,0,0,0.12)',
+                      '& .MuiChip-label': {
+                        paddingLeft: 0.5,
+                        paddingRight: 1.5
+                      },
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        backgroundColor: categoryFilter === category ? 'primary.dark' : 'rgba(33, 150, 243, 0.08)'
+                      }
+                    }}
+                  />
+                ))}
+            </Box>
+          </Box>
         </Paper>
       </Fade>
 

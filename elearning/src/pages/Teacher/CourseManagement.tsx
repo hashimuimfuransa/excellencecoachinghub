@@ -158,7 +158,45 @@ const CourseManagement: React.FC = () => {
     chatEnabled: true,
     courseId: courseId || '',
     zoomFallbackLink: '',
+    streamProvider: 'internal',
+    youtubeEmbedUrl: '',
   });
+  const [sessionDialogError, setSessionDialogError] = useState<string | null>(null);
+  const [sessionScheduledTimeError, setSessionScheduledTimeError] = useState<string | null>(null);
+  const [sessionServerErrors, setSessionServerErrors] = useState<string[]>([]);
+  const [sessionYoutubeUrlError, setSessionYoutubeUrlError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sessionDialogOpen) {
+      setSessionScheduledTimeError(null);
+      return;
+    }
+    if (!sessionForm.scheduledTime) {
+      setSessionScheduledTimeError('Please choose a scheduled time.');
+      return;
+    }
+    const parsedDate = new Date(sessionForm.scheduledTime);
+    if (Number.isNaN(parsedDate.getTime())) {
+      setSessionScheduledTimeError('Please choose a valid scheduled time.');
+      return;
+    }
+    const futureThreshold = Date.now() + 5 * 60 * 1000;
+    if (parsedDate.getTime() <= futureThreshold) {
+      setSessionScheduledTimeError('Scheduled time must be at least 5 minutes in the future.');
+      return;
+    }
+    setSessionScheduledTimeError(null);
+  }, [sessionForm.scheduledTime, sessionDialogOpen]);
+
+  useEffect(() => {
+    if (sessionForm.streamProvider !== 'youtube') {
+      setSessionYoutubeUrlError(null);
+      return;
+    }
+    if (sessionForm.youtubeEmbedUrl?.trim()) {
+      setSessionYoutubeUrlError(null);
+    }
+  }, [sessionForm.streamProvider, sessionForm.youtubeEmbedUrl]);
 
   // Announcement dialog state
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
@@ -621,7 +659,7 @@ const CourseManagement: React.FC = () => {
     setSessionForm({
       title: '',
       description: '',
-      scheduledTime: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16), // 1 hour from now
+      scheduledTime: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16),
       duration: 60,
       maxParticipants: 50,
       agenda: '',
@@ -629,7 +667,13 @@ const CourseManagement: React.FC = () => {
       chatEnabled: true,
       courseId: courseId || '',
       zoomFallbackLink: '',
+      streamProvider: 'internal',
+      youtubeEmbedUrl: '',
     });
+    setSessionDialogError(null);
+    setSessionScheduledTimeError(null);
+    setSessionServerErrors([]);
+    setSessionYoutubeUrlError(null);
     setSessionDialogOpen(true);
   };
 
@@ -646,7 +690,13 @@ const CourseManagement: React.FC = () => {
       chatEnabled: session.chatEnabled !== false,
       courseId: session.course?._id || session.courseId || courseId || '',
       zoomFallbackLink: session.zoomFallbackLink || '',
+      streamProvider: session.streamProvider || (session.youtubeEmbedUrl ? 'youtube' : 'internal'),
+      youtubeEmbedUrl: session.youtubeEmbedUrl || '',
     });
+    setSessionDialogError(null);
+    setSessionScheduledTimeError(null);
+    setSessionServerErrors([]);
+    setSessionYoutubeUrlError(null);
     setSessionDialogOpen(true);
   };
 
@@ -661,14 +711,70 @@ const CourseManagement: React.FC = () => {
     }
   };
 
+  const normalizeYoutubeEmbed = (url: string) => {
+    if (!url) {
+      return '';
+    }
+    const trimmed = url.trim();
+    const embedMatch = trimmed.match(/youtube\.com\/embed\/([\w-]{11})/i);
+    if (embedMatch) {
+      return `https://www.youtube.com/embed/${embedMatch[1]}`;
+    }
+    const watchMatch = trimmed.match(/(?:v=|youtu\.be\/)([\w-]{11})/i);
+    if (watchMatch) {
+      return `https://www.youtube.com/embed/${watchMatch[1]}`;
+    }
+    return trimmed;
+  };
+
   const handleSaveSession = async () => {
+    setSessionDialogError(null);
+    setSessionServerErrors([]);
+    setSessionYoutubeUrlError(null);
+    setError(null);
+
+    const trimmedTitle = sessionForm.title.trim();
+    if (!trimmedTitle) {
+      setSessionDialogError('Session title is required.');
+      return;
+    }
+
+    const trimmedDescription = sessionForm.description.trim();
+    if (!trimmedDescription) {
+      setSessionDialogError('Session description is required.');
+      return;
+    }
+
+    const { scheduledTime } = sessionForm;
+    if (!scheduledTime) {
+      setSessionScheduledTimeError('Please choose a scheduled time.');
+      return;
+    }
+
+    const scheduledDate = new Date(scheduledTime);
+    if (Number.isNaN(scheduledDate.getTime())) {
+      setSessionScheduledTimeError('Please choose a valid scheduled time.');
+      return;
+    }
+
+    const futureThreshold = Date.now() + 5 * 60 * 1000;
+    if (scheduledDate.getTime() <= futureThreshold) {
+      setSessionScheduledTimeError('Scheduled time must be at least 5 minutes in the future.');
+      return;
+    }
+
+    if (sessionForm.streamProvider === 'youtube' && !sessionForm.youtubeEmbedUrl.trim()) {
+      setSessionYoutubeUrlError('YouTube URL is required for YouTube livestreams.');
+      return;
+    }
+
     try {
+      const youtubeEmbedUrl = sessionForm.streamProvider === 'youtube' ? normalizeYoutubeEmbed(sessionForm.youtubeEmbedUrl) : '';
       if (editingSession) {
-        // Update existing session
-        const updatedSession = await liveSessionService.updateSession(editingSession._id, {
-          title: sessionForm.title,
-          description: sessionForm.description,
-          scheduledTime: new Date(sessionForm.scheduledTime).toISOString(),
+        const payload = {
+          title: trimmedTitle,
+          description: trimmedDescription,
+          scheduledTime: scheduledDate.toISOString(),
           duration: sessionForm.duration,
           maxParticipants: sessionForm.maxParticipants,
           agenda: sessionForm.agenda ? sessionForm.agenda.split('\n').filter(item => item.trim()) : [],
@@ -678,18 +784,25 @@ const CourseManagement: React.FC = () => {
           screenShareEnabled: true,
           attendanceRequired: false,
           courseId: sessionForm.courseId,
-          zoomFallbackLink: sessionForm.zoomFallbackLink
-        });
+          zoomFallbackLink: sessionForm.zoomFallbackLink,
+          streamProvider: sessionForm.streamProvider,
+          youtubeEmbedUrl,
+        };
+        const updatedSession = await liveSessionService.updateSession(editingSession._id, payload);
+        const normalizedSession = {
+          ...updatedSession,
+          streamProvider: sessionForm.streamProvider,
+          youtubeEmbedUrl,
+        };
         setLiveSessions(prev => prev.map(s => 
-          s._id === editingSession._id ? updatedSession : s
+          s._id === editingSession._id ? normalizedSession : s
         ));
       } else {
-        // Create new session
-        const newSession = await liveSessionService.createSession({
-          title: sessionForm.title,
-          description: sessionForm.description,
+        const payload = {
+          title: trimmedTitle,
+          description: trimmedDescription,
           courseId: sessionForm.courseId || courseId!,
-          scheduledTime: new Date(sessionForm.scheduledTime).toISOString(),
+          scheduledTime: scheduledDate.toISOString(),
           duration: sessionForm.duration,
           maxParticipants: sessionForm.maxParticipants,
           agenda: sessionForm.agenda ? sessionForm.agenda.split('\n').filter(item => item.trim()) : [],
@@ -698,15 +811,36 @@ const CourseManagement: React.FC = () => {
           handRaiseEnabled: true,
           screenShareEnabled: true,
           attendanceRequired: false,
-          zoomFallbackLink: sessionForm.zoomFallbackLink
-        });
-        setLiveSessions(prev => [...prev, newSession]);
+          zoomFallbackLink: sessionForm.zoomFallbackLink,
+          streamProvider: sessionForm.streamProvider,
+          youtubeEmbedUrl,
+        };
+        const newSession = await liveSessionService.createSession(payload);
+        const normalizedSession = {
+          ...newSession,
+          streamProvider: sessionForm.streamProvider,
+          youtubeEmbedUrl,
+        };
+        setLiveSessions(prev => [...prev, normalizedSession]);
       }
       setSessionDialogOpen(false);
-      setError(null);
-    } catch (error) {
+      setSessionDialogError(null);
+      setSessionServerErrors([]);
+      setSessionScheduledTimeError(null);
+      setSessionYoutubeUrlError(null);
+    } catch (error: any) {
       console.error('Error saving session:', error);
-      setError('Failed to save session. Please try again.');
+      const apiErrors = error?.response?.data?.errors;
+      if (Array.isArray(apiErrors) && apiErrors.length) {
+        setSessionServerErrors(apiErrors.map((item: any) => item?.message || 'Validation error'));
+        setSessionDialogError('Unable to save session. Please review the errors below.');
+      } else if (error?.response?.data?.message) {
+        setSessionDialogError(error.response.data.message);
+      } else if (error?.message) {
+        setSessionDialogError(error.message);
+      } else {
+        setSessionDialogError('Failed to save session. Please try again.');
+      }
     }
   };
 
@@ -3542,11 +3676,40 @@ const CourseManagement: React.FC = () => {
       </Dialog>
 
       {/* Add/Edit Live Session Dialog */}
-      <Dialog open={sessionDialogOpen} onClose={() => setSessionDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={sessionDialogOpen}
+        onClose={() => {
+          setSessionDialogOpen(false);
+          setSessionDialogError(null);
+          setSessionServerErrors([]);
+          setSessionScheduledTimeError(null);
+          setSessionYoutubeUrlError(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>
           {editingSession ? 'Edit Live Session' : 'Schedule New Live Session'}
         </DialogTitle>
         <DialogContent>
+          {sessionDialogError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {sessionDialogError}
+            </Alert>
+          )}
+          {sessionServerErrors.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              {sessionServerErrors.map((message, index) => (
+                <Alert
+                  key={`${message}-${index}`}
+                  severity="error"
+                  sx={{ mb: index === sessionServerErrors.length - 1 ? 0 : 1 }}
+                >
+                  {message}
+                </Alert>
+              ))}
+            </Box>
+          )}
           <Box sx={{ pt: 2 }}>
             <TextField
               fullWidth
@@ -3582,6 +3745,48 @@ const CourseManagement: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
+
+            <FormControl fullWidth margin="normal" required>
+              <InputLabel>Live Session Type</InputLabel>
+              <Select
+                value={sessionForm.streamProvider}
+                onChange={(e) => {
+                  const value = e.target.value as string;
+                  setSessionForm(prev => ({
+                    ...prev,
+                    streamProvider: value,
+                    youtubeEmbedUrl: value === 'youtube' ? prev.youtubeEmbedUrl : '',
+                  }));
+                  setSessionYoutubeUrlError(null);
+                  setSessionServerErrors([]);
+                }}
+                label="Live Session Type"
+              >
+                <MenuItem value="internal">Interactive Video Room</MenuItem>
+                <MenuItem value="youtube">YouTube Livestream</MenuItem>
+              </Select>
+            </FormControl>
+
+            {sessionForm.streamProvider === 'youtube' && (
+              <TextField
+                fullWidth
+                label="YouTube Embed or Watch URL"
+                value={sessionForm.youtubeEmbedUrl}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSessionForm(prev => ({ ...prev, youtubeEmbedUrl: value }));
+                  if (value.trim()) {
+                    setSessionYoutubeUrlError(null);
+                  }
+                  setSessionServerErrors([]);
+                }}
+                margin="normal"
+                placeholder="https://www.youtube.com/watch?v=..."
+                required
+                error={!!sessionYoutubeUrlError}
+                helperText={sessionYoutubeUrlError || 'Students will watch the stream using the embedded player'}
+              />
+            )}
             
             <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
               <TextField
@@ -3589,10 +3794,15 @@ const CourseManagement: React.FC = () => {
                 label="Scheduled Time"
                 type="datetime-local"
                 value={sessionForm.scheduledTime}
-                onChange={(e) => setSessionForm(prev => ({ ...prev, scheduledTime: e.target.value }))}
+                onChange={(e) => {
+                  setSessionForm(prev => ({ ...prev, scheduledTime: e.target.value }));
+                  setSessionScheduledTimeError(null);
+                  setSessionServerErrors([]);
+                }}
                 InputLabelProps={{ shrink: true }}
                 required
-                helperText="⚠️ Please choose a future date and time (not now) to avoid validation errors"
+                error={!!sessionScheduledTimeError}
+                helperText={sessionScheduledTimeError || 'Choose a future date and time (at least 5 minutes from now)'}
               />
               
               <TextField
@@ -3666,13 +3876,21 @@ const CourseManagement: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSessionDialogOpen(false)}>
+          <Button
+            onClick={() => {
+              setSessionDialogOpen(false);
+              setSessionDialogError(null);
+              setSessionServerErrors([]);
+              setSessionScheduledTimeError(null);
+              setSessionYoutubeUrlError(null);
+            }}
+          >
             Cancel
           </Button>
           <Button 
             onClick={handleSaveSession} 
             variant="contained"
-            disabled={!sessionForm.title || !sessionForm.description || !sessionForm.scheduledTime}
+            disabled={!sessionForm.title || !sessionForm.description || !sessionForm.scheduledTime || (sessionForm.streamProvider === 'youtube' && !sessionForm.youtubeEmbedUrl)}
           >
             {editingSession ? 'Update' : 'Schedule'} Session
           </Button>

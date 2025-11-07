@@ -600,7 +600,7 @@ const CategoriesSection: React.FC = () => {
       gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       count: '⭐ Popular',
       description: 'Leadership, Executive, Project Management, CPA/CAT/ACCA',
-      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
+      image: '/coaching1.png'
     },
     {
       name: 'Business & Entrepreneurship Coaching',
@@ -610,7 +610,7 @@ const CategoriesSection: React.FC = () => {
       gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
       count: '⭐ Popular',
       description: 'Startup, Strategy, Finance, Marketing, Innovation',
-      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
+      image: '/elearning-entreprise.jpg'
     },
     {
       name: 'Academic Coaching',
@@ -620,7 +620,7 @@ const CategoriesSection: React.FC = () => {
       gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
       count: 'All levels',
       description: 'Primary, Secondary, University, Nursery, Exams, Research',
-      image: 'https://images.unsplash.com/photo-1573496359142-b8d87d7ce4a1?w=500&h=300&fit=crop'
+      image: '/is-academic-coaching-1024x576.jpg'
     },
     {
       name: 'Language Coaching',
@@ -630,7 +630,7 @@ const CategoriesSection: React.FC = () => {
       gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
       count: 'Fluency',
       description: 'English, French, Kinyarwanda, Business Communication',
-      image: 'https://images.unsplash.com/photo-1516534775068-bb57b42fc91d?w=500&h=300&fit=crop'
+      image: '/E-learning-Library.png'
     },
     {
       name: 'Technical & Digital Coaching',
@@ -640,7 +640,7 @@ const CategoriesSection: React.FC = () => {
       gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
       count: 'In-demand',
       description: 'AI, Data, Cybersecurity, Cloud, Dev, Digital Marketing',
-      image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&h=300&fit=crop'
+      image: '/webinar-digital-body-language-8x5.jpg'
     },
     {
       name: 'Job Seeker Coaching',
@@ -650,7 +650,7 @@ const CategoriesSection: React.FC = () => {
       gradient: 'linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)',
       count: 'Career-ready',
       description: 'Career choice, skills, exams, interview, resume',
-      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
+      image: '/coaching6.jpg'
     },
     {
       name: 'Personal & Corporate Development',
@@ -660,7 +660,7 @@ const CategoriesSection: React.FC = () => {
       gradient: 'linear-gradient(135deg, #b06ab3 0%, #4568dc 100%)',
       count: 'Growth',
       description: 'Communication, EI, Time, Team, HR, Ethics',
-      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
+      image: '/STSspotlight_TTE_Y3Q2p3-scaled.jpg'
     }
   ];
 
@@ -1945,27 +1945,27 @@ const TestimonialsSection: React.FC = () => {
       name: 'John Uwimana',
       role: 'Business Development Manager',
       company: 'Local Enterprise, Kigali',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
+      avatar: '/haruna.jpeg',
       rating: 5,
       text: 'Excellence Coaching Hub transformed the way I learn — I finally completed a course that gave me practical confidence in my career. The weekly structure made learning manageable.',
       achievement: 'Career Growth: Leadership Role Promotion',
       color: '#4285F4'
     },
     {
-      name: 'Marie Kamikazi',
+      name: 'James Nsabimana',
       role: 'Digital Marketing Specialist',
       company: 'Tech Startup, Rwanda',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop',
+      avatar: '/jeanpaul.jpeg',
       rating: 5,
       text: 'Their weekly course structure made learning manageable and consistent. The expert instructors provided practical skills that I could immediately apply to my work.',
       achievement: 'Skills Gained: Digital Marketing Expertise',
       color: '#00A4EF'
     },
     {
-      name: 'James Nsabimana',
+      name: 'Marie Kamikazi',
       role: 'Academic Coordinator',
       company: 'Professional Learner',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop',
+      avatar: '/martin.jpeg',
       rating: 5,
       text: 'As a professional, I found the coaching approach incredibly effective. The cloud-based materials and progress tracking made continuous learning accessible anytime.',
       achievement: 'Impact: Improved teaching methodology',

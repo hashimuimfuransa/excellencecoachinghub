@@ -199,6 +199,19 @@ const learningCategories = [
     ]
   },
   {
+    id: 'nursery_coaching',
+    title: 'Nursery Coaching',
+    description: 'Early childhood education for nursery students',
+    subcategories: [
+      'Nursery 1 Coaching',
+      'Nursery 2 Coaching',
+      'Nursery 3 Coaching',
+      'Early Literacy Coaching',
+      'Early Numeracy Coaching',
+      'Play-Based Learning Coaching'
+    ]
+  },
+  {
     id: 'language_coaching',
     title: 'Language Coaching',
     description: 'Master languages for life and business',
@@ -418,7 +431,10 @@ const TeacherCourses: React.FC = () => {
     learningStyle: '',
     specificInterests: [] as string[],
     learningCategories: [] as string[],
-    learningSubcategories: [] as string[]
+    learningSubcategories: [] as string[],
+    // Conditional fields for nursery and language levels
+    nurseryLevel: '' as 'Nursery 1' | 'Nursery 2' | 'Nursery 3' | '',
+    language: '' as 'English' | 'French' | ''
   });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -513,6 +529,7 @@ const TeacherCourses: React.FC = () => {
         'professional_coaching',
         'business_entrepreneurship_coaching',
         'academic_coaching',
+        'nursery_coaching',
         'language_coaching',
         'technical_digital_coaching',
         'job_seeker_coaching',
@@ -538,7 +555,10 @@ const TeacherCourses: React.FC = () => {
         learningStyle: selectedCourse.learningStyle || '',
         specificInterests: selectedCourse.specificInterests || [],
         learningCategories: filteredCategories,
-        learningSubcategories: selectedCourse.learningSubcategories || []
+        learningSubcategories: selectedCourse.learningSubcategories || [],
+        // Conditional fields
+        nurseryLevel: selectedCourse.nurseryLevel || '',
+        language: selectedCourse.language || ''
       });
       setEditDialogOpen(true);
     }
@@ -1820,6 +1840,91 @@ const TeacherCourses: React.FC = () => {
                       Selected Subcategories: {editForm.learningSubcategories.join(', ')}
                     </Typography>
                   )}
+                </Box>
+              )}
+
+              {/* Conditional Fields for Academic and Nursery Coaching */}
+              {(editForm.learningCategories.includes('academic_coaching') || editForm.learningCategories.includes('nursery_coaching')) && (
+                <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(103, 58, 183, 0.05)', borderRadius: 2, border: '1px solid rgba(103, 58, 183, 0.2)' }}>
+                  <Typography 
+                    variant="subtitle2" 
+                    gutterBottom
+                    sx={{ 
+                      fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                      fontWeight: 600,
+                      mb: 2,
+                      color: 'primary.main'
+                    }}
+                  >
+                    📚 Academic & Nursery Course Details
+                  </Typography>
+                  
+                  <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+                    {/* Nursery Level - Show only for Nursery Coaching */}
+                    {editForm.learningCategories.includes('nursery_coaching') && (
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Nursery Level *</InputLabel>
+                          <Select
+                            value={editForm.nurseryLevel}
+                            label="Nursery Level *"
+                            onChange={(e) => handleEditInputChange('nurseryLevel', e.target.value)}
+                            size={isMobile ? "small" : "medium"}
+                            displayEmpty
+                          >
+                            <MenuItem value="">
+                              <em>Select nursery level</em>
+                            </MenuItem>
+                            <MenuItem value="Nursery 1">Nursery 1</MenuItem>
+                            <MenuItem value="Nursery 2">Nursery 2</MenuItem>
+                            <MenuItem value="Nursery 3">Nursery 3</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          sx={{ 
+                            mt: 1, 
+                            display: 'block',
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                          }}
+                        >
+                          💡 Specify the nursery level this course targets
+                        </Typography>
+                      </Grid>
+                    )}
+
+                    {/* Language Field - Show for both Academic and Nursery */}
+                    <Grid item xs={12} sm={editForm.learningCategories.includes('nursery_coaching') ? 6 : 12}>
+                      <FormControl fullWidth>
+                        <InputLabel>Course Language *</InputLabel>
+                        <Select
+                          value={editForm.language}
+                          label="Course Language *"
+                          onChange={(e) => handleEditInputChange('language', e.target.value)}
+                          size={isMobile ? "small" : "medium"}
+                          displayEmpty
+                        >
+                          <MenuItem value="">
+                            <em>Select language</em>
+                          </MenuItem>
+                          <MenuItem value="English">English</MenuItem>
+                          <MenuItem value="French">French</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        sx={{ 
+                          mt: 1, 
+                          display: 'block',
+                          fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                        }}
+                      >
+                        💡 Select the language in which this course will be taught
+                      </Typography>
+                    </Grid>
+                  </Grid>
                 </Box>
               )}
             </Box>

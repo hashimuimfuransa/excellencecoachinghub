@@ -15,7 +15,8 @@ import {
   ArrowBack,
   PlayArrow,
   OndemandVideo,
-  Event
+  Event,
+  LiveTv
 } from '@mui/icons-material';
 import { useAuth } from '../../store/AuthContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
@@ -23,7 +24,21 @@ import { liveSessionService, ILiveSession } from '../../services/liveSessionServ
 import LiveClass from '../../components/Video/LiveClass';
 import VideoSessionWrapper from '../../components/Video/VideoSessionWrapper';
 
-
+const normalizeYoutubeUrls = (url: string) => {
+  if (!url) {
+    return { embed: '', watch: '' };
+  }
+  const trimmed = url.trim();
+  const idMatch = trimmed.match(/(?:embed\/|watch\?v=|youtu\.be\/)([\w-]{11})/i);
+  const id = idMatch ? idMatch[1] : '';
+  if (id) {
+    return {
+      embed: `https://www.youtube.com/embed/${id}`,
+      watch: `https://www.youtube.com/watch?v=${id}`,
+    };
+  }
+  return { embed: trimmed, watch: trimmed };
+};
 
 const StudentLiveSessionRoom: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -35,6 +50,9 @@ const StudentLiveSessionRoom: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inVideoRoom, setInVideoRoom] = useState(false);
+
+  const { embed: youtubeEmbedUrl, watch: youtubeWatchUrl } = normalizeYoutubeUrls(session?.youtubeEmbedUrl || '');
+  const isYoutubeStream = session?.streamProvider === 'youtube' || (!!youtubeEmbedUrl && youtubeEmbedUrl.includes('youtube.com'));
 
   // Load session data
   useEffect(() => {
@@ -48,9 +66,11 @@ const StudentLiveSessionRoom: React.FC = () => {
         const sessionData = await liveSessionService.joinSessionAsStudent(sessionId);
         setSession(sessionData);
 
-        // Auto-join video room if session is live
-        if (sessionData.status === 'live') {
+        const isYoutube = sessionData.streamProvider === 'youtube' || !!sessionData.youtubeEmbedUrl;
+        if (sessionData.status === 'live' && !isYoutube) {
           setInVideoRoom(true);
+        } else {
+          setInVideoRoom(false);
         }
 
       } catch (err: any) {
@@ -65,6 +85,12 @@ const StudentLiveSessionRoom: React.FC = () => {
 
   // Handle joining video room
   const handleJoinVideoRoom = () => {
+    if (isYoutubeStream) {
+      if (youtubeWatchUrl) {
+        window.open(youtubeWatchUrl, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
     setInVideoRoom(true);
   };
 

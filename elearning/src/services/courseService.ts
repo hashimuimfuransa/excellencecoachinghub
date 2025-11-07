@@ -46,6 +46,7 @@ export interface ICourse {
   learningStyle?: string;
   specificInterests?: string[];
   learningCategories?: string[];
+  nurseryLevel?: string; // For kid-friendly courses: 'Nursery 1', 'Nursery 2', 'Nursery 3'
   createdAt: string;
   updatedAt: string;
   approvedAt?: string;

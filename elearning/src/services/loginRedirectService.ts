@@ -26,18 +26,26 @@ export const loginRedirectService = {
     // For learners (students and job seekers), check if they have any active enrollments
     try {
       console.log('🔍 Checking learner enrollments...');
-      const enrollmentsResponse = await enrollmentService.getMyEnrollments({ limit: 1 });
+      const enrollmentsResponse = await enrollmentService.getMyEnrollments({ limit: 10 });
       const activeEnrollments = enrollmentsResponse.enrollments.filter(
         enrollment => enrollment.isActive && enrollment.paymentStatus === 'completed'
       );
 
       console.log('🔍 Active enrollments found:', activeEnrollments.length);
 
-      // If learner has active enrollments, redirect to student dashboard
+      // If learner has active enrollments, redirect to the Unified Learning Page of the first course
       if (activeEnrollments.length > 0) {
-        const dashboardPath = `/dashboard/student`;
-        console.log('🔍 Redirecting to student dashboard:', dashboardPath);
-        return dashboardPath;
+        // Sort by lastAccessedAt to get the most recently accessed course, or use the first one
+        const sortedEnrollments = activeEnrollments.sort((a, b) => {
+          const aDate = a.progress?.lastAccessedAt || a.enrolledAt;
+          const bDate = b.progress?.lastAccessedAt || b.enrolledAt;
+          return new Date(bDate).getTime() - new Date(aDate).getTime();
+        });
+
+        const courseId = sortedEnrollments[0].course._id;
+        const unifiedLearningPath = `/course/${courseId}/learn`;
+        console.log('🔍 Redirecting to Unified Learning Page:', unifiedLearningPath);
+        return unifiedLearningPath;
       }
 
       // If interests were provided, redirect to courses with interests
@@ -85,12 +93,12 @@ export const loginRedirectService = {
 
       // Sort by lastAccessedAt or enrolledAt to find the most recent
       const sortedEnrollments = activeEnrollments.sort((a, b) => {
-        const aDate = a.progress.lastAccessedAt || a.enrolledAt;
-        const bDate = b.progress.lastAccessedAt || b.enrolledAt;
+        const aDate = a.progress?.lastAccessedAt || a.enrolledAt;
+        const bDate = b.progress?.lastAccessedAt || b.enrolledAt;
         return new Date(bDate).getTime() - new Date(aDate).getTime();
       });
 
-      return `/dashboard/student/course/${sortedEnrollments[0].course._id}`;
+      return `/course/${sortedEnrollments[0].course._id}/learn`;
     } catch (error) {
       console.warn('Error getting most recent course hub:', error);
       return null;

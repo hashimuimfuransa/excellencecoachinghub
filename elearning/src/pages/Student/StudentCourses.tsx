@@ -786,6 +786,7 @@ const StudentCourses: React.FC = () => {
       professional_coaching: ['Professional Coaching', 'Leadership', 'Executive', 'Project Management', 'CPA', 'ACCA', 'CAT', 'Career'],
       business_entrepreneurship_coaching: ['Business', 'Entrepreneurship', 'Startup', 'SME', 'Strategy', 'Finance', 'Marketing', 'Branding'],
       academic_coaching: ['Academic', 'Education', 'Primary', 'Secondary', 'University', 'Exam', 'Study Skills', 'Research', 'Thesis'],
+      nursery_coaching: ['Nursery', 'Early Childhood', 'Preschool', 'Ages 3-5', 'Early Literacy', 'Early Numeracy', 'Play-Based Learning'],
       language_coaching: ['Language', 'English', 'French', 'Kinyarwanda', 'Business Communication', 'Public Speaking', 'Writing'],
       technical_digital_coaching: ['Technology', 'Programming', 'Web', 'Software', 'AI', 'Machine Learning', 'Data', 'Cybersecurity', 'Cloud', 'IT', 'Digital Marketing', 'Vocational'],
       job_seeker_coaching: ['Job', 'Career', 'Resume', 'Portfolio', 'Interview'],
@@ -873,6 +874,100 @@ const StudentCourses: React.FC = () => {
     );
   };
 
+  // Group courses by category with metadata
+  const getCategoryMetadata = (categoryId: string) => {
+    const categoryMap: { [key: string]: { label: string; icon: string; color: string; description: string } } = {
+      professional_coaching: { 
+        label: '💼 Professional Coaching', 
+        icon: '💼',
+        color: '#667eea',
+        description: 'Leadership, Executive & Career Development'
+      },
+      business_entrepreneurship_coaching: { 
+        label: '🚀 Business & Entrepreneurship', 
+        icon: '🚀',
+        color: '#f093fb',
+        description: 'Business Strategy, Startups & SME Management'
+      },
+      academic_coaching: { 
+        label: '📚 Academic Coaching', 
+        icon: '📚',
+        color: '#4facfe',
+        description: 'Academic Excellence & Exam Preparation'
+      },
+      nursery_coaching: { 
+        label: '👶 Nursery Coaching', 
+        icon: '👶',
+        color: '#FFB6C1',
+        description: 'Early Childhood Education & Development'
+      },
+      language_coaching: { 
+        label: '🗣️ Language Coaching', 
+        icon: '🗣️',
+        color: '#43e97b',
+        description: 'Language Skills & Communication'
+      },
+      technical_digital_coaching: { 
+        label: '💻 Technical & Digital', 
+        icon: '💻',
+        color: '#fa709a',
+        description: 'Programming, AI & Digital Technologies'
+      },
+      job_seeker_coaching: { 
+        label: '💎 Job Seeker Coaching', 
+        icon: '💎',
+        color: '#feca57',
+        description: 'Job Search, Interviews & Career Transition'
+      },
+      personal_corporate_development_coaching: { 
+        label: '🌟 Personal & Corporate Development', 
+        icon: '🌟',
+        color: '#48dbfb',
+        description: 'Personal Growth, Team Development & Corporate Training'
+      }
+    };
+    return categoryMap[categoryId] || { 
+      label: categoryId, 
+      icon: '📖',
+      color: '#667eea',
+      description: 'Discover amazing courses'
+    };
+  };
+
+  const groupCoursesByCategory = (courses: ICourse[]) => {
+    const grouped: { [key: string]: ICourse[] } = {};
+    courses.forEach(course => {
+      const categories = Array.isArray(course.learningCategories) ? course.learningCategories : [course.category || 'other'];
+      categories.forEach(cat => {
+        if (!grouped[cat]) {
+          grouped[cat] = [];
+        }
+        grouped[cat].push(course);
+      });
+    });
+    
+    // Sort category keys by the order they appear in the metadata
+    const categoryOrder = [
+      'professional_coaching',
+      'business_entrepreneurship_coaching',
+      'academic_coaching',
+      'nursery_coaching',
+      'language_coaching',
+      'technical_digital_coaching',
+      'job_seeker_coaching',
+      'personal_corporate_development_coaching'
+    ];
+    
+    return Object.keys(grouped).sort((a, b) => {
+      const aIndex = categoryOrder.indexOf(a);
+      const bIndex = categoryOrder.indexOf(b);
+      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+    }).reduce((acc, key) => {
+      acc[key] = grouped[key];
+      return acc;
+    }, {} as { [key: string]: ICourse[] });
+  };
+
   return (
     <Box sx={{ 
       bgcolor: 'background.default', 
@@ -890,7 +985,7 @@ const StudentCourses: React.FC = () => {
         zIndex: 0,
       }
     }}>
-      <Container maxWidth="lg" sx={{ py: { xs: 1, sm: 2, md: 3 }, position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 1, sm: 2, md: 3 }, position: 'relative', zIndex: 1 }}>
 
         {/* Profile Completion Alert for Students - Ultra Compact */}
       {false && user?.role === UserRole.STUDENT && !profileCompletion.isComplete && showProfileAlert && (
@@ -1323,7 +1418,7 @@ const StudentCourses: React.FC = () => {
                 const levelColor = getLevelColor(course.level);
                 
                 return (
-                  <Grid item xs={12} sm={6} lg={4} key={course._id}>
+                  <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={course._id}>
                     <Zoom in={true} style={{ transitionDelay: `${index * 100}ms` }}>
                       <StyledCard>
                         <Box sx={{ position: 'relative' }}>
@@ -1476,7 +1571,7 @@ const StudentCourses: React.FC = () => {
         <Grid container spacing={3}>
           {/* Sidebar Filters - Hidden on Mobile by default */}
           {!isMobile ? (
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={2.5}>
               <FilterSidebar>
                 {/* Search */}
                 <FilterSection>
@@ -1562,6 +1657,7 @@ const StudentCourses: React.FC = () => {
                       { id: 'professional_coaching', label: '💼 Professional' },
                       { id: 'business_entrepreneurship_coaching', label: '🚀 Business' },
                       { id: 'academic_coaching', label: '📚 Academic' },
+                      { id: 'nursery_coaching', label: '👶 Nursery' },
                       { id: 'language_coaching', label: '🗣️ Language' },
                       { id: 'technical_digital_coaching', label: '💻 Tech & Digital' },
                       { id: 'job_seeker_coaching', label: '💼 Job Seeking' },
@@ -1602,7 +1698,7 @@ const StudentCourses: React.FC = () => {
           ) : null}
 
           {/* Main Content Area */}
-          <Grid item xs={12} md={isMobile ? 12 : 9}>
+          <Grid item xs={12} md={isMobile ? 12 : 9.5}>
             {/* Mobile Filter Toggle */}
             {isMobile && (
               <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
@@ -1691,6 +1787,7 @@ const StudentCourses: React.FC = () => {
                         { id: 'professional_coaching', label: '💼 Professional' },
                         { id: 'business_entrepreneurship_coaching', label: '🚀 Business' },
                         { id: 'academic_coaching', label: '📚 Academic' },
+                        { id: 'nursery_coaching', label: '👶 Nursery' },
                         { id: 'language_coaching', label: '🗣️ Language' },
                         { id: 'technical_digital_coaching', label: '💻 Tech' },
                         { id: 'job_seeker_coaching', label: '💼 Job Seeking' },
@@ -1804,14 +1901,59 @@ const StudentCourses: React.FC = () => {
               </Paper>
             ) : (
               <>
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center' }}>
-                    ✨ Found {availableCourses.length} amazing course{availableCourses.length !== 1 ? 's' : ''} for you!
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h5" color="primary.main" sx={{ textAlign: 'center', fontWeight: 700 }}>
+                    ✨ Found {availableCourses.length} amazing course{availableCourses.length !== 1 ? 's' : ''}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 1 }}>
+                    Browse courses organized by category for easy discovery
                   </Typography>
                 </Box>
-                
-                <Grid container spacing={{ xs: 2, md: 3 }}>
-              {sortCourses(availableCourses).map((course, index) => {
+
+                {/* Grouped Courses by Category */}
+                {Object.entries(groupCoursesByCategory(sortCourses(availableCourses))).map((entry) => {
+                  const [categoryId, courses] = entry;
+                  const categoryMeta = getCategoryMetadata(categoryId);
+                  return (
+                    <Box key={categoryId} sx={{ mb: 6 }}>
+                      {/* Category Header */}
+                      <Box
+                        sx={{
+                          mb: 3,
+                          pb: 2,
+                          borderBottom: `3px solid ${categoryMeta.color}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 2
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Typography variant="h5" sx={{ fontWeight: 700, color: categoryMeta.color }}>
+                            {categoryMeta.label}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip
+                            label={`${courses.length} course${courses.length !== 1 ? 's' : ''}`}
+                            size="small"
+                            sx={{
+                              bgcolor: `${categoryMeta.color}20`,
+                              color: categoryMeta.color,
+                              fontWeight: 600,
+                              border: `1px solid ${categoryMeta.color}40`
+                            }}
+                          />
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            {categoryMeta.description}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      {/* Courses Grid for this Category */}
+                      <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mb: 4 }}>
+                        {courses.map((course, index) => {
                 const levelColor = getLevelColor(course.level);
                 const isEnrolled = enrollments.some(e => {
                   if (typeof e.course === 'object' && e.course && '_id' in e.course) {
@@ -1825,7 +1967,7 @@ const StudentCourses: React.FC = () => {
                 const enrollmentProgress = isEnrolled ? getEnrollmentProgress(course._id) : 0;
                 
                 return (
-                  <Grid item xs={12} sm={6} lg={4} key={course._id}>
+                  <Grid item xs={12} sm={6} md={4} lg={3} xl={2.4} key={course._id}>
                     <Zoom in={true} style={{ transitionDelay: `${index * 100}ms` }}>
                       <StyledCard>
                         <Box sx={{ position: 'relative' }}>
@@ -2024,9 +2166,12 @@ const StudentCourses: React.FC = () => {
                       </StyledCard>
                     </Zoom>
                   </Grid>
-                );
-              })}
-                </Grid>
+                        );
+                      })}
+                      </Grid>
+                    </Box>
+                  );
+                })}
               </>
             )}
           </Grid>

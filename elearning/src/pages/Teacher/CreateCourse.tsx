@@ -118,6 +118,19 @@ const learningCategories = [
     ]
   },
   {
+    id: 'nursery_coaching',
+    title: 'Nursery Coaching',
+    description: 'Early childhood education for nursery students',
+    subcategories: [
+      'Nursery 1 Coaching',
+      'Nursery 2 Coaching',
+      'Nursery 3 Coaching',
+      'Early Literacy Coaching',
+      'Early Numeracy Coaching',
+      'Play-Based Learning Coaching'
+    ]
+  },
+  {
     id: 'language_coaching',
     title: 'Language Coaching',
     description: 'Master languages for life and business',
@@ -319,7 +332,10 @@ const CreateCourse: React.FC = () => {
     tags: [] as string[],
     // Learning categories for course discoverability
     learningCategories: [] as string[],
-    learningSubcategories: [] as string[]
+    learningSubcategories: [] as string[],
+    // Conditional fields for nursery and language levels
+    nurseryLevel: '' as 'Nursery 1' | 'Nursery 2' | 'Nursery 3' | '',
+    language: '' as 'English' | 'French' | ''
   });
 
   // Temporary input states
@@ -440,6 +456,9 @@ const CreateCourse: React.FC = () => {
         tags: formData.tags,
         learningCategories: formData.learningCategories,
         learningSubcategories: formData.learningSubcategories,
+        // Add conditional fields if applicable
+        ...(formData.nurseryLevel && { nurseryLevel: formData.nurseryLevel }),
+        ...(formData.language && { language: formData.language }),
         price: 0, // Price will be set by admin when publishing
         isPublished: false, // Course starts as unpublished - admin will publish after reviewing materials
         status: 'draft' // Teacher can manage immediately
@@ -1075,6 +1094,91 @@ const CreateCourse: React.FC = () => {
                         />
                       </Box>
                     )}
+
+                    {/* Conditional Fields for Academic and Nursery Coaching */}
+                    {(formData.learningCategories.includes('academic_coaching') || formData.learningCategories.includes('nursery_coaching')) && (
+                      <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(103, 58, 183, 0.05)', borderRadius: 2, border: '1px solid rgba(103, 58, 183, 0.2)' }}>
+                        <Typography 
+                          variant="subtitle2" 
+                          gutterBottom
+                          sx={{ 
+                            fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                            fontWeight: 600,
+                            mb: 2,
+                            color: 'primary.main'
+                          }}
+                        >
+                          📚 Academic & Nursery Course Details
+                        </Typography>
+                        
+                        <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+                          {/* Nursery Level - Show only for Nursery Coaching */}
+                          {formData.learningCategories.includes('nursery_coaching') && (
+                            <Grid item xs={12} sm={6}>
+                              <FormControl fullWidth>
+                                <InputLabel>Nursery Level *</InputLabel>
+                                <Select
+                                  value={formData.nurseryLevel}
+                                  label="Nursery Level *"
+                                  onChange={(e) => handleInputChange('nurseryLevel', e.target.value)}
+                                  size={isMobile ? "small" : "medium"}
+                                  displayEmpty
+                                >
+                                  <MenuItem value="">
+                                    <em>Select nursery level</em>
+                                  </MenuItem>
+                                  <MenuItem value="Nursery 1">Nursery 1</MenuItem>
+                                  <MenuItem value="Nursery 2">Nursery 2</MenuItem>
+                                  <MenuItem value="Nursery 3">Nursery 3</MenuItem>
+                                </Select>
+                              </FormControl>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ 
+                                  mt: 1, 
+                                  display: 'block',
+                                  fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                                }}
+                              >
+                                💡 Specify the nursery level this course targets
+                              </Typography>
+                            </Grid>
+                          )}
+
+                          {/* Language Field - Show for both Academic and Nursery */}
+                          <Grid item xs={12} sm={formData.learningCategories.includes('nursery_coaching') ? 6 : 12}>
+                            <FormControl fullWidth>
+                              <InputLabel>Course Language *</InputLabel>
+                              <Select
+                                value={formData.language}
+                                label="Course Language *"
+                                onChange={(e) => handleInputChange('language', e.target.value)}
+                                size={isMobile ? "small" : "medium"}
+                                displayEmpty
+                              >
+                                <MenuItem value="">
+                                  <em>Select language</em>
+                                </MenuItem>
+                                <MenuItem value="English">English</MenuItem>
+                                <MenuItem value="French">French</MenuItem>
+                              </Select>
+                            </FormControl>
+                            <Typography 
+                              variant="caption" 
+                              color="text.secondary"
+                              sx={{ 
+                                mt: 1, 
+                                display: 'block',
+                                fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                              }}
+                            >
+                              💡 Select the language in which this course will be taught
+                            </Typography>
+                          </Grid>
+                        </Grid>
+                      </Box>
+                    )}
                   </Grid>
 
                 </Grid>
@@ -1186,6 +1290,44 @@ const CreateCourse: React.FC = () => {
                       </CardContent>
                     </Card>
                   </Grid>
+
+                  {/* Conditional Fields Summary */}
+                  {(formData.nurseryLevel || formData.language) && (
+                    <Grid item xs={12} md={6}>
+                      <Card variant="outlined" sx={{ height: '100%', bgcolor: 'rgba(103, 58, 183, 0.02)', borderColor: 'rgba(103, 58, 183, 0.3)' }}>
+                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                          <Typography 
+                            variant="subtitle1" 
+                            gutterBottom
+                            sx={{ 
+                              fontSize: { xs: '0.9rem', sm: '1rem' },
+                              fontWeight: 600
+                            }}
+                          >
+                            📚 Academic & Nursery Details
+                          </Typography>
+                          <Stack spacing={0.5}>
+                            {formData.nurseryLevel && (
+                              <Typography 
+                                variant="body2" 
+                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                              >
+                                <strong>Nursery Level:</strong> {formData.nurseryLevel}
+                              </Typography>
+                            )}
+                            {formData.language && (
+                              <Typography 
+                                variant="body2" 
+                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                              >
+                                <strong>Course Language:</strong> {formData.language}
+                              </Typography>
+                            )}
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  )}
 
                   <Grid item xs={12} md={6}>
                     <Card variant="outlined" sx={{ height: '100%' }}>

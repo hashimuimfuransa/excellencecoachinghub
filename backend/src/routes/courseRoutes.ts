@@ -153,6 +153,7 @@ const createCourseValidation = [
       'professional_coaching',
       'business_entrepreneurship_coaching',
       'academic_coaching',
+      'nursery_coaching',
       'language_coaching',
       'technical_digital_coaching',
       'job_seeker_coaching',
@@ -169,7 +170,13 @@ const createCourseValidation = [
     .isString()
     .trim()
     .isLength({ max: 100 })
-    .withMessage('Each subcategory cannot exceed 100 characters')
+    .withMessage('Each subcategory cannot exceed 100 characters'),
+  body('nurseryLevel')
+    .optional()
+    .isString()
+    .trim()
+    .isIn(['Nursery 1', 'Nursery 2', 'Nursery 3', ''])
+    .withMessage('Nursery level must be one of: Nursery 1, Nursery 2, or Nursery 3')
 ];
 
 const updateCourseValidation = [
@@ -244,6 +251,7 @@ const updateCourseValidation = [
       'professional_coaching',
       'business_entrepreneurship_coaching',
       'academic_coaching',
+      'nursery_coaching',
       'language_coaching',
       'technical_digital_coaching',
       'job_seeker_coaching',
@@ -260,6 +268,12 @@ const updateCourseValidation = [
     .trim()
     .isLength({ max: 100 })
     .withMessage('Each subcategory cannot exceed 100 characters'),
+  body('nurseryLevel')
+    .optional()
+    .isString()
+    .trim()
+    .isIn(['Nursery 1', 'Nursery 2', 'Nursery 3', ''])
+    .withMessage('Nursery level must be one of: Nursery 1, Nursery 2, or Nursery 3'),
   body('prerequisites')
     .optional()
     .isArray()

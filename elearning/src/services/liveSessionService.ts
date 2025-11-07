@@ -54,6 +54,8 @@ export interface ILiveSession {
   screenShareEnabled: boolean;
   attendanceRequired: boolean;
   zoomFallbackLink?: string;
+  streamProvider?: 'internal' | 'youtube';
+  youtubeEmbedUrl?: string;
   attendees: IAttendee[];
   createdAt: string;
   updatedAt: string;
@@ -132,6 +134,8 @@ export interface ICreateLiveSessionData {
   screenShareEnabled?: boolean;
   attendanceRequired?: boolean;
   zoomFallbackLink?: string;
+  streamProvider?: 'internal' | 'youtube';
+  youtubeEmbedUrl?: string;
 }
 
 export interface IUpdateLiveSessionData {
@@ -148,6 +152,8 @@ export interface IUpdateLiveSessionData {
   attendanceRequired?: boolean;
   courseId?: string;
   zoomFallbackLink?: string;
+  streamProvider?: 'internal' | 'youtube';
+  youtubeEmbedUrl?: string;
 }
 
 export const liveSessionService = {

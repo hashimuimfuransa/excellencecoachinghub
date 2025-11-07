@@ -36,6 +36,22 @@ import { useAuth } from '../../store/AuthContext';
 import { liveSessionService, ICreateLiveSessionData } from '../../services/liveSessionService';
 import { courseService, ICourse } from '../../services/courseService';
 
+const normalizeYoutubeEmbed = (url: string) => {
+  if (!url) {
+    return '';
+  }
+  const trimmed = url.trim();
+  const embedMatch = trimmed.match(/youtube\.com\/embed\/([\w-]{11})/i);
+  if (embedMatch) {
+    return `https://www.youtube.com/embed/${embedMatch[1]}`;
+  }
+  const watchMatch = trimmed.match(/(?:v=|youtu\.be\/)([\w-]{11})/i);
+  if (watchMatch) {
+    return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  }
+  return trimmed;
+};
+
 const CreateLiveSession: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -62,7 +78,9 @@ const CreateLiveSession: React.FC = () => {
     chatEnabled: true,
     handRaiseEnabled: true,
     screenShareEnabled: true,
-    attendanceRequired: false
+    attendanceRequired: false,
+    streamProvider: 'internal',
+    youtubeEmbedUrl: ''
   });
 
   // Temporary states for agenda items
@@ -137,6 +155,10 @@ const CreateLiveSession: React.FC = () => {
       setError('Maximum participants must be between 1 and 1000');
       return false;
     }
+    if (formData.streamProvider === 'youtube' && !formData.youtubeEmbedUrl?.trim()) {
+      setError('Please provide a YouTube URL for the livestream');
+      return false;
+    }
     return true;
   };
 
@@ -148,10 +170,21 @@ const CreateLiveSession: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const sessionData: ICreateLiveSessionData = {
+      const sessionProvider = formData.streamProvider === 'youtube' ? 'youtube' : 'internal';
+      let sessionData: ICreateLiveSessionData = {
         ...formData,
-        scheduledTime: new Date(formData.scheduledTime).toISOString()
+        scheduledTime: new Date(formData.scheduledTime).toISOString(),
+        streamProvider: sessionProvider
       };
+
+      if (sessionProvider === 'youtube') {
+        sessionData = {
+          ...sessionData,
+          youtubeEmbedUrl: normalizeYoutubeEmbed(formData.youtubeEmbedUrl || '')
+        };
+      } else {
+        delete (sessionData as any).youtubeEmbedUrl;
+      }
 
       const session = await liveSessionService.createSession(sessionData);
       
@@ -286,6 +319,26 @@ const CreateLiveSession: React.FC = () => {
                   
                   <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
+                      <FormControl fullWidth required>
+                        <InputLabel>Live Session Type *</InputLabel>
+                        <Select
+                          value={formData.streamProvider || 'internal'}
+                          label="Live Session Type *"
+                          onChange={(e) => {
+                            const value = e.target.value as 'internal' | 'youtube';
+                            handleInputChange('streamProvider', value);
+                            if (value !== 'youtube') {
+                              handleInputChange('youtubeEmbedUrl', '');
+                            }
+                          }}
+                        >
+                          <MenuItem value="internal">Interactive Video Room</MenuItem>
+                          <MenuItem value="youtube">YouTube Livestream</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
                         label="Scheduled Time *"
@@ -328,6 +381,20 @@ const CreateLiveSession: React.FC = () => {
                         helperText="Maximum number of participants (optional)"
                       />
                     </Grid>
+
+                    {formData.streamProvider === 'youtube' && (
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          required
+                          label="YouTube Embed or Watch URL *"
+                          value={formData.youtubeEmbedUrl || ''}
+                          onChange={(e) => handleInputChange('youtubeEmbedUrl', e.target.value)}
+                          placeholder="https://www.youtube.com/watch?v=..."
+                          helperText="Students will watch this session through the embedded YouTube livestream"
+                        />
+                      </Grid>
+                    )}
                   </Grid>
                 </CardContent>
               </Card>

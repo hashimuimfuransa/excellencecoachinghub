@@ -71,6 +71,7 @@ export interface ICourseDocument extends Document {
   specificInterests: string[]; // Specific topics and skills covered
   learningCategories: string[]; // Learning categories for better discoverability
   learningSubcategories?: string[]; // Specific subcategories within learning categories
+  nurseryLevel?: string; // Nursery level (Nursery 1, 2, or 3) for nursery coaching courses
   isPublished: boolean;
   publishedAt?: Date;
   enrollmentDeadline?: Date; // When enrollment closes
@@ -367,6 +368,7 @@ const courseSchema = new Schema<ICourseDocument>({
       'professional_coaching',
       'business_entrepreneurship_coaching',
       'academic_coaching',
+      'nursery_coaching',
       'language_coaching',
       'technical_digital_coaching',
       'job_seeker_coaching',
@@ -379,6 +381,12 @@ const courseSchema = new Schema<ICourseDocument>({
     trim: true,
     maxlength: [100, 'Subcategory cannot exceed 100 characters']
   }],
+  nurseryLevel: {
+    type: String,
+    enum: ['Nursery 1', 'Nursery 2', 'Nursery 3', ''],
+    default: '',
+    trim: true
+  },
   courseEndDate: {
     type: Date,
     default: null

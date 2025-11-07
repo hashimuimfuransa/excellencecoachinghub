@@ -23,13 +23,30 @@ import {
   CloudUpload,
   PlayArrow,
   Delete,
-  Edit
+  Edit,
+  LiveTv
 } from '@mui/icons-material';
 import { useAuth } from '../../store/AuthContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
 
 import LiveClass from '../../components/Video/LiveClass';
 import VideoSessionWrapper from '../../components/Video/VideoSessionWrapper';
+
+const normalizeYoutubeUrls = (url: string) => {
+  if (!url) {
+    return { embed: '', watch: '' };
+  }
+  const trimmed = url.trim();
+  const idMatch = trimmed.match(/(?:embed\/|watch\?v=|youtu\.be\/)([\w-]{11})/i);
+  const id = idMatch ? idMatch[1] : '';
+  if (id) {
+    return {
+      embed: `https://www.youtube.com/embed/${id}`,
+      watch: `https://www.youtube.com/watch?v=${id}`
+    };
+  }
+  return { embed: trimmed, watch: trimmed };
+};
 
 
 
@@ -53,6 +70,9 @@ const LiveSessionRoom: React.FC = () => {
   const [videoDescription, setVideoDescription] = useState('');
 
   console.log('🏫 LiveSessionRoom mounted with:', { sessionId, userId: user?._id, userRole: user?.role });
+
+  const { embed: youtubeEmbedUrl, watch: youtubeWatchUrl } = normalizeYoutubeUrls(session?.youtubeEmbedUrl || '');
+  const isYoutubeStream = session?.streamProvider === 'youtube' || (!!youtubeEmbedUrl && youtubeEmbedUrl.includes('youtube.com'));
 
   // Early return if sessionId is missing
   if (!sessionId) {
@@ -88,11 +108,13 @@ const LiveSessionRoom: React.FC = () => {
         setSession(sessionData);
 
         // Auto-join video room if session is live
-        if (sessionData.status === 'live') {
+        const isYoutube = sessionData.streamProvider === 'youtube' || !!sessionData.youtubeEmbedUrl;
+        if (sessionData.status === 'live' && !isYoutube) {
           console.log('🔴 Session is live, auto-joining video room');
           setInVideoRoom(true);
         } else {
-          console.log('⏸️ Session status:', sessionData.status);
+          console.log('⏸️ Session status:', sessionData.status, 'YouTube stream:', isYoutube);
+          setInVideoRoom(false);
         }
 
       } catch (err: any) {
@@ -108,6 +130,13 @@ const LiveSessionRoom: React.FC = () => {
 
   // Handle joining video room
   const handleJoinVideoRoom = () => {
+    if (isYoutubeStream) {
+      const targetUrl = youtubeWatchUrl || youtubeEmbedUrl;
+      if (targetUrl) {
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
     setInVideoRoom(true);
   };
 
@@ -318,6 +347,9 @@ const LiveSessionRoom: React.FC = () => {
           <Typography variant="body2" sx={{ mb: 1 }}>
             <strong>Recording:</strong> {session.isRecorded ? 'Enabled' : 'Disabled'}
           </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Stream Type:</strong> {isYoutubeStream ? 'YouTube Livestream' : 'Interactive Video Room'}
+          </Typography>
         </Box>
 
         {/* Session status and actions */}
@@ -353,12 +385,12 @@ const LiveSessionRoom: React.FC = () => {
             <Button
               variant="contained"
               size="large"
-              startIcon={<VideoCall />}
+              startIcon={isYoutubeStream ? <LiveTv /> : <VideoCall />}
               onClick={handleJoinVideoRoom}
               color="primary"
               sx={{ fontWeight: 'bold' }}
             >
-              {session.status === 'live' ? 'Join Live Session' : 'Start Session'}
+              {isYoutubeStream ? 'Open YouTube Stream' : session.status === 'live' ? 'Join Live Session' : 'Start Session'}
             </Button>
           )}
 
@@ -374,6 +406,35 @@ const LiveSessionRoom: React.FC = () => {
             </Button>
           )}
         </Box>
+
+        {isYoutubeStream && youtubeEmbedUrl && (
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Livestream Preview
+            </Typography>
+            <Box
+              component="iframe"
+              src={`${youtubeEmbedUrl}?rel=0`}
+              sx={{
+                width: '100%',
+                border: 0,
+                borderRadius: 2,
+                minHeight: { xs: 240, sm: 360 },
+                boxShadow: 3
+              }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+            <Button
+              variant="outlined"
+              startIcon={<PlayArrow />}
+              sx={{ mt: 2 }}
+              onClick={() => window.open(youtubeWatchUrl || youtubeEmbedUrl, '_blank', 'noopener,noreferrer')}
+            >
+              Open Stream in New Tab
+            </Button>
+          </Box>
+        )}
 
         {/* Video Recording Section - Only show if session has ended */}
         {session.status === 'ended' && (

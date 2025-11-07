@@ -222,7 +222,8 @@ export const createCourse = async (req: Request, res: Response, next: NextFuncti
       learningStyle,
       specificInterests,
       learningCategories,
-      learningSubcategories
+      learningSubcategories,
+      nurseryLevel
     } = req.body;
 
     // Normalize level to lowercase (frontend might send capitalized)
@@ -247,6 +248,7 @@ export const createCourse = async (req: Request, res: Response, next: NextFuncti
       specificInterests: specificInterests || [],
       learningCategories: learningCategories || [],
       learningSubcategories: learningSubcategories || [],
+      ...(nurseryLevel && { nurseryLevel }),
       instructor: req.user._id,
       status: CourseStatus.PENDING_APPROVAL, // Use proper enum value
       isPublished: false,
@@ -492,7 +494,8 @@ export const updateCourse = async (req: Request, res: Response, next: NextFuncti
       learningStyle,
       specificInterests,
       learningCategories,
-      learningSubcategories
+      learningSubcategories,
+      nurseryLevel
     } = req.body;
 
     // Build update object with only provided fields
@@ -518,6 +521,7 @@ export const updateCourse = async (req: Request, res: Response, next: NextFuncti
     if (specificInterests !== undefined) updateData.specificInterests = specificInterests;
     if (learningCategories !== undefined) updateData.learningCategories = learningCategories;
     if (learningSubcategories !== undefined) updateData.learningSubcategories = learningSubcategories;
+    if (nurseryLevel !== undefined) updateData.nurseryLevel = nurseryLevel;
 
     const course = await Course.findByIdAndUpdate(
       id,

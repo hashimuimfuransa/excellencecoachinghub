@@ -555,30 +555,36 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Find assignment
-    const assignment = await Assignment.findById(assignmentId);
-    if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        error: 'Assignment not found'
-      });
-    }
+    // Handle school-homework special case
+    let assignment: any = null;
+    const isSchoolHomework = assignmentId === 'school-homework';
+    
+    if (!isSchoolHomework) {
+      // Find assignment
+      assignment = await Assignment.findById(assignmentId);
+      if (!assignment) {
+        return res.status(404).json({
+          success: false,
+          error: 'Assignment not found'
+        });
+      }
 
-    // Check if assignment is published
-    if (assignment.status !== 'published') {
-      return res.status(400).json({
-        success: false,
-        error: 'Assignment is not available for submission'
-      });
+      // Check if assignment is published
+      if (assignment.status !== 'published') {
+        return res.status(400).json({
+          success: false,
+          error: 'Assignment is not available for submission'
+        });
+      }
     }
 
     // Check if already submitted (only for final submission)
     const existingSubmission = await AssignmentSubmission.findOne({
-      assignment: assignmentId,
+      assignment: isSchoolHomework ? 'school-homework' : assignmentId,
       student: req.user._id
     });
 
-    if (existingSubmission && existingSubmission.status === 'submitted' && !isDraft && !autoSubmit) {
+    if (existingSubmission && existingSubmission.status === 'submitted' && !isDraft && !autoSubmit && !isSchoolHomework) {
       return res.status(400).json({
         success: false,
         error: 'Assignment already submitted'
@@ -587,10 +593,10 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
 
     // Check time limit for auto-submit
     const now = new Date();
-    const isOverdue = now > assignment.dueDate;
+    const isOverdue = assignment ? now > assignment.dueDate : false;
     
     // Validate submission if not a draft and not auto-submit
-    if (!isDraft && !autoSubmit) {
+    if (!isDraft && !autoSubmit && !isSchoolHomework) {
       if (assignment.submissionType === 'text') {
         const hasTextSubmission = submissionText && submissionText.trim().length > 0;
         const hasSectionContent = sections && sections.length > 0 && sections.some(s => s.content && s.content.trim().length > 0);
@@ -641,8 +647,8 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
     await submission.save();
     await submission.populate('student', 'firstName lastName email');
 
-    // Trigger AI grading for submitted assignments
-    if (!isDraft && submission.status === 'submitted') {
+    // Trigger AI grading for submitted assignments (not for school homework)
+    if (!isDraft && !isSchoolHomework && submission.status === 'submitted') {
       try {
         await triggerAIGrading(submission, assignment);
       } catch (aiError) {
@@ -766,39 +772,56 @@ export const uploadAssignmentFile = async (req: AuthRequest, res: Response) => {
 
     const { assignmentId } = req.params;
 
-    // Find assignment to validate file constraints
-    const assignment = await Assignment.findById(assignmentId);
-    if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        error: 'Assignment not found'
-      });
-    }
+    // Handle school-homework special case
+    if (assignmentId !== 'school-homework') {
+      // Find assignment to validate file constraints
+      const assignment = await Assignment.findById(assignmentId);
+      if (!assignment) {
+        return res.status(404).json({
+          success: false,
+          error: 'Assignment not found'
+        });
+      }
 
-    // Check file size
-    const fileSizeMB = req.file.size / (1024 * 1024);
-    if (fileSizeMB > assignment.maxFileSize) {
-      return res.status(400).json({
-        success: false,
-        error: `File size exceeds maximum allowed size of ${assignment.maxFileSize}MB`
-      });
-    }
+      // Check file size
+      const fileSizeMB = req.file.size / (1024 * 1024);
+      if (fileSizeMB > assignment.maxFileSize) {
+        return res.status(400).json({
+          success: false,
+          error: `File size exceeds maximum allowed size of ${assignment.maxFileSize}MB`
+        });
+      }
 
-    // Check file type
-    const fileExtension = req.file.originalname.split('.').pop()?.toLowerCase();
-    if (fileExtension && !assignment.allowedFileTypes.includes(fileExtension)) {
-      return res.status(400).json({
-        success: false,
-        error: `File type .${fileExtension} is not allowed. Allowed types: ${assignment.allowedFileTypes.join(', ')}`
-      });
+      // Check file type
+      const fileExtension = req.file.originalname.split('.').pop()?.toLowerCase();
+      if (fileExtension && !assignment.allowedFileTypes.includes(fileExtension)) {
+        return res.status(400).json({
+          success: false,
+          error: `File type .${fileExtension} is not allowed. Allowed types: ${assignment.allowedFileTypes.join(', ')}`
+        });
+      }
+    } else {
+      // For school homework, do basic validation only
+      const fileSizeMB = req.file.size / (1024 * 1024);
+      const maxSize = 50;
+      if (fileSizeMB > maxSize) {
+        return res.status(400).json({
+          success: false,
+          error: `File size exceeds maximum allowed size of ${maxSize}MB`
+        });
+      }
     }
 
     // Upload to Cloudinary
+    const uploadPath = assignmentId === 'school-homework'
+      ? `excellence-coaching-hub/school-homework/submissions`
+      : `excellence-coaching-hub/assignments/${assignmentId}/submissions`;
+    
     const uploadResult = await uploadDocumentToCloudinary(
       req.file.buffer,
       req.user._id,
       req.file.originalname,
-      `excellence-coaching-hub/assignments/${assignmentId}/submissions`
+      uploadPath
     );
 
     const fileData = {
@@ -2741,6 +2764,31 @@ export const submitAssignmentWithExtractedAnswers = async (req: AuthRequest, res
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to submit assignment'
+    });
+  }
+};
+
+// Get school homework submissions by course
+export const getCourseSchoolHomeworkSubmissions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { courseId } = req.params;
+
+    // Get all school homework submissions for the course
+    const submissions = await AssignmentSubmission.find({
+      assignment: 'school-homework'
+    })
+    .populate('student', 'firstName lastName email _id')
+    .sort({ submittedAt: -1 });
+
+    res.json({
+      success: true,
+      data: submissions
+    });
+  } catch (error: any) {
+    console.error('Error fetching school homework submissions:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch school homework submissions'
     });
   }
 };

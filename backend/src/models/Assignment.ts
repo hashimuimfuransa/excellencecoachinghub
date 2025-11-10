@@ -69,7 +69,7 @@ export interface IAssignment extends Document {
 }
 
 export interface IAssignmentSubmission extends Document {
-  assignment: mongoose.Types.ObjectId;
+  assignment: mongoose.Types.ObjectId | string;
   student: mongoose.Types.ObjectId;
   submissionText?: string;
   sections?: Array<{
@@ -321,7 +321,7 @@ const AssignmentSchema = new Schema<IAssignment>({
 
 const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
   assignment: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.Mixed,
     ref: 'Assignment',
     required: [true, 'Assignment is required']
   },

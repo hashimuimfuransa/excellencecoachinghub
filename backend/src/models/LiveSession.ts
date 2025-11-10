@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 // Live session document interface
 export interface ILiveSessionDocument extends Document {

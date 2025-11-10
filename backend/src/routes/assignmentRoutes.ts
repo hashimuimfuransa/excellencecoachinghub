@@ -35,7 +35,8 @@ import {
   debugAIProcessing,
   extractAssignmentQuestions,
   saveAssignmentProgress,
-  submitAssignmentWithExtractedAnswers
+  submitAssignmentWithExtractedAnswers,
+  getCourseSchoolHomeworkSubmissions
 } from '../controllers/assignmentController';
 
 const router = express.Router();
@@ -117,6 +118,7 @@ router.patch('/:id/publish', auth, asyncHandler(async (req, res) => {
 
 // Course assignments
 router.get('/course/:courseId', auth, asyncHandler(getCourseAssignments));
+router.get('/course/:courseId/school-homework', auth, asyncHandler(getCourseSchoolHomeworkSubmissions));
 router.get('/course/:courseId/submissions', auth, asyncHandler(async (req, res) => {
   const { courseId } = req.params;
   

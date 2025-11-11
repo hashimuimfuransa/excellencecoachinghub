@@ -44,14 +44,16 @@ const sendTokenResponse = async (user: IUserDocument, statusCode: number, res: R
           _id: user._id,
           email: user.email,
           firstName: user.firstName,
-          lastName: user.lastName,
+          lastName: user.lastName || '',
           role: user.role,
           avatar: user.avatar,
           isEmailVerified: user.isEmailVerified,
           isActive: user.isActive,
           lastLogin: user.lastLogin,
           createdAt: user.createdAt,
-          updatedAt: user.updatedAt
+          updatedAt: user.updatedAt,
+          level: (user as any).level,
+          language: (user as any).language
         },
         token,
         refreshToken
@@ -71,14 +73,24 @@ const sendTokenResponse = async (user: IUserDocument, statusCode: number, res: R
 // @access  Public
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, password, firstName, lastName, role, platform } = req.body;
+    const { email, password, firstName, lastName, name, role, platform } = req.body;
+
+    // Parse name into firstName and lastName if they are missing
+    let finalFirstName = firstName;
+    let finalLastName = lastName;
+
+    if ((!finalFirstName || !finalLastName) && name) {
+      const nameParts = name.trim().split(' ');
+      finalFirstName = finalFirstName || nameParts[0] || '';
+      finalLastName = finalLastName || nameParts.slice(1).join(' ') || '';
+    }
 
     // Validate required fields
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !password || (!finalFirstName && !name)) {
       res.status(400).json({
         success: false,
         error: 'Missing Required Information',
-        message: 'Please fill in all required fields: email, password, first name, and last name.',
+        message: 'Please fill in all required fields: email, password, and name or first name.',
         details: {
           type: 'MISSING_REQUIRED_FIELDS',
           suggestion: 'Make sure all fields are completed before submitting'
@@ -123,8 +135,8 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     const user = await User.create({
       email,
       password,
-      firstName,
-      lastName,
+      firstName: finalFirstName,
+      lastName: finalLastName,
       role: userRole,
       isEmailVerified: true // Auto-verify email
     });
@@ -278,14 +290,16 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
           _id: user._id,
           email: user.email,
           firstName: user.firstName,
-          lastName: user.lastName,
+          lastName: user.lastName || '',
           role: user.role,
           avatar: user.avatar,
           isEmailVerified: user.isEmailVerified,
           isActive: user.isActive,
           lastLogin: user.lastLogin,
           createdAt: user.createdAt,
-          updatedAt: user.updatedAt
+          updatedAt: user.updatedAt,
+          level: (user as any).level,
+          language: (user as any).language
         }
       }
     });
@@ -538,44 +552,30 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
     if (user) {
       // User exists - check if registration is completed
       if (!user.registrationCompleted) {
-        // User needs to complete role selection
-        res.status(200).json({
-          success: true,
-          data: {
-            requiresRoleSelection: true,
-            googleUserData: {
-              email: userData.email,
-              firstName: userData.given_name || userData.name?.split(' ')[0] || 'Google',
-              lastName: userData.family_name || userData.name?.split(' ').slice(1).join(' ') || 'User',
-              googleId: userData.sub || userData.id,
-              profilePicture: userData.picture,
-              provider: 'google',
-              isEmailVerified: userData.email_verified || true
-            }
-          }
-        });
-        return;
+        // Complete registration with default role
+        user.role = UserRole.STUDENT;
+        user.registrationCompleted = true;
+        user.avatar = userData.picture || user.avatar;
+        await user.save();
       }
 
       // User exists and registration is complete - log them in
       await sendTokenResponse(user, 200, res);
     } else {
-      // New user - needs role selection
-      res.status(200).json({
-        success: true,
-        data: {
-          requiresRoleSelection: true,
-          googleUserData: {
-            email: userData.email,
-            firstName: userData.given_name || userData.name?.split(' ')[0] || 'Google',
-            lastName: userData.family_name || userData.name?.split(' ').slice(1).join(' ') || 'User',
-            googleId: userData.sub || userData.id,
-            profilePicture: userData.picture,
-            provider: 'google',
-            isEmailVerified: userData.email_verified || true
-          }
-        }
+      // New user - create with default role
+      const newUser = await User.create({
+        email: userData.email,
+        firstName: userData.given_name || userData.name?.split(' ')[0] || 'Google',
+        lastName: userData.family_name || userData.name?.split(' ').slice(1).join(' ') || 'User',
+        googleId: userData.sub || userData.id,
+        provider: 'google',
+        role: UserRole.STUDENT, // Default role
+        isEmailVerified: userData.email_verified || true,
+        avatar: userData.picture,
+        registrationCompleted: true
       });
+
+      await sendTokenResponse(newUser, 201, res);
     }
   } catch (error) {
     next(error);

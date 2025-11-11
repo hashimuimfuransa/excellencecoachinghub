@@ -30,6 +30,8 @@ export { EmailEvent, IEmailEvent } from './EmailEvent';
 export { default as EmailTracker, IEmailTracker, EmailType } from './EmailTracker';
 export { Annotation, IAnnotation } from './Annotation';
 export { Announcement, IAnnouncementDocument, IAnnouncementModel } from './Announcement';
+export { HomeworkHelp, IHomeworkHelp } from './HomeworkHelp';
+export { default as VideoWatch, IVideoWatch } from './VideoWatch';
 
 // Past Papers Models
 export { PastPaper, IPastPaperDocument, IPastPaperModel } from './PastPaper';

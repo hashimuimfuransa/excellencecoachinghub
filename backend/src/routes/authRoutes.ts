@@ -48,20 +48,36 @@ const registerValidation = [
     .withMessage('Please provide a valid email'),
   body('password')
     .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
-    .custom(passwordValidator),
+    .withMessage('Password must be at least 8 characters long'),
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Name must be between 2 and 100 characters'),
   body('firstName')
+    .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('First name must be between 2 and 50 characters'),
   body('lastName')
+    .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters'),
+    .withMessage('Last name must be between 2 and 50 characters')
+    .custom((value, { req }) => {
+      // If firstName is provided, lastName is required, or if name is not provided, both are required
+      if (req.body.firstName && !value) {
+        throw new Error('Last name is required when first name is provided');
+      }
+      if (!req.body.name && !req.body.firstName) {
+        throw new Error('Either name or firstName/lastName must be provided');
+      }
+      return true;
+    }),
   body('role')
     .optional()
-    .isIn(['admin', 'teacher', 'student', 'professional', 'employer'])
-    .withMessage('Role must be admin, teacher, student, professional, or employer'),
+    .isIn(['admin', 'teacher', 'student', 'professional', 'employer', 'parent'])
+    .withMessage('Role must be admin, teacher, student, professional, employer, or parent'),
   body('platform')
     .optional()
     .isIn(['homepage', 'job-portal', 'elearning'])

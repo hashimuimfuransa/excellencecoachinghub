@@ -9,7 +9,8 @@ export enum UserRole {
   STUDENT = 'student',
   PROFESSIONAL = 'professional',
   EMPLOYER = 'employer',
-  JOB_SEEKER = 'job_seeker'
+  JOB_SEEKER = 'job_seeker',
+  PARENT = 'parent'
 }
 
 export enum CourseStatus {

@@ -11,6 +11,9 @@ import {
 import { protect } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
 import { body } from 'express-validator';
+import UploadedVideo from '../models/UploadedVideo';
+import VideoWatch from '../models/VideoWatch';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
@@ -119,5 +122,45 @@ router.post('/room/enable', enableRoomValidation, validateRequest, enableRoom);
  * @access  Private (teachers and admins only)
  */
 router.get('/recording/:recordingId', getRecordingDetails);
+
+/**
+ * @route   GET /api/videos
+ * @desc    Get all educational videos
+ * @access  Private (authenticated users)
+ */
+router.get('/', asyncHandler(async (req, res) => {
+  const videos = await UploadedVideo.find({ isActive: true })
+    .populate('uploadedBy', 'name')
+    .sort({ createdAt: -1 });
+
+  res.json(videos);
+}));
+
+/**
+ * @route   PUT /api/videos/:videoId/watched
+ * @desc    Mark video as watched by user
+ * @access  Private (authenticated users)
+ */
+router.put('/:videoId/watched', asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const userId = req.user._id;
+  const { completed = true, watchDuration } = req.body;
+
+  // Update or create video watch record
+  const videoWatch = await VideoWatch.findOneAndUpdate(
+    { user: userId, video: videoId },
+    {
+      watchedAt: new Date(),
+      completed,
+      ...(watchDuration && { watchDuration })
+    },
+    { upsert: true, new: true }
+  );
+
+  res.json({
+    message: 'Video watch status updated',
+    data: videoWatch
+  });
+}));
 
 export default router;

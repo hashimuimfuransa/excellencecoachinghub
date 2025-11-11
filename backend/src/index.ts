@@ -68,6 +68,8 @@ import recordedSessionRoutes from '@/routes/recordedSessions';
 import gradesRoutes from '@/routes/gradesRoutes';
 import testRoutes from '@/routes/testRoutes';
 import gamificationRoutes from '@/routes/gamificationRoutes';
+import homeworkRoutes from '@/routes/homeworkRoutes';
+import parentRoutes from '@/routes/parentRoutes';
 
 // Job Portal routes
 import jobRoutes from '@/routes/jobRoutes';
@@ -844,7 +846,7 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/week-feedback', weekFeedbackRoutes);
 app.use('/api/support', supportRoutes);
-app.use('/api/video', videoRoutes);
+app.use('/api/videos', videoRoutes);
 app.use('/api/uploaded-videos', uploadedVideoRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/ai', aiRoutes);
@@ -862,6 +864,8 @@ app.use('/api/recorded-sessions', recordedSessionRoutes);
 app.use('/api/grades', gradesRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/gamification', gamificationRoutes);
+app.use('/api/homework', homeworkRoutes);
+app.use('/api/parent', parentRoutes);
 
 // Job Portal routes
 app.use('/api/jobs', jobRoutes);

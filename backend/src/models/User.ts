@@ -7,7 +7,7 @@ export interface IUserDocument extends Document {
   email: string;
   password?: string; // Optional for Google OAuth users
   firstName: string;
-  lastName: string;
+  lastName?: string;
   role: UserRole;
   userType?: 'student' | 'job_seeker' | 'employer';
   avatar?: string;
@@ -217,7 +217,7 @@ const userSchema = new Schema<IUserDocument>({
   },
   lastName: {
     type: String,
-    required: [true, 'Last name is required'],
+    required: false,
     trim: true,
     maxlength: [50, 'Last name cannot exceed 50 characters']
   },

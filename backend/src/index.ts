@@ -141,6 +141,8 @@ const io = new Server(server, {
       'https://exjobnet.com', // Updated job portal domain
       'https://excellencecoachinghub.com',
       'https://elearning.excellencecoachinghub.com',
+      'https://ecoaching.onrender.com',
+      'https://ecoaching.excellencecoachinghub.com',
       'https://exjobnet.excellencecoachinghub.com',
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ],
@@ -175,7 +177,9 @@ const corsOptions = {
       'https://adminexcellencecoachinghub.onrender.com',
       'https://ech-w16g.onrender.com',
       'https://exjobnet.com', // Updated job portal domain
-      'https://excellencecoachinghub.com',       // Add root domain too
+      'https://excellencecoachinghub.com', 
+      'https://ecoaching.onrender.com',
+      'https://ecoaching.excellencecoachinghub.com',      // Add root domain too
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ];
     

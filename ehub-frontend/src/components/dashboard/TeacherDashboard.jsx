@@ -22,16 +22,32 @@ const TeacherDashboard = () => {
           homeworkApi.getTeacherStats()
         ]);
         
+        // Transform submissions data to match expected format
+        let transformedSubmissions = [];
+        if (Array.isArray(submissionsResponse.data)) {
+          transformedSubmissions = submissionsResponse.data.map(submission => ({
+            id: submission._id,
+            studentName: `${submission.student.firstName} ${submission.student.lastName}`,
+            studentGrade: 'N/A', // This would need to be fetched from student data
+            homeworkTitle: submission.assignment.title,
+            subject: 'Homework', // This would need to be fetched from course data
+            submittedAt: submission.submittedAt,
+            status: submission.status,
+            reviewed: submission.status === 'graded',
+            fileUrl: submission.attachments && submission.attachments.length > 0 ? submission.attachments[0].url : null,
+            fileName: submission.attachments && submission.attachments.length > 0 ? submission.attachments[0].originalName : null
+          }));
+        }
+        
         // Ensure we're setting arrays for submissions and help requests
-        setSubmissions(Array.isArray(submissionsResponse.data) ? submissionsResponse.data : []);
+        setSubmissions(transformedSubmissions);
         setHelpRequests(Array.isArray(helpResponse.data) ? helpResponse.data : []);
         
         // Calculate stats from real data
-        const submissionsData = Array.isArray(submissionsResponse.data) ? submissionsResponse.data : [];
         setStats({
-          totalStudents: statsResponse?.data?.totalStudents || 0,
-          pendingReviews: submissionsData.filter(s => !s.reviewed).length,
-          homeworkCreated: statsResponse?.data?.homeworkCreated || 0,
+          totalStudents: statsResponse?.data?.overview?.totalStudents || statsResponse?.data?.totalStudents || 0,
+          pendingReviews: transformedSubmissions.filter(s => s.status !== 'graded').length,
+          homeworkCreated: statsResponse?.data?.overview?.totalCourses || statsResponse?.data?.totalCourses || 0,
         });
       } catch (error) {
         console.error('Error loading dashboard data:', error);

@@ -11,7 +11,9 @@ const Leaderboard = () => {
       try {
         // Fetch real leaderboard data from backend
         const response = await homeworkApi.getLeaderboard();
-        setStudents(response.data || []);
+        // Ensure we're setting an array for students
+        const leaderboardData = response.data?.leaderboard || response.data || [];
+        setStudents(Array.isArray(leaderboardData) ? leaderboardData : []);
       } catch (error) {
         console.error('Error loading leaderboard:', error);
         // Set empty array if API call fails

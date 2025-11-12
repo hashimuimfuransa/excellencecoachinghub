@@ -12,7 +12,26 @@ const HomeworkReviews = () => {
     const loadSubmissions = async () => {
       try {
         const response = await homeworkApi.getSubmissions();
-        setSubmissions(response.data || []);
+        
+        // Transform submissions data to match expected format
+        let transformedSubmissions = [];
+        if (Array.isArray(response.data)) {
+          transformedSubmissions = response.data.map(submission => ({
+            id: submission._id,
+            studentName: `${submission.student.firstName} ${submission.student.lastName}`,
+            studentGrade: 'N/A', // This would need to be fetched from student data
+            homeworkTitle: submission.assignment.title,
+            subject: 'Homework', // This would need to be fetched from course data
+            submittedAt: submission.submittedAt,
+            status: submission.status,
+            reviewed: submission.status === 'graded',
+            grade: submission.grade || submission.score,
+            fileUrl: submission.attachments && submission.attachments.length > 0 ? submission.attachments[0].url : null,
+            fileName: submission.attachments && submission.attachments.length > 0 ? submission.attachments[0].originalName : null
+          }));
+        }
+        
+        setSubmissions(transformedSubmissions);
       } catch (error) {
         console.error('Error loading submissions:', error);
         // Fallback to mock data if backend is not available

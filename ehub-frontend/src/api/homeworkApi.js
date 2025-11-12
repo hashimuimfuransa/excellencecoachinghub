@@ -9,7 +9,8 @@ export const homeworkApi = {
   
   // Homework submission and grading
   submitHomework: (homeworkId, submissionData) => axiosClient.post(`/homework/${homeworkId}/submit`, submissionData),
-  getSubmissions: () => axiosClient.get('/homework/submissions'),
+  // Use the correct endpoint for getting all submissions for a teacher
+  getSubmissions: () => axiosClient.get('/assignments/teacher/submissions'),
   getSubmissionById: (submissionId) => axiosClient.get(`/homework/submissions/${submissionId}`),
   reviewSubmission: (submissionId, feedbackData) => axiosClient.put(`/homework/submissions/${submissionId}/review`, feedbackData),
   gradeSubmission: (submissionId, gradeData) => axiosClient.put(`/homework/submissions/${submissionId}/grade`, gradeData),

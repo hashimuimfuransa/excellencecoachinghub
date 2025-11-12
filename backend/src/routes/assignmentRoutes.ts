@@ -200,6 +200,61 @@ router.post('/save-draft', auth, asyncHandler(saveDraft));
 router.get('/:assignmentId/submission-history', auth, asyncHandler(getSubmissionHistory));
 router.post('/submissions/:submissionId/ai-grade', auth, asyncHandler(updateAIGrade));
 
+// Get all submissions for a teacher across all their courses
+router.get('/teacher/submissions', auth, authorizeRoles(['teacher']), asyncHandler(async (req, res) => {
+  try {
+    const teacherId = req.user?._id;
+    
+    if (!teacherId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+    
+    // Get all courses for this teacher
+    const courses = await (await import('../models/Course')).Course.find({ instructor: teacherId }).select('_id');
+    const courseIds = courses.map(course => course._id);
+    
+    if (courseIds.length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+    
+    // Get all assignments for these courses
+    const assignments = await Assignment.find({ course: { $in: courseIds } });
+    const assignmentIds = assignments.map(a => a._id);
+    
+    if (assignmentIds.length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+    
+    // Get all submissions for these assignments
+    const submissions = await AssignmentSubmission.find({ 
+      assignment: { $in: assignmentIds } 
+    })
+    .populate('assignment', 'title dueDate maxPoints course')
+    .populate('student', 'firstName lastName email')
+    .sort({ submittedAt: -1 });
+    
+    res.json({
+      success: true,
+      data: submissions
+    });
+  } catch (error: any) {
+    console.error('Failed to fetch teacher submissions:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch teacher submissions'
+    });
+  }
+}));
+
 // Additional utility routes
 router.get('/course/:courseId/upcoming', auth, asyncHandler(async (req, res) => {
   const { courseId } = req.params;

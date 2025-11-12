@@ -856,7 +856,7 @@ class SuperAdminService {
   }> {
     try {
       console.log('🔍 SuperAdminService: Deleting expired jobs via API...');
-      const response = await apiPost<any>('/jobs/delete-expired');
+      const response = await apiPost<any>('/admin/jobs/delete-expired');
       const result = this.extractApiData(response);
       console.log('✅ SuperAdminService: Successfully deleted expired jobs:', result);
       return result;

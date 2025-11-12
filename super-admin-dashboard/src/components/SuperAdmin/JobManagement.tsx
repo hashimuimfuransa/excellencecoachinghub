@@ -395,20 +395,39 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
   const handleShowExpiredJobs = async () => {
     setExpiredJobsSection(prev => ({ ...prev, show: true, loading: true }));
     try {
-      // Set filter to show only expired jobs
-      setFilters(prev => ({ ...prev, status: JobStatus.EXPIRED }));
-      
-      // Also filter jobs to show only expired ones in current view
-      const expiredJobs = jobs.filter(job => {
+      // Load all jobs without filters to check for expired ones
+      const searchParams = {
+        page: 1,
+        limit: 10000, // Load many jobs to check for expired ones
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+        showAll: true
+      };
+
+      const response = await superAdminService.getAllJobs(searchParams);
+
+      // Extract jobs from response
+      let allJobs: Job[] = [];
+      if (response.jobs && Array.isArray(response.jobs)) {
+        allJobs = response.jobs;
+      } else if (response.data && response.data.jobs && Array.isArray(response.data.jobs)) {
+        allJobs = response.data.jobs;
+      } else if (Array.isArray(response)) {
+        allJobs = response;
+      }
+
+      // Filter jobs to show only expired ones based on application deadline
+      const expiredJobs = allJobs.filter(job => {
         if (!job.applicationDeadline) return false;
         const deadline = new Date(job.applicationDeadline);
         const now = new Date();
         return deadline < now;
       });
-      setExpiredJobsSection(prev => ({ 
-        ...prev, 
-        expiredJobs, 
-        loading: false 
+
+      setExpiredJobsSection(prev => ({
+        ...prev,
+        expiredJobs,
+        loading: false
       }));
     } catch (error) {
       console.error('Error loading expired jobs:', error);
@@ -683,11 +702,16 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
                     🗑️ Expired Jobs Management
                   </Typography>
                   <Typography variant="body2">
-                    {expiredJobsSection.loading 
-                      ? 'Loading expired jobs...' 
-                      : `Found ${expiredJobsSection.expiredJobs.length} expired jobs in the current view`
+                    {expiredJobsSection.loading
+                      ? 'Loading expired jobs...'
+                      : `Found ${expiredJobsSection.expiredJobs.length} expired jobs that can be deleted`
                     }
                   </Typography>
+                  {!expiredJobsSection.loading && expiredJobsSection.expiredJobs.length > 0 && (
+                    <Typography variant="body2" sx={{ mt: 1, fontSize: '0.875rem', color: 'text.secondary' }}>
+                      These jobs have passed their application deadlines and should be removed from the system.
+                    </Typography>
+                  )}
                   {expiredJobsSection.deletionResult && (
                     <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
                       ✅ Successfully deleted {expiredJobsSection.deletionResult.deletedCount} expired jobs from database
@@ -756,9 +780,10 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
                       key={job._id} 
                       hover
                       sx={{
-                        backgroundColor: isExpired ? 'rgba(255, 152, 0, 0.1)' : 'inherit',
+                        backgroundColor: isExpired ? 'rgba(244, 67, 54, 0.08)' : 'inherit',
+                        borderLeft: isExpired ? '4px solid #f44336' : 'none',
                         '&:hover': {
-                          backgroundColor: isExpired ? 'rgba(255, 152, 0, 0.15)' : 'inherit'
+                          backgroundColor: isExpired ? 'rgba(244, 67, 54, 0.12)' : 'inherit'
                         }
                       }}
                     >

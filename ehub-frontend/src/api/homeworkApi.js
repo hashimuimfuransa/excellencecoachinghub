@@ -1,14 +1,40 @@
 import axiosClient from './axiosClient';
 
 export const homeworkApi = {
+  // Homework management
   getHomework: () => axiosClient.get('/homework'),
-  submitHomework: (homeworkData) => axiosClient.post('/homework/submit', homeworkData),
-  getSubmissions: () => axiosClient.get('/homework/submissions'),
-  reviewSubmission: (submissionId, feedback) => axiosClient.put(`/homework/feedback/${submissionId}`, { feedback }),
   createHomework: (homeworkData) => axiosClient.post('/homework/create', homeworkData),
-  uploadHomeworkHelp: (formData) => axiosClient.post('/homework/help/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
+  updateHomework: (id, homeworkData) => axiosClient.put(`/homework/${id}`, homeworkData),
+  deleteHomework: (id) => axiosClient.delete(`/homework/${id}`),
+  
+  // Homework submission and grading
+  submitHomework: (homeworkId, submissionData) => axiosClient.post(`/homework/${homeworkId}/submit`, submissionData),
+  getSubmissions: () => axiosClient.get('/homework/submissions'),
+  getSubmissionById: (submissionId) => axiosClient.get(`/homework/submissions/${submissionId}`),
+  reviewSubmission: (submissionId, feedbackData) => axiosClient.put(`/homework/submissions/${submissionId}/review`, feedbackData),
+  gradeSubmission: (submissionId, gradeData) => axiosClient.put(`/homework/submissions/${submissionId}/grade`, gradeData),
+  
+  // Homework help system
   getHomeworkHelp: () => axiosClient.get('/homework/help'),
-  addComment: (helpId, comment) => axiosClient.post(`/homework/help/${helpId}/comments`, { comment }),
+  getHomeworkHelpById: (id) => axiosClient.get(`/homework/help/${id}`),
+  uploadHomeworkHelp: (formData) => axiosClient.post('/homework/help/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }),
+  downloadHomeworkHelp: (fileUrl) => axiosClient.get(fileUrl, { responseType: 'blob' }),
+  
+  // Interactive homework
+  getInteractiveHomework: (id) => axiosClient.get(`/homework/interactive/${id}`),
+  submitInteractiveHomework: (id, answers) => axiosClient.post(`/homework/interactive/${id}/submit`, { answers }),
+  
+  // Student-created homework
+  getStudentHomework: () => axiosClient.get('/homework/student'),
+  
+  // Teacher stats and students
+  getTeacherStats: () => axiosClient.get('/teacher/stats'),
+  getStudents: () => axiosClient.get('/teacher/students'),
+  
+  // Leaderboard
+  getLeaderboard: () => axiosClient.get('/leaderboard'),
 };

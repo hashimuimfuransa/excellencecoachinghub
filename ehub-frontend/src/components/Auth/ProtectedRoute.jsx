@@ -9,6 +9,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   // If we have user data from localStorage, don't show loading spinner
   const hasCachedUser = localStorage.getItem('user');
 
+  // Show loading only if we don't have cached user data and we're still verifying
   if (loading && !hasCachedUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -17,7 +18,13 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     );
   }
 
-  if (!isAuthenticated && !hasCachedUser) {
+  // If we have cached user data, show the content immediately
+  // Even if we're still verifying in the background
+  if (hasCachedUser && !isAuthenticated && loading) {
+    // Allow access while we verify in the background
+    // The axios interceptor will handle actual auth errors
+  } else if (!isAuthenticated && !hasCachedUser) {
+    // No cached data and not authenticated, redirect to login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

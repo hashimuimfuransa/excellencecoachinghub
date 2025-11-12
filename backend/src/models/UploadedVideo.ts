@@ -70,7 +70,6 @@ const UploadedVideoSchema = new Schema<IUploadedVideo>({
   },
   shareToken: {
     type: String,
-    unique: true,
     sparse: true
   },
   shareUrl: {
@@ -86,7 +85,6 @@ const UploadedVideoSchema = new Schema<IUploadedVideo>({
 
 UploadedVideoSchema.index({ uploadedBy: 1, uploadDate: -1 });
 UploadedVideoSchema.index({ isPublic: 1, uploadDate: -1 });
-UploadedVideoSchema.index({ shareToken: 1 });
 
 UploadedVideoSchema.virtual('formattedSize').get(function() {
   const sizeInMB = this.fileSize / (1024 * 1024);

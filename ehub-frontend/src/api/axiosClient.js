@@ -26,6 +26,8 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Only redirect to login on actual authentication errors (401)
+    // Don't redirect on network errors or server issues
     if (error.response?.status === 401) {
       // Only redirect if we're not already on the login page
       if (window.location.pathname !== '/login') {

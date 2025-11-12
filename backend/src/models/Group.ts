@@ -96,6 +96,7 @@ const groupSchema = new Schema<IGroup>({
   },
   joinCode: {
     type: String,
+    unique: true,
     sparse: true,
   },
   tags: [{
@@ -139,7 +140,7 @@ groupSchema.index({ 'members.userId': 1 });
 groupSchema.index({ createdBy: 1 });
 groupSchema.index({ createdAt: -1 });
 groupSchema.index({ lastActivity: -1 });
-groupSchema.index({ joinCode: 1 }, { unique: true, partialFilterExpression: { joinCode: { $exists: true } } });
+
 
 // Virtual for member count
 groupSchema.virtual('memberCount').get(function() {

@@ -938,6 +938,59 @@ router.post('/jobs/bulk-action', asyncHandler(async (req, res) => {
   }
 }));
 
+/**
+ * @route   POST /api/admin/jobs/delete-expired
+ * @desc    Delete all jobs that have expired based on application deadline
+ * @access  Super Admin only
+ */
+router.post('/jobs/delete-expired', asyncHandler(async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Find all jobs where applicationDeadline exists and is in the past
+    const expiredJobs = await Job.find({
+      applicationDeadline: { $exists: true, $ne: null, $lt: now }
+    });
+
+    if (expiredJobs.length === 0) {
+      return res.json({
+        success: true,
+        deletedCount: 0,
+        deletedJobs: [],
+        message: 'No expired jobs found'
+      });
+    }
+
+    // Delete the expired jobs
+    const deletedResult = await Job.deleteMany({
+      applicationDeadline: { $exists: true, $ne: null, $lt: now }
+    });
+
+    // Prepare response data
+    const deletedJobs = expiredJobs.map(job => ({
+      id: job._id,
+      title: job.title,
+      company: job.company,
+      deadline: job.applicationDeadline
+    }));
+
+    console.log(`🗑️ Deleted ${deletedResult.deletedCount} expired jobs`);
+
+    res.json({
+      success: true,
+      deletedCount: deletedResult.deletedCount,
+      deletedJobs,
+      message: `Successfully deleted ${deletedResult.deletedCount} expired jobs`
+    });
+  } catch (error) {
+    console.error('Error deleting expired jobs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete expired jobs'
+    });
+  }
+}));
+
 // Application Management
 router.get('/applications', asyncHandler(async (req, res) => {
   try {

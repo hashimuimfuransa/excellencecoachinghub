@@ -29,6 +29,7 @@ interface ISmartTest extends Document {
   skillsRequired: string[];
   isActive: boolean;
   testType?: 'free' | 'premium';
+  isPublished?: boolean;
   isAdminUploaded?: boolean;
   uploadedBy?: string;
   uploadedFileName?: string;
@@ -59,7 +60,7 @@ const smartTestQuestionSchema = new Schema<ISmartTestQuestion>({
 });
 
 const smartTestSchema = new Schema<ISmartTest>({
-  testId: { type: String, required: true, unique: true },
+  testId: { type: String, required: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
   jobId: { type: Schema.Types.ObjectId, ref: 'Job' },
@@ -96,7 +97,6 @@ const smartTestSchema = new Schema<ISmartTest>({
 // Indexes for better query performance
 smartTestSchema.index({ userId: 1, createdAt: -1 });
 smartTestSchema.index({ jobId: 1, userId: 1 });
-smartTestSchema.index({ testId: 1 });
 smartTestSchema.index({ isActive: 1 });
 smartTestSchema.index({ userId: 1, testType: 1 }); // For free test checking
 

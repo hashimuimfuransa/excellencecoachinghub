@@ -51,8 +51,7 @@ const companySchema = new Schema<ICompanyDocument>({
     type: String,
     required: [true, 'Company name is required'],
     trim: true,
-    maxlength: [200, 'Company name cannot exceed 200 characters'],
-    unique: true
+    maxlength: [200, 'Company name cannot exceed 200 characters']
   },
   description: {
     type: String,
@@ -186,7 +185,6 @@ const companySchema = new Schema<ICompanyDocument>({
 });
 
 // Indexes for performance
-companySchema.index({ name: 1 });
 companySchema.index({ industry: 1 });
 companySchema.index({ location: 1 });
 companySchema.index({ followersCount: -1 });

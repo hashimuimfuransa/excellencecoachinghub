@@ -21,6 +21,11 @@ export interface ITestPurchaseDocument extends Document {
   attemptsUsed: number;
   createdAt: Date;
   updatedAt: Date;
+  
+  // Virtual properties
+  remainingAttempts?: number;
+  isExpired?: boolean;
+  isActive?: boolean;
 }
 
 export interface ITestPurchaseModel extends Model<ITestPurchaseDocument> {
@@ -46,8 +51,7 @@ const testPurchaseSchema = new Schema<ITestPurchaseDocument>({
   },
   transactionId: {
     type: String,
-    required: [true, 'Transaction ID is required'],
-    unique: true
+    required: [true, 'Transaction ID is required']
   },
   amount: {
     type: Number,
@@ -119,7 +123,6 @@ const testPurchaseSchema = new Schema<ITestPurchaseDocument>({
 testPurchaseSchema.index({ user: 1 });
 testPurchaseSchema.index({ testLevel: 1 });
 testPurchaseSchema.index({ status: 1 });
-testPurchaseSchema.index({ transactionId: 1 });
 testPurchaseSchema.index({ expiresAt: 1 });
 testPurchaseSchema.index({ user: 1, status: 1 });
 testPurchaseSchema.index({ user: 1, testLevel: 1 });
@@ -134,7 +137,9 @@ testPurchaseSchema.virtual('isExpired').get(function(this: ITestPurchaseDocument
 });
 
 testPurchaseSchema.virtual('isActive').get(function(this: ITestPurchaseDocument) {
-  return this.status === 'completed' && !this.isExpired && this.remainingAttempts > 0;
+  const isExpired = new Date() > this.expiresAt;
+  const remainingAttempts = Math.max(0, this.features.attempts - this.attemptsUsed);
+  return this.status === 'completed' && !isExpired && remainingAttempts > 0;
 });
 
 // Static methods

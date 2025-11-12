@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { homeworkApi } from '../../api/homeworkApi';
 import './animations.css';
 
@@ -7,13 +7,7 @@ const StudentDashboard = () => {
   const [homework, setHomework] = useState([]);
   const [homeworkHelp, setHomeworkHelp] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [uploadForm, setUploadForm] = useState({
-    subject: '',
-    description: '',
-    file: null,
-  });
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadData = async () => {
@@ -37,43 +31,6 @@ const StudentDashboard = () => {
 
     loadData();
   }, []);
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setUploadForm({ ...uploadForm, file });
-    }
-  };
-
-  const handleUploadSubmit = async (e) => {
-    e.preventDefault();
-    if (!uploadForm.file || !uploadForm.subject || !uploadForm.description) {
-      alert('Please fill in all fields and select a file');
-      return;
-    }
-
-    setUploadingFile(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', uploadForm.file);
-      formData.append('subject', uploadForm.subject);
-      formData.append('description', uploadForm.description);
-
-      await homeworkApi.uploadHomeworkHelp(formData);
-      
-      const response = await homeworkApi.getHomeworkHelp();
-      setHomeworkHelp(response.data || []);
-      
-      setUploadForm({ subject: '', description: '', file: null });
-      setShowUploadModal(false);
-      alert('Homework uploaded successfully! Teachers and friends can now help you 🎉');
-    } catch (error) {
-      console.error('Error uploading homework:', error);
-      alert('Failed to upload homework. Please try again.');
-    } finally {
-      setUploadingFile(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -125,8 +82,8 @@ const StudentDashboard = () => {
           </Link>
 
           {/* Help Button */}
-          <button 
-            onClick={() => setShowUploadModal(true)}
+          <Link 
+            to="/homework/help/request"
             className="group relative bg-gradient-to-br from-red-500 to-red-600 rounded-3xl p-6 text-white text-center shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 cursor-pointer animate-bounce-slow"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-red-400 to-red-700 rounded-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
@@ -138,7 +95,7 @@ const StudentDashboard = () => {
             <div className="absolute bottom-4 right-4 text-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               👉
             </div>
-          </button>
+          </Link>
 
           {/* Leaderboard Button */}
           <Link 
@@ -201,12 +158,12 @@ const StudentDashboard = () => {
             <h2 className="text-2xl font-bold text-gray-900 flex items-center">
               <span className="text-3xl mr-2 animate-bounce">🤝</span> Help from Classmates
             </h2>
-            <button
-              onClick={() => setShowUploadModal(true)}
+            <Link
+              to="/homework/help/request"
               className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full text-sm transition-all duration-300 transform hover:scale-110"
             >
               + Ask for Help
-            </button>
+            </Link>
           </div>
 
           {homeworkHelp.length > 0 ? (
@@ -252,7 +209,7 @@ const StudentDashboard = () => {
               <h3 className="text-2xl font-bold text-gray-900 mb-2">No Help Requests Yet!</h3>
               <p className="text-gray-600 text-lg mb-6">Be the first to ask or help a classmate! 🎯</p>
               <button
-                onClick={() => setShowUploadModal(true)}
+                onClick={() => navigate('/homework/help/request')}
                 className="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-110"
               >
                 Ask for Help
@@ -268,7 +225,7 @@ const StudentDashboard = () => {
             <h3 className="text-3xl font-bold text-gray-900 mb-4">All Caught Up!</h3>
             <p className="text-gray-600 text-xl mb-8">You don&#39;t have any pending homework. Great job! 🎓</p>
             <button
-              onClick={() => setShowUploadModal(true)}
+              onClick={() => navigate('/homework/help/request')}
               className="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-10 rounded-full text-xl transition-all duration-300 transform hover:scale-110"
             >
               Ask for Help Anyway
@@ -277,97 +234,6 @@ const StudentDashboard = () => {
         )}
 
         {/* Upload Modal */}
-        {showUploadModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 transform transition-all duration-300 scale-95 animate-scale-in">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                  <span className="text-3xl mr-2">📤</span> Ask for Homework Help
-                </h2>
-                <button
-                  onClick={() => setShowUploadModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-3xl transition-transform duration-300 hover:rotate-90"
-                >
-                  ×
-                </button>
-              </div>
-
-              <form onSubmit={handleUploadSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Subject/Topic 📚</label>
-                  <input
-                    type="text"
-                    value={uploadForm.subject}
-                    onChange={(e) => setUploadForm({ ...uploadForm, subject: e.target.value })}
-                    placeholder="e.g., Math, Science, English"
-                    className="w-full border-2 border-gray-300 rounded-2xl p-4 focus:outline-none focus:border-blue-500 transition-all duration-300"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">What do you need help with? 📝</label>
-                  <textarea
-                    value={uploadForm.description}
-                    onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-                    placeholder="Explain your question or problem..."
-                    rows="4"
-                    className="w-full border-2 border-gray-300 rounded-2xl p-4 focus:outline-none focus:border-blue-500 resize-none transition-all duration-300"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Attach File (Optional) 📎</label>
-                  <div className="border-2 border-dashed border-blue-300 rounded-2xl p-6 text-center cursor-pointer hover:bg-blue-50 transition-all duration-300">
-                    <input
-                      type="file"
-                      onChange={handleFileChange}
-                      accept=".pdf,.doc,.docx,.jpg,.png,.gif,.zip"
-                      className="hidden"
-                      id="file-input"
-                    />
-                    <label htmlFor="file-input" className="cursor-pointer block">
-                      <div className="text-4xl mb-3">📎</div>
-                      {uploadForm.file ? (
-                        <p className="text-blue-600 font-semibold">{uploadForm.file.name}</p>
-                      ) : (
-                        <>
-                          <p className="text-gray-700 font-semibold text-lg">Click to upload file</p>
-                          <p className="text-xs text-gray-600">PDF, DOC, Images, ZIP (Optional)</p>
-                        </>
-                      )}
-                    </label>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowUploadModal(false)}
-                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-900 font-bold py-4 rounded-2xl transition-all duration-300 transform hover:scale-105"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={uploadingFile}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {uploadingFile ? (
-                      <div className="flex items-center justify-center">
-                        <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin mr-2"></div>
-                        Sending...
-                      </div>
-                    ) : (
-                      'Send Request 🚀'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Custom styles for animations */}

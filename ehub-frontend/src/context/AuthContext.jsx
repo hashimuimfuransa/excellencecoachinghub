@@ -35,13 +35,22 @@ export const AuthProvider = ({ children }) => {
             setUser(userData);
             // Update user data in localStorage
             localStorage.setItem('user', JSON.stringify(userData));
+            setIsAuthenticated(true);
           })
-          .catch(() => {
-            // If verification fails, clear auth data
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setUser(null);
-            setIsAuthenticated(false);
+          .catch((error) => {
+            // Only clear auth data if it's definitely an auth error
+            // Not all errors mean the token is invalid
+            if (error.response?.status === 401) {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              setUser(null);
+              setIsAuthenticated(false);
+            } else {
+              // For other errors (network issues, server down, etc.), 
+              // keep the user logged in with cached data
+              setUser(parsedUser);
+              setIsAuthenticated(true);
+            }
           });
       } catch (e) {
         console.error('Error parsing saved user data:', e);
@@ -50,6 +59,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       }
     } else {
+      // No token or user data in localStorage
       setLoading(false);
     }
   }, []);

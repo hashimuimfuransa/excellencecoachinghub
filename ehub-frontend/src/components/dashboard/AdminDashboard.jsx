@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { adminApi } from '../../api/adminApi';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -14,24 +15,43 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data - in real app, this would come from API
-    setStats({
-      totalUsers: 1250,
-      totalStudents: 980,
-      totalTeachers: 45,
-      totalParents: 225,
-      totalVideos: 156,
-      totalHomework: 89,
-    });
+    const loadData = async () => {
+      try {
+        // Fetch real data from backend
+        const [statsResponse, activityResponse] = await Promise.all([
+          adminApi.getStats(),
+          adminApi.getRecentActivity()
+        ]);
+        
+        setStats(statsResponse.data || {
+          totalUsers: 0,
+          totalStudents: 0,
+          totalTeachers: 0,
+          totalParents: 0,
+          totalVideos: 0,
+          totalHomework: 0,
+        });
+        
+        setRecentActivity(activityResponse.data || []);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        // Set empty data if API calls fail
+        setStats({
+          totalUsers: 0,
+          totalStudents: 0,
+          totalTeachers: 0,
+          totalParents: 0,
+          totalVideos: 0,
+          totalHomework: 0,
+        });
+        
+        setRecentActivity([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setRecentActivity([
-      { id: 1, type: 'user', action: 'New teacher registered', timestamp: '2 hours ago' },
-      { id: 2, type: 'content', action: 'Video uploaded: "Advanced Calculus"', timestamp: '4 hours ago' },
-      { id: 3, type: 'user', action: 'Parent account activated', timestamp: '6 hours ago' },
-      { id: 4, type: 'system', action: 'System backup completed', timestamp: '1 day ago' },
-    ]);
-
-    setLoading(false);
+    loadData();
   }, []);
 
   if (loading) {

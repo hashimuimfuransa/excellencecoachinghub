@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 import { CertificateType } from '../types';
 
 export interface IJobCertificateDocument extends Document {
-  user: string;
+  user: mongoose.Types.ObjectId;
   type: CertificateType;
   title: string;
   description: string;
@@ -12,10 +12,10 @@ export interface IJobCertificateDocument extends Document {
   expiresAt?: Date;
   verificationCode: string;
   isVerified: boolean;
-  relatedJob?: string;
-  relatedCourse?: string;
-  psychometricTestResults?: string[];
-  interviewResults?: string[];
+  relatedJob?: mongoose.Types.ObjectId;
+  relatedCourse?: mongoose.Types.ObjectId;
+  psychometricTestResults?: mongoose.Types.ObjectId[];
+  interviewResults?: mongoose.Types.ObjectId[];
 }
 
 export interface IJobCertificateModel extends Model<IJobCertificateDocument> {
@@ -76,7 +76,6 @@ const jobCertificateSchema = new Schema<IJobCertificateDocument>({
   verificationCode: {
     type: String,
     required: [true, 'Verification code is required'],
-    unique: true,
     trim: true,
     maxlength: [50, 'Verification code cannot exceed 50 characters']
   },
@@ -113,7 +112,6 @@ const jobCertificateSchema = new Schema<IJobCertificateDocument>({
 // Indexes for performance
 jobCertificateSchema.index({ user: 1 });
 jobCertificateSchema.index({ type: 1 });
-jobCertificateSchema.index({ verificationCode: 1 });
 jobCertificateSchema.index({ issuedAt: -1 });
 jobCertificateSchema.index({ expiresAt: 1 });
 jobCertificateSchema.index({ isVerified: 1 });

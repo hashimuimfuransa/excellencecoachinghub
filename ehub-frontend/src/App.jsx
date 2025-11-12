@@ -12,6 +12,17 @@ import Register from './pages/Register';
 
 import SelectLevel from './pages/SelectLevel';
 import Homework from './pages/Homework';
+import InteractiveHomework from './pages/InteractiveHomework';
+import StudentHomeworkCreator from './pages/StudentHomeworkCreator';
+import StudentCreatedHomework from './pages/StudentCreatedHomework';
+import ReviewStudentHomework from './pages/ReviewStudentHomework';
+import CreateHomework from './pages/CreateHomework';
+import ManageHomework from './pages/ManageHomework';
+import HomeworkReviews from './pages/HomeworkReviews';
+import ReviewHomework from './pages/ReviewHomework';
+import HomeworkHelp from './pages/HomeworkHelp';
+import HomeworkHelpStudent from './pages/HomeworkHelpStudent';
+import ManageStudents from './pages/ManageStudents';
 import Leaderboard from './pages/Leaderboard';
 
 // Import UI components
@@ -67,6 +78,27 @@ const DashboardRouter = () => {
     case 'admin':
       return <AdminDashboard />;
     default:
+      // If we have cached user data but no role, still show dashboard while verifying
+      if (hasCachedUser) {
+        // Try to parse the cached user to determine role
+        try {
+          const cachedUser = JSON.parse(hasCachedUser);
+          switch (cachedUser.role) {
+            case 'student':
+              return <StudentDashboard />;
+            case 'teacher':
+              return <TeacherDashboard />;
+            case 'parent':
+              return <ParentDashboard />;
+            case 'admin':
+              return <AdminDashboard />;
+            default:
+              return <Navigate to="/login" replace />;
+          }
+        } catch (e) {
+          return <Navigate to="/login" replace />;
+        }
+      }
       return <Navigate to="/login" replace />;
   }
 };
@@ -104,6 +136,94 @@ const AppContent = () => {
             element={
               <ProtectedRoute allowedRoles={['student', 'teacher']}>
                 <Homework />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/:id"
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <InteractiveHomework />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/create"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <CreateHomework />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/manage"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <ManageHomework />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/reviews"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <HomeworkReviews />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/review/:id"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <ReviewHomework />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/help"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <HomeworkHelp />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/help/request"
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <HomeworkHelpStudent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/create/student"
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentHomeworkCreator />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/student"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <StudentCreatedHomework />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/student/:id/review"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <ReviewStudentHomework />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/students"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <ManageStudents />
               </ProtectedRoute>
             }
           />

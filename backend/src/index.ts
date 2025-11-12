@@ -70,6 +70,8 @@ import testRoutes from '@/routes/testRoutes';
 import gamificationRoutes from '@/routes/gamificationRoutes';
 import homeworkRoutes from '@/routes/homeworkRoutes';
 import parentRoutes from '@/routes/parentRoutes';
+import teacherRoutes from '@/routes/teacherRoutes';
+import leaderboardRoutes from '@/routes/leaderboardRoutes';
 
 // Job Portal routes
 import jobRoutes from '@/routes/jobRoutes';
@@ -487,15 +489,15 @@ app.get('/api/test-jobs-early', async (req, res) => {
     const formattedJobs = jobs.map(job => ({
       _id: job._id,
       title: job.title,
-      company: job.company || job.employer?.company,
-      industry: job.industry,
-      experienceLevel: job.experienceLevel,
-      skillsRequired: job.skillsRequired || job.requirements || [],
+      company: (job as any).company || (job.employer as any)?.company,
+      industry: (job as any).industry,
+      experienceLevel: (job as any).experienceLevel,
+      skillsRequired: (job as any).skillsRequired || (job as any).requirements || [],
       description: job.description,
       status: job.status,
-      jobType: job.jobType,
-      location: job.location,
-      educationLevel: job.educationLevel,
+      jobType: (job as any).jobType,
+      location: (job as any).location,
+      educationLevel: (job as any).educationLevel,
       employer: job.employer
     }));
 
@@ -542,7 +544,7 @@ app.get('/api/test-jobs-early', async (req, res) => {
         pages: 1
       },
       message: 'Error fetching real jobs - using fallback data',
-      error: error.message
+      error: (error as Error).message || 'Unknown error'
     });
   }
 });
@@ -856,7 +858,6 @@ app.use('/api/course-notes', courseNotesRoutes);
 app.use('/api/course-materials', courseMaterialsRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/weeks', weekRoutes);
-app.use('/api/progress', progressRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/announcements', announcementRoutes);
@@ -866,6 +867,8 @@ app.use('/api/test', testRoutes);
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/homework', homeworkRoutes);
 app.use('/api/parent', parentRoutes);
+app.use('/api/teacher', teacherRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 // Job Portal routes
 app.use('/api/jobs', jobRoutes);
@@ -884,7 +887,6 @@ app.use('/api/modern-interviews', modernInterviewRoutes);
 app.use('/api/speech', speechRoutes);
 app.use('/api/job-certificates', jobCertificateRoutes);
 app.use('/api/profiles', profileRoutes);
-app.use('/api/upload', uploadRoutes);
 app.use('/api/recordings', recordingRoutes);
 app.use('/api/job-scraping', jobScrapingRoutes);
 app.use('/api/smart-tests', smartTestRoutes);
@@ -939,7 +941,7 @@ app.get('/api/jobs-debug', async (req, res) => {
     console.error('Jobs debug error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message || 'Unknown error'
     });
   }
 });
@@ -1061,7 +1063,7 @@ app.get('*', (req, res, next) => {
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
 // Always bind to 0.0.0.0 for cloud deployment compatibility (Render, Heroku, etc.)
 const HOST = '0.0.0.0';

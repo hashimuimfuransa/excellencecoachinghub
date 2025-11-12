@@ -89,7 +89,13 @@ const SelectLevel = () => {
                     }`}
                   >
                     <div className="text-2xl mb-2">
-                      {language.value === 'english' ? '🇺🇸' : '🇫🇷'}
+                      {language.value === 'english' && '🇺🇸'}
+                      {language.value === 'spanish' && '🇪🇸'}
+                      {language.value === 'french' && '🇫🇷'}
+                      {language.value === 'german' && '🇩🇪'}
+                      {language.value === 'chinese' && '🇨🇳'}
+                      {language.value === 'japanese' && '🇯🇵'}
+                      {language.value === 'other' && '🌐'}
                     </div>
                     <div className="font-medium">{language.label}</div>
                   </button>

@@ -13,7 +13,9 @@ const ManageStudents = () => {
       try {
         // Fetch real student data from backend
         const response = await homeworkApi.getStudents();
-        setStudents(response.data || []);
+        // Ensure we're setting an array
+        const studentsData = Array.isArray(response.data) ? response.data : [];
+        setStudents(studentsData);
       } catch (error) {
         console.error('Error loading students:', error);
         // Set empty array if API call fails

@@ -22,13 +22,15 @@ const TeacherDashboard = () => {
           homeworkApi.getTeacherStats()
         ]);
         
-        setSubmissions(submissionsResponse.data || []);
-        setHelpRequests(helpResponse.data || []);
+        // Ensure we're setting arrays for submissions and help requests
+        setSubmissions(Array.isArray(submissionsResponse.data) ? submissionsResponse.data : []);
+        setHelpRequests(Array.isArray(helpResponse.data) ? helpResponse.data : []);
         
         // Calculate stats from real data
+        const submissionsData = Array.isArray(submissionsResponse.data) ? submissionsResponse.data : [];
         setStats({
           totalStudents: statsResponse?.data?.totalStudents || 0,
-          pendingReviews: (submissionsResponse.data || []).filter(s => !s.reviewed).length,
+          pendingReviews: submissionsData.filter(s => !s.reviewed).length,
           homeworkCreated: statsResponse?.data?.homeworkCreated || 0,
         });
       } catch (error) {

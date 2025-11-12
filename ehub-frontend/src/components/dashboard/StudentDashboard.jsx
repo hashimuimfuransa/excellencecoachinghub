@@ -18,8 +18,9 @@ const StudentDashboard = () => {
 
         const [homeworkResponse, helpResponse] = await Promise.all([homeworkPromise, helpPromise]);
         
-        setHomework(homeworkResponse.data || []);
-        setHomeworkHelp(helpResponse.data || []);
+        // Ensure we're setting arrays for homework and help requests
+        setHomework(Array.isArray(homeworkResponse.data) ? homeworkResponse.data : []);
+        setHomeworkHelp(Array.isArray(helpResponse.data) ? helpResponse.data : []);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         setHomework([]);

@@ -32,7 +32,8 @@ const AdminDashboard = () => {
           totalHomework: 0,
         });
         
-        setRecentActivity(activityResponse.data || []);
+        // Ensure we're setting an array for recent activity
+        setRecentActivity(Array.isArray(activityResponse.data) ? activityResponse.data : []);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         // Set empty data if API calls fail

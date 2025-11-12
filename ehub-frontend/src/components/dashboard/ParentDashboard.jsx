@@ -12,15 +12,22 @@ const ParentDashboard = () => {
     const loadData = async () => {
       try {
         const childrenResponse = await parentApi.getChildren();
-        setChildren(childrenResponse.data || []);
-        if (childrenResponse.data && childrenResponse.data.length > 0) {
-          setSelectedChild(childrenResponse.data[0]);
-          const progressResponse = await parentApi.getChildProgress(childrenResponse.data[0].id);
-          setChildProgress(progressResponse.data || null);
+        const childrenData = Array.isArray(childrenResponse.data) ? childrenResponse.data : [];
+        setChildren(childrenData);
+        if (childrenData.length > 0) {
+          setSelectedChild(childrenData[0]);
+          try {
+            const progressResponse = await parentApi.getChildProgress(childrenData[0].id);
+            setChildProgress(progressResponse.data || null);
+          } catch (progressError) {
+            console.error('Error loading child progress:', progressError);
+            setChildProgress(null);
+          }
         }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         setChildren([]);
+        setChildProgress(null);
       } finally {
         setLoading(false);
       }

@@ -70,8 +70,8 @@ ecoach connects students, teachers, and parents in a comprehensive learning ecos
 
    Edit `.env` with your configuration:
    ```env
-   REACT_APP_API_BASE_URL=http://localhost:5000/api
-   REACT_APP_SOCKET_URL=http://localhost:5000
+   REACT_APP_API_BASE_URL=https://excellencecoachinghubbackend.onrender.com/api
+   REACT_APP_SOCKET_URL=https://excellencecoachinghubbackend.onrender.com
    ```
 
 4. **Start the development server**

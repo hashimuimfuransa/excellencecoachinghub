@@ -180,6 +180,7 @@ const corsOptions = {
       'https://excellencecoachinghub.com', 
       'https://ecoaching.onrender.com',
       'https://ecoaching.excellencecoachinghub.com',      // Add root domain too
+      'https://excellencecoachinghubbackend.onrender.com',
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ];
     
@@ -310,7 +311,8 @@ app.use((req, res, next) => {
     'https://exjobnet.com',
     'https://excellencecoachinghub.com',
     'https://ecoaching.onrender.com',
-    'https://ecoaching.excellencecoachinghub.com'
+    'https://ecoaching.excellencecoachinghub.com',
+    'https://excellencecoachinghubbackend.onrender.com'
   ];
   
   if (allowedOrigins.includes(origin as string) || !origin) {
@@ -324,7 +326,7 @@ app.use((req, res, next) => {
   
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
+    res.status(204).end();
     return;
   }
   

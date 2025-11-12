@@ -20,7 +20,7 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const newSocket = io(process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000', {
+      const newSocket = io(process.env.REACT_APP_SOCKET_URL || 'https://excellencecoachinghubbackend.onrender.com', {
         auth: {
           token: localStorage.getItem('token'),
         },

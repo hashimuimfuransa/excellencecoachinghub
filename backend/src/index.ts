@@ -308,7 +308,9 @@ app.use((req, res, next) => {
     'https://adminexcellencecoachinghub.onrender.com',
     'https://ech-w16g.onrender.com',
     'https://exjobnet.com',
-    'https://excellencecoachinghub.com'
+    'https://excellencecoachinghub.com',
+    'https://ecoaching.onrender.com',
+    'https://ecoaching.excellencecoachinghub.com'
   ];
   
   if (allowedOrigins.includes(origin as string) || !origin) {

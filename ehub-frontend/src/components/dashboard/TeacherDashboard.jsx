@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { homeworkApi } from '../../api/homeworkApi';
+import { teacherApi } from '../../api/teacherApi'; // Use teacherApi instead
 
 const TeacherDashboard = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -9,6 +9,8 @@ const TeacherDashboard = () => {
     totalStudents: 0,
     pendingReviews: 0,
     homeworkCreated: 0,
+    totalSubmissions: 0,
+    averageGrade: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -16,38 +18,39 @@ const TeacherDashboard = () => {
     const loadData = async () => {
       try {
         // Fetch real data from backend
-        const [submissionsResponse, helpResponse, statsResponse] = await Promise.all([
-          homeworkApi.getSubmissions(),
-          homeworkApi.getHomeworkHelp(),
-          homeworkApi.getTeacherStats()
+        const [submissionsResponse, statsResponse] = await Promise.all([
+          teacherApi.getSubmissions(), // Get teacher's homework submissions
+          teacherApi.getStats() // Use the correct teacher stats endpoint
         ]);
         
-        // Transform submissions data to match expected format
+        // Transform submissions data
         let transformedSubmissions = [];
-        if (Array.isArray(submissionsResponse.data)) {
-          transformedSubmissions = submissionsResponse.data.map(submission => ({
-            id: submission._id,
-            studentName: `${submission.student.firstName} ${submission.student.lastName}`,
-            studentGrade: 'N/A', // This would need to be fetched from student data
-            homeworkTitle: submission.assignment.title,
-            subject: 'Homework', // This would need to be fetched from course data
-            submittedAt: submission.submittedAt,
-            status: submission.status,
-            reviewed: submission.status === 'graded',
-            fileUrl: submission.attachments && submission.attachments.length > 0 ? submission.attachments[0].url : null,
-            fileName: submission.attachments && submission.attachments.length > 0 ? submission.attachments[0].originalName : null
+        if (submissionsResponse.data && submissionsResponse.data.data && submissionsResponse.data.data.submissions) {
+          transformedSubmissions = submissionsResponse.data.data.submissions.slice(0, 3).map(sub => ({
+            id: sub._id,
+            studentName: `${sub.student.firstName} ${sub.student.lastName}`,
+            studentGrade: 'Grade 5', // This would come from student data in a real implementation
+            homeworkTitle: sub.assignment.title,
+            subject: 'Homework',
+            submittedAt: sub.submittedAt,
+            status: sub.status,
+            reviewed: sub.status === 'graded',
+            grade: sub.grade
           }));
         }
         
-        // Ensure we're setting arrays for submissions and help requests
+        // Set submissions data
         setSubmissions(transformedSubmissions);
-        setHelpRequests(Array.isArray(helpResponse.data) ? helpResponse.data : []);
+        setHelpRequests([]); // Mock empty help requests for now
         
         // Calculate stats from real data
+        const teacherStats = statsResponse.data.data.overview;
         setStats({
-          totalStudents: statsResponse?.data?.overview?.totalStudents || statsResponse?.data?.totalStudents || 0,
-          pendingReviews: transformedSubmissions.filter(s => s.status !== 'graded').length,
-          homeworkCreated: statsResponse?.data?.overview?.totalCourses || statsResponse?.data?.totalCourses || 0,
+          totalStudents: teacherStats?.totalStudents || 0,
+          pendingReviews: transformedSubmissions.filter(s => !s.reviewed).length,
+          homeworkCreated: teacherStats?.totalHomework || 0,
+          totalSubmissions: teacherStats?.totalSubmissions || 0,
+          averageGrade: teacherStats?.averageGrade || 0,
         });
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -58,6 +61,8 @@ const TeacherDashboard = () => {
           totalStudents: 0,
           pendingReviews: 0,
           homeworkCreated: 0,
+          totalSubmissions: 0,
+          averageGrade: 0,
         });
       } finally {
         setLoading(false);
@@ -85,7 +90,7 @@ const TeacherDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-2xl shadow-xl p-6 transform transition-transform hover:scale-105">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
@@ -118,6 +123,30 @@ const TeacherDashboard = () => {
               <div>
                 <p className="text-gray-500 text-sm">Homework Created</p>
                 <p className="text-3xl font-bold text-gray-900">{stats.homeworkCreated}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-xl p-6 transform transition-transform hover:scale-105">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                <span className="text-2xl">📥</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-sm">Total Submissions</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.totalSubmissions}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-xl p-6 transform transition-transform hover:scale-105">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4">
+                <span className="text-2xl">📊</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-sm">Average Grade</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.averageGrade.toFixed(1)}%</p>
               </div>
             </div>
           </div>
@@ -193,8 +222,12 @@ const TeacherDashboard = () => {
                       <h3 className="font-medium text-gray-900">{submission.homeworkTitle}</h3>
                       <p className="text-gray-600 text-sm">{submission.studentName} • {submission.subject}</p>
                     </div>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                      Pending Review
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      submission.reviewed 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {submission.reviewed ? 'Graded' : 'Pending Review'}
                     </span>
                   </div>
                   <div className="mt-3 flex justify-between items-center">
@@ -205,9 +238,14 @@ const TeacherDashboard = () => {
                       to={`/homework/review/${submission.id}`} 
                       className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
                     >
-                      Review
+                      {submission.reviewed ? 'View Grade' : 'Review'}
                     </Link>
                   </div>
+                  {submission.reviewed && submission.grade && (
+                    <div className="mt-2">
+                      <span className="text-gray-700 text-sm">Grade: {submission.grade}%</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

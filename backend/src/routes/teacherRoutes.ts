@@ -1,7 +1,8 @@
 import express from 'express';
 import { 
   getTeacherStats,
-  getTeacherStudents
+  getTeacherStudents,
+  getTeacherSubmissions
 } from '../controllers/teacherController';
 import { protect } from '../middleware/auth';
 import { authorizeRoles } from '../middleware/roleAuth';
@@ -16,5 +17,8 @@ router.get('/stats', authorizeRoles(['teacher']), getTeacherStats);
 
 // Teacher students route
 router.get('/students', authorizeRoles(['teacher']), getTeacherStudents);
+
+// Teacher submissions route
+router.get('/submissions', authorizeRoles(['teacher']), getTeacherSubmissions);
 
 export default router;

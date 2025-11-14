@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { homeworkApi } from '../api/homeworkApi';
+import { teacherApi } from '../api/teacherApi'; // Use teacherApi instead
 
 const ManageStudents = () => {
   const navigate = useNavigate();
@@ -11,10 +11,10 @@ const ManageStudents = () => {
   useEffect(() => {
     const loadStudents = async () => {
       try {
-        // Fetch real student data from backend
-        const response = await homeworkApi.getStudents();
-        // Ensure we're setting an array
-        const studentsData = Array.isArray(response.data) ? response.data : [];
+        // Use the teacher API endpoint for getting students
+        const response = await teacherApi.getStudents();
+        // Extract students from the response data structure
+        const studentsData = Array.isArray(response.data.data.students) ? response.data.data.students : [];
         setStudents(studentsData);
       } catch (error) {
         console.error('Error loading students:', error);
@@ -29,13 +29,9 @@ const ManageStudents = () => {
   }, []);
 
   const filteredStudents = students.filter(student =>
-    (student.name && student.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (student.firstName && student.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (student.lastName && student.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (student.grade && student.grade.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (student.level && student.level.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (student.email && student.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (student.emailAddress && student.emailAddress.toLowerCase().includes(searchTerm.toLowerCase()))
+    (student.email && student.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleViewProgress = (studentId) => {
@@ -82,7 +78,7 @@ const ManageStudents = () => {
           <div className="relative">
             <input
               type="text"
-              placeholder="Search students by name, grade, or email..."
+              placeholder="Search students by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -108,34 +104,34 @@ const ManageStudents = () => {
           ) : (
             <div className="divide-y divide-gray-200">
               {filteredStudents.map((student) => (
-                <div key={student.id} className="px-6 py-4 hover:bg-gray-50">
+                <div key={student._id} className="px-6 py-4 hover:bg-gray-50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
                         <span className="text-xl">👤</span>
                       </div>
                       <div>
-                        <h3 className="font-medium text-gray-900">{student.name || student.firstName + ' ' + student.lastName || 'Unknown Student'}</h3>
+                        <h3 className="font-medium text-gray-900">{student.firstName} {student.lastName}</h3>
                         <p className="text-sm text-gray-600">
-                          {student.grade || student.level || 'Grade not set'} • {student.email || student.emailAddress || 'No email'}
+                          {student.email || 'No email'}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
                       <div className="text-right">
                         <p className="text-sm text-gray-900">
-                          Last active: {student.lastActive ? new Date(student.lastActive).toLocaleDateString() : 'Never'}
+                          Courses: {student.courses?.length || 0}
                         </p>
                       </div>
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => handleViewProgress(student.id)}
+                          onClick={() => handleViewProgress(student._id)}
                           className="btn-secondary px-3 py-1 text-sm"
                         >
                           Progress
                         </button>
                         <button
-                          onClick={() => handleSendMessage(student.id)}
+                          onClick={() => handleSendMessage(student._id)}
                           className="btn-primary px-3 py-1 text-sm"
                         >
                           Message
@@ -166,13 +162,13 @@ const ManageStudents = () => {
           <div className="card">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                ✅
+                📚
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">
-                  {students.filter(s => s.lastActive && new Date(s.lastActive) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length}
+                  {students.length > 0 ? Math.round(students.reduce((acc, student) => acc + (student.totalEnrollments || 0), 0) / students.length) : 0}
                 </p>
-                <p className="text-gray-600">Active This Week</p>
+                <p className="text-gray-600">Average Enrollments</p>
               </div>
             </div>
           </div>
@@ -180,13 +176,13 @@ const ManageStudents = () => {
           <div className="card">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mr-4">
-                📚
+                🏆
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">
-                  {students.length > 0 ? Math.round(students.reduce((acc, student) => acc + (student.completionRate || Math.random() * 100), 0) / students.length) : 0}%
+                  {students.filter(s => s.totalEnrollments > 1).length}
                 </p>
-                <p className="text-gray-600">Average Completion</p>
+                <p className="text-gray-600">Active Students</p>
               </div>
             </div>
           </div>

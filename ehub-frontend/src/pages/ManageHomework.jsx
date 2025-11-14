@@ -12,7 +12,26 @@ const ManageHomework = () => {
     const loadHomework = async () => {
       try {
         const response = await homeworkApi.getHomework();
-        setHomework(response.data || []);
+        // Ensure we're working with an array
+        let homeworkData = [];
+        if (Array.isArray(response.data)) {
+          homeworkData = response.data;
+        } else if (response.data && typeof response.data === 'object') {
+          // Check if it's an object with a homework property that's an array
+          if (Array.isArray(response.data.homework)) {
+            homeworkData = response.data.homework;
+          } else if (Array.isArray(response.data.data)) {
+            homeworkData = response.data.data;
+          } else if (response.data.data && Array.isArray(response.data.data.homework)) {
+            // Handle the case where data is { homework: [...], count: ... }
+            homeworkData = response.data.data.homework;
+          }
+          // If it's just an object with homework data, convert it to array
+          else if (response.data.id) {
+            homeworkData = [response.data];
+          }
+        }
+        setHomework(homeworkData);
       } catch (error) {
         console.error('Error loading homework:', error);
         // Fallback to mock data if backend is not available
@@ -63,11 +82,12 @@ const ManageHomework = () => {
     loadHomework();
   }, []);
 
-  const filteredHomework = homework.filter(hw => {
+  // Ensure homework is an array before filtering
+  const filteredHomework = Array.isArray(homework) ? homework.filter(hw => {
     if (filter === 'active') return hw.status === 'active';
     if (filter === 'past') return hw.status === 'past';
     return true;
-  });
+  }) : [];
 
   const handleEdit = (homeworkId) => {
     // Navigate to edit homework page
@@ -78,7 +98,7 @@ const ManageHomework = () => {
     if (window.confirm('Are you sure you want to delete this homework?')) {
       try {
         await homeworkApi.deleteHomework(id);
-        setHomework(prev => prev.filter(hw => hw.id !== id));
+        setHomework(prev => Array.isArray(prev) ? prev.filter(hw => hw.id !== id) : []);
       } catch (error) {
         console.error('Error deleting homework:', error);
         alert('Failed to delete homework. Please try again.');
@@ -132,23 +152,23 @@ const ManageHomework = () => {
             className={`py-2 px-4 font-medium ${filter === 'all' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
             onClick={() => setFilter('all')}
           >
-            All ({homework.length})
+            All ({Array.isArray(homework) ? homework.length : 0})
           </button>
           <button
             className={`py-2 px-4 font-medium ${filter === 'active' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
             onClick={() => setFilter('active')}
           >
-            Active ({homework.filter(h => h.status === 'active').length})
+            Active ({Array.isArray(homework) ? homework.filter(h => h.status === 'active').length : 0})
           </button>
           <button
             className={`py-2 px-4 font-medium ${filter === 'past' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
             onClick={() => setFilter('past')}
           >
-            Past ({homework.filter(h => h.status === 'past').length})
+            Past ({Array.isArray(homework) ? homework.filter(h => h.status === 'past').length : 0})
           </button>
         </div>
 
-        {filteredHomework.length === 0 ? (
+        {Array.isArray(filteredHomework) && filteredHomework.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
             <div className="text-6xl mb-4">📚</div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
@@ -168,7 +188,7 @@ const ManageHomework = () => {
         ) : (
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="divide-y divide-gray-200">
-              {filteredHomework.map((hw) => (
+              {Array.isArray(filteredHomework) && filteredHomework.map((hw) => (
                 <div key={hw.id} className="px-6 py-4 hover:bg-gray-50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
@@ -242,7 +262,7 @@ const ManageHomework = () => {
                 📝
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{homework.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{Array.isArray(homework) ? homework.length : 0}</p>
                 <p className="text-gray-600">Total Assignments</p>
               </div>
             </div>
@@ -255,7 +275,7 @@ const ManageHomework = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">
-                  {homework.filter(h => h.status === 'active').length}
+                  {Array.isArray(homework) ? homework.filter(h => h.status === 'active').length : 0}
                 </p>
                 <p className="text-gray-600">Active Assignments</p>
               </div>
@@ -269,7 +289,8 @@ const ManageHomework = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">
-                  {Math.round(homework.reduce((acc, hw) => acc + (hw.submissions / hw.totalStudents) * 100, 0) / homework.length)}%
+                  {Array.isArray(homework) && homework.length > 0 ? 
+                    Math.round(homework.reduce((acc, hw) => acc + (hw.submissions / hw.totalStudents) * 100, 0) / homework.length) : 0}%
                 </p>
                 <p className="text-gray-600">Average Completion</p>
               </div>

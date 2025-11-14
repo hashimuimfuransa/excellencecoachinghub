@@ -6,6 +6,7 @@ import {
   getStudentPerformance,
   getStudentDetailedPerformance 
 } from '../controllers/settingsController';
+import { getTeacherStats } from '../controllers/teacherController';
 import { protect } from '../middleware/auth';
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.get('/user', getUserSettings);
 router.put('/user', updateUserSettings);
 
 // Teacher-specific routes
+router.get('/teacher/stats', getTeacherStats);
 router.get('/teacher/students', getTeacherStudents);
 router.get('/teacher/students/:studentId', getStudentDetailedPerformance);
 

@@ -1,8 +1,46 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler';
 
+// Define types for homework questions
+interface BaseQuestion {
+  id: number;
+  type: string;
+  question: string;
+}
+
+interface MultipleChoiceQuestion extends BaseQuestion {
+  type: 'multiple-choice';
+  options: string[];
+  correctAnswer: number;
+}
+
+interface TextQuestion extends BaseQuestion {
+  type: 'text' | 'long-text';
+  correctAnswer: string;
+}
+
+interface MatchingQuestion extends BaseQuestion {
+  type: 'matching';
+  leftItems: string[];
+  rightItems: string[];
+  leftItemImages?: string[];
+  rightItemImages?: string[];
+  correctMatches: Record<string, string>;
+}
+
+type HomeworkQuestion = MultipleChoiceQuestion | TextQuestion | MatchingQuestion;
+
+interface Homework {
+  id: string;
+  title: string;
+  description: string;
+  questions: HomeworkQuestion[];
+  courseId: string;
+  dueDate: Date;
+}
+
 // Mock data for interactive homework
-const interactiveHomeworkData = [
+const interactiveHomeworkData: Homework[] = [
   {
     id: '1',
     title: 'Math Quiz',
@@ -39,6 +77,27 @@ const interactiveHomeworkData = [
     ],
     courseId: 'course2',
     dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 2 weeks from now
+  },
+  {
+    id: '3',
+    title: 'Matching Exercise',
+    description: 'Match the animals with their habitats',
+    questions: [
+      {
+        id: 1,
+        type: 'matching',
+        question: 'Match the animals with their habitats',
+        leftItems: ['Bird', 'Fish', 'Bear'],
+        rightItems: ['Nest', 'Ocean', 'Forest'],
+        correctMatches: {
+          'Bird': 'Nest',
+          'Fish': 'Ocean',
+          'Bear': 'Forest'
+        }
+      }
+    ],
+    courseId: 'course3',
+    dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) // 10 days from now
   }
 ];
 
@@ -81,6 +140,7 @@ export const submitInteractiveHomework = asyncHandler(async (req: Request, res: 
   
   homework.questions.forEach((question, index) => {
     const userAnswer = answers[index];
+    
     if (question.type === 'multiple-choice') {
       if (userAnswer === question.correctAnswer) {
         score++;
@@ -92,6 +152,26 @@ export const submitInteractiveHomework = asyncHandler(async (req: Request, res: 
           typeof question.correctAnswer === 'string' &&
           userAnswer.toLowerCase().includes(question.correctAnswer.toLowerCase())) {
         score++;
+      }
+    } else if (question.type === 'matching') {
+      // For matching questions, check each match
+      let correctMatches = 0;
+      const totalMatches = Object.keys(question.correctMatches || {}).length;
+      
+      if (userAnswer && typeof userAnswer === 'object') {
+        Object.entries(userAnswer).forEach(([leftItem, rightItem]) => {
+          if (question.correctMatches?.[leftItem] === rightItem) {
+            correctMatches++;
+          }
+        });
+        
+        // Award points based on percentage of correct matches
+        if (totalMatches > 0) {
+          const matchPercentage = correctMatches / totalMatches;
+          if (matchPercentage > 0.5) { // At least 50% correct
+            score++;
+          }
+        }
       }
     }
   });

@@ -13,6 +13,9 @@ export interface IAssignment extends Document {
   maxFileSize: number; // in MB
   isRequired: boolean;
   status: 'draft' | 'published' | 'closed';
+  // Added level and language fields
+  level: string;
+  language: string;
   assignmentDocument?: {
     filename: string;
     originalName: string;
@@ -42,6 +45,12 @@ export interface IAssignment extends Document {
     options?: string[];
     correctAnswer?: string | string[]; // Array for matching/ordering questions
     matchingPairs?: Array<{ left: string; right: string }>; // For matching questions
+    // Added image fields for matching questions
+    leftItems?: string[];
+    rightItems?: string[];
+    leftItemImages?: string[];
+    rightItemImages?: string[];
+    correctMatches?: { [key: string]: string }; // For matching questions: leftItem -> rightItem
     codeLanguage?: string; // For code questions
     numericalRange?: { min: number; max: number }; // For numerical questions with tolerance
     points: number;
@@ -89,7 +98,7 @@ export interface IAssignmentSubmission extends Document {
   // For extracted questions assignments
   extractedAnswers?: Array<{
     questionIndex: number;
-    answer: string | string[]; // Array for matching/ordering questions
+    answer: string | string[] | { matches: { [key: string]: string } }; // Object for matching questions
     questionType: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'fill-in-blank' | 'matching' | 'ordering' | 'numerical' | 'code';
     timeSpent?: number; // Time spent on this question in seconds
     attempts?: number; // Number of attempts for this question
@@ -141,7 +150,7 @@ const AssignmentSchema = new Schema<IAssignment>({
   course: {
     type: Schema.Types.ObjectId,
     ref: 'Course',
-    required: [true, 'Course is required']
+    required: false // Changed from true to false to make it optional
   },
   instructor: {
     type: Schema.Types.ObjectId,
@@ -153,9 +162,14 @@ const AssignmentSchema = new Schema<IAssignment>({
     required: [true, 'Due date is required'],
     validate: {
       validator: function(value: Date) {
-        return value > new Date();
+        // Allow dates in the future or today (to be more flexible)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        const dueDate = new Date(value);
+        dueDate.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        return dueDate >= today;
       },
-      message: 'Due date must be in the future'
+      message: 'Due date must be today or in the future'
     }
   },
   maxPoints: {
@@ -196,6 +210,20 @@ const AssignmentSchema = new Schema<IAssignment>({
     enum: ['draft', 'published', 'closed'],
     default: 'draft'
   },
+  // Added level and language fields
+  level: {
+    type: String,
+    required: [true, 'Level is required'],
+    enum: ['nursery-1', 'nursery-2', 'nursery-3', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6'],
+    trim: true
+  },
+  language: {
+    type: String,
+    required: [true, 'Language is required'],
+    enum: ['english', 'french', 'kinyarwanda'],
+    trim: true,
+    default: 'english'
+  },
   assignmentDocument: {
     filename: {
       type: String
@@ -235,6 +263,22 @@ const AssignmentSchema = new Schema<IAssignment>({
       left: { type: String },
       right: { type: String }
     }],
+    // Added image fields for matching questions
+    leftItems: [{
+      type: String
+    }],
+    rightItems: [{
+      type: String
+    }],
+    leftItemImages: [{
+      type: String
+    }],
+    rightItemImages: [{
+      type: String
+    }],
+    correctMatches: {
+      type: Schema.Types.Mixed // Object mapping left items to right items
+    },
     codeLanguage: {
       type: String,
       enum: ['javascript', 'python', 'java', 'cpp', 'c', 'html', 'css', 'sql', 'other']
@@ -388,7 +432,7 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
       required: true
     },
     answer: {
-      type: Schema.Types.Mixed, // Can be string or array
+      type: Schema.Types.Mixed, // Can be string, array, or object
       required: true
     },
     timeSpent: {
@@ -511,6 +555,7 @@ AssignmentSchema.index({ course: 1, status: 1 });
 AssignmentSchema.index({ instructor: 1 });
 AssignmentSchema.index({ dueDate: 1 });
 AssignmentSchema.index({ createdAt: -1 });
+AssignmentSchema.index({ level: 1, language: 1 }); // Added index for level and language
 
 AssignmentSubmissionSchema.index({ assignment: 1, student: 1, version: -1 });
 AssignmentSubmissionSchema.index({ student: 1 });

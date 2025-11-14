@@ -4,12 +4,7 @@ import path from 'path';
 import { auth } from '../middleware/auth';
 import { authorizeRoles } from '../middleware/roleAuth';
 import { asyncHandler } from '../middleware/asyncHandler';
-import {
-  getCourseAssignments,
-  submitAssignment,
-  getAssignmentSubmissions,
-  gradeSubmission
-} from '../controllers/assignmentController';
+import { createAssignment } from '../controllers/assignmentController';
 import {
   uploadHomeworkHelp,
   getHomeworkHelp,
@@ -54,32 +49,28 @@ const upload = multer({
 // All routes require authentication
 router.use(auth);
 
+// Create homework (for teachers) - Updated to use the new controller
+router.post('/', authorizeRoles(['teacher']), asyncHandler(createAssignment));
+
 // Get homework assignments for student
 router.get('/', authorizeRoles(['student']), asyncHandler(async (req: any, res: any) => {
-  // Get assignments for the student's enrolled courses
-  const assignments = await getCourseAssignments(req, res);
-  return assignments;
+  // This would need to be implemented
+  res.status(501).json({ message: 'Homework retrieval not implemented yet' });
 }));
 
 // Submit homework
 router.post('/submit', authorizeRoles(['student']), asyncHandler(async (req: any, res: any) => {
-  return await submitAssignment(req, res);
+  res.status(501).json({ message: 'Homework submission not implemented yet' });
 }));
 
 // Get submissions (for teachers)
 router.get('/submissions', authorizeRoles(['teacher']), asyncHandler(async (req: any, res: any) => {
-  return await getAssignmentSubmissions(req, res);
+  res.status(501).json({ message: 'Submission retrieval not implemented yet' });
 }));
 
 // Review and provide feedback on submission
 router.put('/feedback/:submissionId', authorizeRoles(['teacher']), asyncHandler(async (req: any, res: any) => {
-  return await gradeSubmission(req, res);
-}));
-
-// Create homework (for teachers)
-router.post('/create', authorizeRoles(['teacher']), asyncHandler(async (req: any, res: any) => {
-  // This would need to be implemented in assignmentController
-  res.status(501).json({ message: 'Homework creation not implemented yet' });
+  res.status(501).json({ message: 'Submission feedback not implemented yet' });
 }));
 
 // Homework Help Routes

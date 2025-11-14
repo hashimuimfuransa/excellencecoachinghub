@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { User } from '../models/User';
 import { Course } from '../models/Course';
 import { Enrollment } from '../models/Enrollment';
+import { Assignment, AssignmentSubmission } from '../models/Assignment';
 import { CourseStatus } from '../../../shared/types';
 
 // Get teacher statistics
@@ -20,10 +21,10 @@ export const getTeacherStats = async (req: Request, res: Response, next: NextFun
     // Get teacher's courses
     const teacherCourses = await Course.find({ instructor: teacherId });
     
-    // Calculate statistics
+    // Calculate course statistics
     const totalCourses = teacherCourses.length;
     const activeCourses = teacherCourses.filter(course => course.status === CourseStatus.APPROVED).length;
-    const pendingCourses = teacherCourses.filter(course => course.status === CourseStatus.PENDING).length;
+    const pendingCourses = teacherCourses.filter(course => course.status === CourseStatus.PENDING_APPROVAL).length;
     const rejectedCourses = teacherCourses.filter(course => course.status === CourseStatus.REJECTED).length;
     
     // Calculate total students from enrollments
@@ -37,6 +38,23 @@ export const getTeacherStats = async (req: Request, res: Response, next: NextFun
       const uniqueStudents = await Enrollment.distinct('student', { course: course._id });
       totalStudents += uniqueStudents.length;
     }
+    
+    // Get teacher's homework assignments
+    const teacherHomework = await Assignment.find({ instructor: teacherId });
+    const totalHomework = teacherHomework.length;
+    
+    // Get homework submissions for the teacher's assignments
+    const homeworkIds = teacherHomework.map(hw => hw._id);
+    const homeworkSubmissions = await AssignmentSubmission.find({ 
+      assignment: { $in: homeworkIds } 
+    }).populate('student', 'firstName lastName email');
+    
+    // Calculate homework submission statistics
+    const totalSubmissions = homeworkSubmissions.length;
+    const gradedSubmissions = homeworkSubmissions.filter(sub => sub.status === 'graded');
+    const averageGrade = gradedSubmissions.length > 0 
+      ? gradedSubmissions.reduce((sum, sub) => sum + (sub.grade || 0), 0) / gradedSubmissions.length
+      : 0;
     
     // Get recent activity (recent enrollments)
     const recentEnrollments = await Enrollment.find({ 
@@ -57,16 +75,19 @@ export const getTeacherStats = async (req: Request, res: Response, next: NextFun
           rejectedCourses,
           totalStudents,
           totalEnrollments,
+          totalHomework,
+          totalSubmissions,
+          averageGrade: Math.round(averageGrade * 100) / 100, // Round to 2 decimal places
           recentEnrollments: recentEnrollments.map(enrollment => ({
             student: {
-              _id: enrollment.student._id,
-              firstName: enrollment.student.firstName,
-              lastName: enrollment.student.lastName,
-              email: enrollment.student.email
+              _id: (enrollment.student as any)._id,
+              firstName: (enrollment.student as any).firstName || '',
+              lastName: (enrollment.student as any).lastName || '',
+              email: (enrollment.student as any).email || ''
             },
             course: {
-              _id: enrollment.course._id,
-              title: enrollment.course.title
+              _id: (enrollment.course as any)._id,
+              title: (enrollment.course as any).title || ''
             },
             enrolledAt: enrollment.createdAt
           }))
@@ -119,37 +140,37 @@ export const getTeacherStudents = async (req: Request, res: Response, next: Next
     
     enrollments.forEach(enrollment => {
       // Add student to map
-      if (!studentMap.has(enrollment.student._id.toString())) {
-        studentMap.set(enrollment.student._id.toString(), {
-          _id: enrollment.student._id,
-          firstName: enrollment.student.firstName,
-          lastName: enrollment.student.lastName,
-          email: enrollment.student.email,
-          profilePicture: enrollment.student.profilePicture,
+      if (!studentMap.has((enrollment.student as any)._id.toString())) {
+        studentMap.set((enrollment.student as any)._id.toString(), {
+          _id: (enrollment.student as any)._id,
+          firstName: (enrollment.student as any).firstName || '',
+          lastName: (enrollment.student as any).lastName || '',
+          email: (enrollment.student as any).email || '',
+          profilePicture: (enrollment.student as any).profilePicture || '',
           courses: [],
           totalEnrollments: 0
         });
       }
       
       // Update student data
-      const student = studentMap.get(enrollment.student._id.toString());
+      const student = studentMap.get((enrollment.student as any)._id.toString());
       student.courses.push({
-        _id: enrollment.course._id,
-        title: enrollment.course.title
+        _id: (enrollment.course as any)._id,
+        title: (enrollment.course as any).title || ''
       });
       student.totalEnrollments += 1;
       
       // Add course to map
-      if (!courseMap.has(enrollment.course._id.toString())) {
-        courseMap.set(enrollment.course._id.toString(), {
-          _id: enrollment.course._id,
-          title: enrollment.course.title,
+      if (!courseMap.has((enrollment.course as any)._id.toString())) {
+        courseMap.set((enrollment.course as any)._id.toString(), {
+          _id: (enrollment.course as any)._id,
+          title: (enrollment.course as any).title || '',
           studentCount: 0
         });
       }
       
       // Update course data
-      const course = courseMap.get(enrollment.course._id.toString());
+      const course = courseMap.get((enrollment.course as any)._id.toString());
       course.studentCount += 1;
     });
     
@@ -162,6 +183,59 @@ export const getTeacherStudents = async (req: Request, res: Response, next: Next
         students,
         totalStudents: students.length,
         courses
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get teacher's homework submissions
+export const getTeacherSubmissions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const teacherId = req.user?._id;
+    
+    if (!teacherId) {
+      res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+      return;
+    }
+
+    // Get teacher's homework assignments
+    const teacherHomework = await Assignment.find({ instructor: teacherId });
+    const homeworkIds = teacherHomework.map(hw => hw._id);
+    
+    // Get all submissions for the teacher's assignments
+    const submissions = await AssignmentSubmission.find({ 
+      assignment: { $in: homeworkIds } 
+    })
+    .populate('assignment', 'title')
+    .populate('student', 'firstName lastName email')
+    .sort({ submittedAt: -1 });
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        submissions: submissions.map(sub => ({
+          _id: sub._id,
+          assignment: {
+            _id: (sub.assignment as any)._id,
+            title: (sub.assignment as any).title || ''
+          },
+          student: {
+            _id: (sub.student as any)._id,
+            firstName: (sub.student as any).firstName || '',
+            lastName: (sub.student as any).lastName || '',
+            email: (sub.student as any).email || ''
+          },
+          submittedAt: sub.submittedAt,
+          status: sub.status,
+          grade: sub.grade,
+          isLate: sub.isLate
+        })),
+        totalSubmissions: submissions.length
       }
     });
   } catch (error) {

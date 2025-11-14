@@ -89,6 +89,8 @@ const interactiveHomeworkData: Homework[] = [
         question: 'Match the animals with their habitats',
         leftItems: ['Bird', 'Fish', 'Bear'],
         rightItems: ['Nest', 'Ocean', 'Forest'],
+        leftItemImages: ['', '', ''],
+        rightItemImages: ['', '', ''],
         correctMatches: {
           'Bird': 'Nest',
           'Fish': 'Ocean',

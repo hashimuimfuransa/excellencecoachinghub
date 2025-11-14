@@ -82,6 +82,7 @@ const CreateHomework = () => {
         status: 'published',
         instructions: 'Complete the interactive homework assignment',
         interactiveElements, // This will be stored in the extractedQuestions field
+        extractedQuestions: interactiveElements, // Also store in extractedQuestions for compatibility
         autoGrading: true
         // courseId is optional and not required
       };

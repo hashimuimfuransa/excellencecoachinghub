@@ -82,8 +82,8 @@ router.post('/help/:id/comments', asyncHandler(addCommentToHomeworkHelp));
 router.delete('/help/:id', authorizeRoles(['student']), asyncHandler(deleteHomeworkHelp));
 
 // Interactive homework routes
-router.get('/interactive/:id', asyncHandler(getInteractiveHomework));
-router.post('/interactive/:id/submit', asyncHandler(submitInteractiveHomework));
+router.get('/interactive/:id', getInteractiveHomework);
+router.post('/interactive/:id/submit', submitInteractiveHomework);
 
 // Student-created homework
 router.get('/student', authorizeRoles(['student']), asyncHandler(getStudentCreatedHomework));

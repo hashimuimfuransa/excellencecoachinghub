@@ -37,9 +37,26 @@ const HomeworkList = () => {
         // Get homework without requiring course ID
         const response = await homeworkApi.getHomework(null, selectedLevel, selectedLanguage);
         if (response.data.success) {
-          setHomeworkList(response.data.data.homework);
+          // Handle different possible response structures
+          const homeworkData = response.data.data.homework || 
+                              response.data.data || 
+                              response.data || 
+                              [];
+          
+          // If it's an object with a homework array, use that
+          if (Array.isArray(homeworkData)) {
+            setHomeworkList(homeworkData);
+          } else if (homeworkData.homework && Array.isArray(homeworkData.homework)) {
+            setHomeworkList(homeworkData.homework);
+          } else if (homeworkData.data && Array.isArray(homeworkData.data)) {
+            setHomeworkList(homeworkData.data);
+          } else {
+            // Fallback to empty array
+            setHomeworkList([]);
+          }
         } else {
           console.error('Failed to fetch homework:', response.data.message);
+          setHomeworkList([]);
         }
       } catch (error) {
         console.error('Error fetching homework:', error);
@@ -147,7 +164,7 @@ const HomeworkList = () => {
         <div className="flex items-center justify-center min-h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
-      ) : homeworkList.length === 0 ? (
+      ) : (!homeworkList || homeworkList.length === 0) ? (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
           <h3 className="text-xl font-medium text-gray-800 mb-2">No homework found</h3>
           <p className="text-gray-600">
@@ -164,7 +181,7 @@ const HomeworkList = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {homeworkList.map((homework) => (
+          {(homeworkList || []).map((homework) => (
             <div key={homework._id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-800 mb-2">{homework.title}</h3>

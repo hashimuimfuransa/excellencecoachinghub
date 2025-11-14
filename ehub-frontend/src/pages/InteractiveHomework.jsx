@@ -173,7 +173,15 @@ const InteractiveHomework = () => {
   };
 
   // Get questions, default to empty array if undefined
-  const questions = homework.extractedQuestions || [];
+  // Also handle the case where questions might be stored directly
+  // Handle different possible data structures for homework questions
+  const questions = homework.extractedQuestions || 
+                   homework.questions || 
+                   homework.interactiveElements || 
+                   (homework.data && homework.data.extractedQuestions) || 
+                   (homework.data && homework.data.questions) || 
+                   (homework.data && homework.data.interactiveElements) || 
+                   [];
 
   return (
     <div className="max-w-4xl mx-auto p-6">

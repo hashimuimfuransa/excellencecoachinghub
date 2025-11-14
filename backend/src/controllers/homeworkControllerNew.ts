@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { Assignment, AssignmentSubmission } from '../models';
 
 // Auto-grade submission
 const autoGradeSubmission = async (homework: any, submission: any) => {
@@ -60,18 +61,18 @@ const autoGradeSubmission = async (homework: any, submission: any) => {
 // Create homework
 export const createHomework = asyncHandler(async (req: Request, res: Response) => {
   try {
-    // In a real app, this would save to a database
-    // For now, we'll just return the data as if it was saved
-    const homeworkData = {
-      id: 'hw_' + Date.now(),
+    // Create assignment in database
+    const homework = new Assignment({
       ...req.body,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+      instructor: (req as any).user._id, // Assuming user is attached to request
+      status: 'published'
+    });
+    
+    await homework.save();
 
     res.status(201).json({
       success: true,
-      data: homeworkData,
+      data: homework,
       message: 'Homework created successfully'
     });
   } catch (error: any) {
@@ -86,42 +87,15 @@ export const createHomework = asyncHandler(async (req: Request, res: Response) =
 // Get all homework
 export const getAllHomework = asyncHandler(async (req: Request, res: Response) => {
   try {
-    // In a real app, this would fetch from a database
-    // For now, we'll return mock data
-    const mockHomework = [
-      {
-        id: 'hw1',
-        title: 'Interactive Matching Exercise',
-        description: 'Match animals with their habitats',
-        level: 'p1',
-        language: 'english',
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        maxPoints: 10,
-        status: 'published',
-        extractedQuestions: [
-          {
-            id: 1,
-            type: 'matching',
-            question: 'Match the animals with their habitats',
-            leftItems: ['Bird', 'Fish', 'Bear'],
-            rightItems: ['Nest', 'Ocean', 'Forest'],
-            leftItemImages: ['', '', ''],
-            rightItemImages: ['', '', ''],
-            correctMatches: {
-              'Bird': 'Nest',
-              'Fish': 'Ocean',
-              'Bear': 'Forest'
-            },
-            points: 10
-          }
-        ]
-      }
-    ];
+    // Fetch published assignments from database
+    const homework = await Assignment.find({ status: 'published' })
+      .select('title description level language dueDate maxPoints status extractedQuestions')
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
-      data: mockHomework,
-      count: mockHomework.length
+      data: homework,
+      count: homework.length
     });
   } catch (error: any) {
     console.error('Error fetching homework:', error);
@@ -137,47 +111,20 @@ export const getHomeworkById = asyncHandler(async (req: Request, res: Response) 
   try {
     const { id } = req.params;
     
-    // In a real app, this would fetch from a database
-    // For now, we'll return mock data
-    const mockHomework = {
-      id,
-      title: 'Interactive Matching Exercise',
-      description: 'Match animals with their habitats',
-      level: 'p1',
-      language: 'english',
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      maxPoints: 10,
-      status: 'published',
-      extractedQuestions: [
-        {
-          id: 1,
-          type: 'matching',
-          question: 'Match the animals with their habitats',
-          leftItems: ['Bird', 'Fish', 'Bear'],
-          rightItems: ['Nest', 'Ocean', 'Forest'],
-          leftItemImages: [
-            'https://example.com/bird.jpg',
-            'https://example.com/fish.jpg',
-            'https://example.com/bear.jpg'
-          ],
-          rightItemImages: [
-            'https://example.com/nest.jpg',
-            'https://example.com/ocean.jpg',
-            'https://example.com/forest.jpg'
-          ],
-          correctMatches: {
-            'Bird': 'Nest',
-            'Fish': 'Ocean',
-            'Bear': 'Forest'
-          },
-          points: 10
-        }
-      ]
-    };
+    // Fetch assignment from database
+    const homework = await Assignment.findById(id)
+      .select('title description level language dueDate maxPoints status extractedQuestions');
+    
+    if (!homework) {
+      return res.status(404).json({
+        success: false,
+        message: 'Homework not found'
+      });
+    }
 
     res.status(200).json({
       success: true,
-      data: mockHomework
+      data: homework
     });
   } catch (error: any) {
     console.error('Error fetching homework:', error);
@@ -194,22 +141,47 @@ export const submitHomework = asyncHandler(async (req: Request, res: Response) =
     const { homeworkId } = req.params;
     const { answers, isDraft } = req.body;
     
-    // In a real app, this would save to a database
-    // For now, we'll just return mock data
-    const mockSubmission = {
-      id: 'sub_' + Date.now(),
-      homeworkId,
-      studentId: 'student123',
-      answers,
+    // Check if assignment exists
+    const assignment = await Assignment.findById(homeworkId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Homework not found'
+      });
+    }
+    
+    // Create or update submission
+    const submissionData = {
+      assignment: homeworkId,
+      student: (req as any).user._id, // Assuming user is attached to request
+      extractedAnswers: answers,
       isDraft: isDraft || false,
-      submittedAt: new Date(),
-      graded: false,
-      score: null
+      submittedAt: isDraft ? undefined : new Date(),
+      status: isDraft ? 'draft' : 'submitted'
     };
+    
+    // Check if submission already exists
+    let submission = await AssignmentSubmission.findOne({
+      assignment: homeworkId,
+      student: (req as any).user._id
+    });
+    
+    if (submission) {
+      // Update existing submission
+      submission = await AssignmentSubmission.findByIdAndUpdate(
+        submission._id,
+        submissionData,
+        { new: true }
+      );
+    } else {
+      // Create new submission
+      submission = new AssignmentSubmission(submissionData);
+      await submission.save();
+    }
 
     res.status(201).json({
       success: true,
-      data: mockSubmission,
+      data: submission,
       message: 'Homework submitted successfully'
     });
   } catch (error: any) {
@@ -226,22 +198,22 @@ export const getStudentHomeworkSubmission = asyncHandler(async (req: Request, re
   try {
     const { homeworkId } = req.params;
     
-    // In a real app, this would fetch from a database
-    // For now, we'll return mock data
-    const mockSubmission = {
-      id: 'sub123',
-      homeworkId,
-      studentId: 'student123',
-      answers: [],
-      isDraft: false,
-      submittedAt: new Date(),
-      graded: false,
-      score: null
-    };
+    // Fetch submission from database
+    const submission = await AssignmentSubmission.findOne({
+      assignment: homeworkId,
+      student: (req as any).user._id
+    });
+    
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: 'Submission not found'
+      });
+    }
 
     res.status(200).json({
       success: true,
-      data: mockSubmission
+      data: submission
     });
   } catch (error: any) {
     console.error('Error fetching submission:', error);
@@ -257,26 +229,23 @@ export const getHomeworkSubmissions = asyncHandler(async (req: Request, res: Res
   try {
     const { homeworkId } = req.params;
     
-    // In a real app, this would fetch from a database
-    // For now, we'll return mock data
-    const mockSubmissions = [
-      {
-        id: 'sub123',
-        homeworkId,
-        studentId: 'student123',
-        studentName: 'John Doe',
-        answers: [],
-        isDraft: false,
-        submittedAt: new Date(),
-        graded: false,
-        score: null
-      }
-    ];
+    // Check if assignment exists
+    const assignment = await Assignment.findById(homeworkId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Homework not found'
+      });
+    }
+    
+    // Fetch submissions from database
+    const submissions = await AssignmentSubmission.find({ assignment: homeworkId })
+      .populate('student', 'firstName lastName');
 
     res.status(200).json({
       success: true,
-      data: mockSubmissions,
-      count: mockSubmissions.length
+      data: submissions,
+      count: submissions.length
     });
   } catch (error: any) {
     console.error('Error fetching submissions:', error);
@@ -293,23 +262,29 @@ export const gradeHomeworkSubmission = asyncHandler(async (req: Request, res: Re
     const { submissionId } = req.params;
     const { grade, feedback } = req.body;
     
-    // In a real app, this would update the database
-    // For now, we'll just return mock data
-    const mockSubmission = {
-      id: submissionId,
-      homeworkId: 'hw123',
-      studentId: 'student123',
-      answers: [],
-      isDraft: false,
-      submittedAt: new Date(),
-      graded: true,
-      score: grade,
-      feedback
-    };
+    // Update submission in database
+    const submission = await AssignmentSubmission.findByIdAndUpdate(
+      submissionId,
+      {
+        grade,
+        feedback,
+        gradedAt: new Date(),
+        gradedBy: (req as any).user._id, // Assuming user is attached to request
+        status: 'graded'
+      },
+      { new: true }
+    );
+    
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: 'Submission not found'
+      });
+    }
 
     res.status(200).json({
       success: true,
-      data: mockSubmission,
+      data: submission,
       message: 'Submission graded successfully'
     });
   } catch (error: any) {
@@ -326,7 +301,19 @@ export const deleteHomework = asyncHandler(async (req: Request, res: Response) =
   try {
     const { id } = req.params;
     
-    // In a real app, this would delete from a database
+    // Delete assignment from database
+    const assignment = await Assignment.findByIdAndDelete(id);
+    
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Homework not found'
+      });
+    }
+    
+    // Also delete associated submissions
+    await AssignmentSubmission.deleteMany({ assignment: id });
+
     res.status(200).json({
       success: true,
       message: 'Homework deleted successfully'
@@ -346,43 +333,32 @@ export const getCourseHomework = asyncHandler(async (req: Request, res: Response
     const { courseId } = req.params;
     const { level, language } = req.query;
     
-    // In a real app, this would fetch from a database
-    // For now, we'll return mock data
-    const mockHomework = [
-      {
-        id: 'hw1',
-        title: 'Interactive Matching Exercise',
-        description: 'Match animals with their habitats',
-        level: level || 'p1',
-        language: language || 'english',
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        maxPoints: 10,
-        status: 'published',
-        courseId,
-        extractedQuestions: [
-          {
-            id: 1,
-            type: 'matching',
-            question: 'Match the animals with their habitats',
-            leftItems: ['Bird', 'Fish', 'Bear'],
-            rightItems: ['Nest', 'Ocean', 'Forest'],
-            leftItemImages: ['', '', ''],
-            rightItemImages: ['', '', ''],
-            correctMatches: {
-              'Bird': 'Nest',
-              'Fish': 'Ocean',
-              'Bear': 'Forest'
-            },
-            points: 10
-          }
-        ]
-      }
-    ];
+    // Build query
+    const query: any = { 
+      status: 'published' 
+    };
+    
+    if (courseId) {
+      query.course = courseId;
+    }
+    
+    if (level) {
+      query.level = level;
+    }
+    
+    if (language) {
+      query.language = language;
+    }
+    
+    // Fetch assignments from database
+    const homework = await Assignment.find(query)
+      .select('title description level language dueDate maxPoints status extractedQuestions')
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
-      data: mockHomework,
-      count: mockHomework.length
+      data: homework,
+      count: homework.length
     });
   } catch (error: any) {
     console.error('Error fetching course homework:', error);

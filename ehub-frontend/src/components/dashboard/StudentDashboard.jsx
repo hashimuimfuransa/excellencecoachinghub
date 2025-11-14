@@ -18,8 +18,16 @@ const StudentDashboard = () => {
 
         const [homeworkResponse, helpResponse] = await Promise.all([homeworkPromise, helpPromise]);
         
+        // Handle different possible response structures for homework
+        let homeworkData = [];
+        if (Array.isArray(homeworkResponse.data)) {
+          homeworkData = homeworkResponse.data;
+        } else if (homeworkResponse.data && Array.isArray(homeworkResponse.data.data)) {
+          homeworkData = homeworkResponse.data.data;
+        }
+        
         // Ensure we're setting arrays for homework and help requests
-        setHomework(Array.isArray(homeworkResponse.data) ? homeworkResponse.data : []);
+        setHomework(homeworkData);
         setHomeworkHelp(Array.isArray(helpResponse.data) ? helpResponse.data : []);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -116,7 +124,7 @@ const StudentDashboard = () => {
         </div>
 
         {/* Homework Section - Only show pending homework */}
-        {homework.filter(hw => !hw.submitted).length > 0 && (
+        {homework.length > 0 && (
           <div className="bg-white rounded-3xl shadow-2xl p-6 mb-8 transform transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -127,7 +135,7 @@ const StudentDashboard = () => {
               </Link>
             </div>
             <div className="space-y-4">
-              {homework.filter(hw => !hw.submitted).slice(0, 3).map((hw, index) => (
+              {homework.slice(0, 3).map((hw, index) => (
                 <div 
                   key={hw.id} 
                   className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 shimmer"

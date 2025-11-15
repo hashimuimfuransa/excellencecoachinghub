@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    email: '',
+    identifier: '', // Changed from email to identifier
     password: '',
   });
   const [error, setError] = useState('');
@@ -139,7 +139,7 @@ const Login = () => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+                <span className="px-2 bg-white text-gray-500">Or continue with email or phone</span>
               </div>
             </div>
           </div>
@@ -147,17 +147,17 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
+                Email or Phone Number
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
+                id="identifier"
+                name="identifier"
+                type="text"
                 required
                 className="input-field"
-                placeholder="Enter your email"
-                value={formData.email}
+                placeholder="Enter your email or phone number"
+                value={formData.identifier}
                 onChange={handleChange}
               />
             </div>

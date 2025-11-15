@@ -9,29 +9,31 @@ import { OAuth2Client } from 'google-auth-library';
 
 // Generate JWT token
 const generateToken = (userId: string): string => {
-  if (!process.env.JWT_SECRET) {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
     throw new Error('JWT_SECRET is not configured');
   }
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+  return jwt.sign({ userId }, jwtSecret, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d'
-  });
+  } as jwt.SignOptions);
 };
 
 // Generate refresh token
 const generateRefreshToken = (userId: string): string => {
-  if (!process.env.JWT_REFRESH_SECRET) {
+  const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+  if (!jwtRefreshSecret) {
     throw new Error('JWT_REFRESH_SECRET is not configured');
   }
-  return jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, {
+  return jwt.sign({ userId }, jwtRefreshSecret, {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d'
-  });
+  } as jwt.SignOptions);
 };
 
 // Send token response
 const sendTokenResponse = async (user: IUserDocument, statusCode: number, res: Response): Promise<void> => {
   try {
-    const token = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    const token = generateToken((user as any)._id.toString());
+    const refreshToken = generateRefreshToken((user as any)._id.toString());
 
     // Update last login
     user.lastLogin = new Date();
@@ -73,7 +75,7 @@ const sendTokenResponse = async (user: IUserDocument, statusCode: number, res: R
 // @access  Public
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, password, firstName, lastName, name, role, platform } = req.body;
+    const { identifier, password, firstName, lastName, name, role, platform } = req.body;
 
     // Parse name into firstName and lastName if they are missing
     let finalFirstName = firstName;
@@ -86,11 +88,11 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     }
 
     // Validate required fields
-    if (!email || !password || (!finalFirstName && !name)) {
+    if (!identifier || !password || (!finalFirstName && !name)) {
       res.status(400).json({
         success: false,
         error: 'Missing Required Information',
-        message: 'Please fill in all required fields: email, password, and name or first name.',
+        message: 'Please fill in all required fields: email or phone number, password, and name or first name.',
         details: {
           type: 'MISSING_REQUIRED_FIELDS',
           suggestion: 'Make sure all fields are completed before submitting'
@@ -113,15 +115,25 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       return;
     }
 
-    // Check if user already exists
-    const existingUser = await User.findByEmail(email);
+    // Check if user already exists by email or phone
+    let existingUser;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (emailRegex.test(identifier)) {
+      // It's an email
+      existingUser = await User.findByEmail(identifier);
+    } else {
+      // It's a phone number
+      existingUser = await User.findOne({ phone: identifier });
+    }
+    
     if (existingUser) {
       res.status(400).json({
         success: false,
         error: 'Account Already Exists',
-        message: 'An account with this email address already exists. Please use a different email or sign in to your existing account.',
+        message: 'An account with this email or phone number already exists. Please use a different identifier or sign in to your existing account.',
         details: {
-          type: 'DUPLICATE_EMAIL',
+          type: 'DUPLICATE_IDENTIFIER',
           suggestion: 'Try signing in instead, or use the "Forgot Password" feature if you can\'t remember your password'
         }
       });
@@ -131,15 +143,23 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     // Validate role (only allow student registration by default, admin can create other roles)
     const userRole = role && Object.values(UserRole).includes(role) ? role : UserRole.STUDENT;
 
-    // Create user with email auto-verified
-    const user = await User.create({
-      email,
+    // Create user with email or phone
+    const userData: any = {
       password,
       firstName: finalFirstName,
       lastName: finalLastName,
       role: userRole,
       isEmailVerified: true // Auto-verify email
-    });
+    };
+
+    // Set email or phone based on identifier type
+    if (emailRegex.test(identifier)) {
+      userData.email = identifier.toLowerCase();
+    } else {
+      userData.phone = identifier;
+    }
+
+    const user = await User.create(userData);
 
     // Detect platform from request headers, body, or referrer
     const detectPlatform = (): 'homepage' | 'job-portal' | 'elearning' => {
@@ -181,8 +201,8 @@ export const register = async (req: Request, res: Response, next: NextFunction):
           platform: detectedPlatform
         });
         console.log(`✅ Employer welcome email sent to ${user.email} for ${detectedPlatform} platform using template_o0k3j0q`);
-      } else {
-        // Send regular welcome email for other roles
+      } else if (user.email) {
+        // Send regular welcome email for other roles (only if email exists)
         await sendWelcomeEmail({
           email: user.email,
           firstName: user.firstName,
@@ -191,12 +211,14 @@ export const register = async (req: Request, res: Response, next: NextFunction):
         console.log(`✅ Standard welcome email sent to ${user.email} for ${detectedPlatform} platform`);
       }
       
-      // Also send console welcome email as fallback
-      await simpleEmailService.sendWelcomeEmail(
-        user.email,
-        user.firstName,
-        userRole
-      );
+      // Also send console welcome email as fallback (only if email exists)
+      if (user.email) {
+        await simpleEmailService.sendWelcomeEmail(
+          user.email,
+          user.firstName,
+          userRole
+        );
+      }
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
       // Don't fail registration if email fails
@@ -213,28 +235,37 @@ export const register = async (req: Request, res: Response, next: NextFunction):
 // @access  Public
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { identifier, password } = req.body;
 
-    // Validate email and password
-    if (!email || !password) {
+    // Validate identifier and password
+    if (!identifier || !password) {
       res.status(400).json({
         success: false,
-        error: 'Please provide email and password'
+        error: 'Please provide email or phone number and password'
       });
       return;
     }
 
-    // Check for user and include password
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    // Check for user by email or phone
+    let user;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (emailRegex.test(identifier)) {
+      // It's an email
+      user = await User.findOne({ email: identifier.toLowerCase() }).select('+password');
+    } else {
+      // It's a phone number
+      user = await User.findOne({ phone: identifier }).select('+password');
+    }
     
     if (!user) {
       res.status(401).json({
         success: false,
         error: 'Login Failed',
-        message: 'We couldn\'t find an account with that email address. Please check your email and try again, or create a new account if you haven\'t registered yet.',
+        message: 'We couldn\'t find an account with that email or phone number. Please check your credentials and try again, or create a new account if you haven\'t registered yet.',
         details: {
-          type: 'EMAIL_NOT_FOUND',
-          suggestion: 'Double-check your email address or register for a new account'
+          type: 'IDENTIFIER_NOT_FOUND',
+          suggestion: 'Double-check your email or phone number or register for a new account'
         }
       });
       return;
@@ -391,44 +422,36 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    // Generate reset token
+    // Generate reset token and expiration
     const resetToken = user.generatePasswordResetToken();
-    await user.save();
+    const resetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
+    // Set reset token and expiration
+    user.passwordResetToken = resetToken;
+    user.passwordResetExpires = new Date(resetExpires);
+    
+    await user.save({ validateBeforeSave: false });
+    
     // Send reset email using simple email service (console logging for development)
     try {
-      // Use simple email service for console logging (development mode)
-      await simpleEmailService.sendPasswordResetEmail(
-        user.email,
-        user.firstName,
-        resetToken
-      );
-
-      // Always send a proper JSON response - frontend will handle actual email sending via EmailJS
-      const responseData = {
+      if (user.email) {
+        await simpleEmailService.sendPasswordResetEmail(
+          user.email,
+          user.firstName,
+          resetToken
+        );
+      }
+      
+      res.status(200).json({
         success: true,
-        message: 'Password reset instructions have been sent',
-        data: {
-          email: user.email,
-          firstName: user.firstName,
-          resetToken: resetToken
-        }
-      };
-
-      res.status(200).json(responseData);
+        message: 'Password reset email sent successfully! Check console for reset token details.'
+      });
     } catch (emailError) {
       console.error('Failed to send password reset email:', emailError);
-
-      // Clear reset token if email fails
-      user.passwordResetToken = undefined;
-      user.passwordResetExpires = undefined;
-      await user.save();
-
-      // Send proper error JSON response
-      res.status(500).json({
-        success: false,
-        error: 'Failed to process password reset request',
-        message: 'Unable to send password reset email. Please try again later.'
+      // Even if email fails, we still want to show success to prevent user enumeration
+      res.status(200).json({
+        success: true,
+        message: 'Password reset email sent successfully! Check console for reset token details.'
       });
     }
   } catch (error) {
@@ -480,12 +503,12 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
 
     // Set new password
     user.password = password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
+    delete user.passwordResetToken;
+    delete user.passwordResetExpires;
 
     // Reset login attempts
     user.loginAttempts = 0;
-    user.lockUntil = undefined;
+    delete user.lockUntil;
 
     await user.save();
 
@@ -642,8 +665,7 @@ export const googleCompleteRegistration = async (req: Request, res: Response, ne
         provider,
         avatar: profilePicture,
         isEmailVerified,
-        registrationCompleted: true,
-        // No password required for Google OAuth users
+        registrationCompleted: true
       });
     }
 

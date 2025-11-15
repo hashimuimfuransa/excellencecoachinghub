@@ -42,10 +42,19 @@ const passwordValidator = (value: string) => {
 };
 
 const registerValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
+  body('identifier')
+    .notEmpty()
+    .withMessage('Email or phone number is required')
+    .custom((value: string) => {
+      // Check if it's a valid email or phone number
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
+      
+      if (!emailRegex.test(value) && !phoneRegex.test(value)) {
+        throw new Error('Please provide a valid email or phone number');
+      }
+      return true;
+    }),
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters long'),
@@ -85,10 +94,19 @@ const registerValidation = [
 ];
 
 const loginValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
+  body('identifier')
+    .notEmpty()
+    .withMessage('Email or phone number is required')
+    .custom((value: string) => {
+      // Check if it's a valid email or phone number
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
+      
+      if (!emailRegex.test(value) && !phoneRegex.test(value)) {
+        throw new Error('Please provide a valid email or phone number');
+      }
+      return true;
+    }),
   body('password')
     .notEmpty()
     .withMessage('Password is required')

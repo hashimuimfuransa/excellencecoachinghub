@@ -4,9 +4,9 @@ import { useAuth } from '../hooks/useAuth';
 
 const Register = () => {
   const [formData, setFormData] = useState({
+    identifier: '', // Changed from email to identifier
     firstName: '',
     lastName: '',
-    email: '',
     password: '',
     confirmPassword: '',
     role: 'student', // default role
@@ -79,9 +79,9 @@ const Register = () => {
     setLoading(true);
 
     const result = await register({
+      identifier: formData.identifier, // Changed from email to identifier
       firstName: formData.firstName,
       lastName: formData.lastName,
-      email: formData.email,
       password: formData.password,
       role: formData.role,
     });
@@ -148,7 +148,7 @@ const Register = () => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or create account with email</span>
+                <span className="px-2 bg-white text-gray-500">Or create account with email or phone</span>
               </div>
             </div>
           </div>
@@ -179,6 +179,7 @@ const Register = () => {
                   id="lastName"
                   name="lastName"
                   type="text"
+                  required
                   className="input-field"
                   placeholder="Enter your last name"
                   value={formData.lastName}
@@ -188,17 +189,17 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
+                Email or Phone Number
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
+                id="identifier"
+                name="identifier"
+                type="text"
                 required
                 className="input-field"
-                placeholder="Enter your email"
-                value={formData.email}
+                placeholder="Enter your email or phone number"
+                value={formData.identifier}
                 onChange={handleChange}
               />
             </div>

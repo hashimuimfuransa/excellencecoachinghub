@@ -1,4 +1,3 @@
-
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { UserRole } from '../types';
@@ -19,7 +18,7 @@ export interface IUserDocument extends Document {
   passwordResetExpires?: Date;
   isActive: boolean;
   lastLogin?: Date;
-  loginAttempts: number;
+  loginAttempts?: number;
   lockUntil?: Date;
   // Google OAuth fields
   googleId?: string;
@@ -44,7 +43,6 @@ export interface IUserDocument extends Document {
   location?: string;
   profilePicture?: string;
   resume?: string;
-  cvFile?: string;
   skills?: string[];
   experience?: Array<{
     _id?: string;
@@ -193,8 +191,12 @@ export interface IUserModel extends Model<IUserDocument> {
 const userSchema = new Schema<IUserDocument>({
   email: {
     type: String,
-    required: false, // Make email optional
+    required: function(this: IUserDocument) {
+      // Email is required if not using phone number (Google OAuth or phone-based auth)
+      return !this.phone && !this.googleId;
+    },
     unique: true,
+    sparse: true, // This allows multiple null values without violating unique constraint
     lowercase: true,
     trim: true,
     match: [
@@ -355,10 +357,6 @@ const userSchema = new Schema<IUserDocument>({
     trim: true
   },
   resume: {
-    type: String,
-    trim: true
-  },
-  cvFile: {
     type: String,
     trim: true
   },
@@ -581,9 +579,10 @@ const userSchema = new Schema<IUserDocument>({
       delete ret.emailVerificationExpires;
       delete ret.passwordResetToken;
       delete ret.passwordResetExpires;
-      delete ret.loginAttempts;
-      delete ret.lockUntil;
-      delete ret.__v;
+      // Check if fields exist before deleting them
+      if ('loginAttempts' in ret) delete ret.loginAttempts;
+      if ('lockUntil' in ret) delete ret.lockUntil;
+      if ('__v' in ret) delete ret.__v;
       return ret;
     }
   }
@@ -604,6 +603,11 @@ userSchema.virtual('fullName').get(function(this: IUserDocument) {
 userSchema.pre<IUserDocument>('save', async function(next) {
   // Only hash the password if it has been modified (or is new)
   if (!this.isModified('password')) return next();
+
+  // Check if password is defined before hashing
+  if (!this.password) {
+    return next();
+  }
 
   try {
     // Hash password with cost of 12

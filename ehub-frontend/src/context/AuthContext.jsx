@@ -75,19 +75,22 @@ export const AuthProvider = ({ children }) => {
         response = await authApi.login(credentials);
       }
 
-      const token = response.data.token || response.data.data?.token;
-      const userData = response.data.user || response.data.data?.user || response.data;
+      // Handle the response structure from the backend
+      const responseData = response.data;
+      const token = responseData.token || responseData.data?.token;
+      const userData = responseData.user || responseData.data?.user || responseData.data;
 
       if (token) {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+        setIsAuthenticated(true);
+        return { success: true, user: userData };
+      } else {
+        return { success: false, error: 'Login failed - no token received' };
       }
-      setUser(userData);
-      setIsAuthenticated(true);
-
-      return { success: true, user: userData };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Login failed' };
+      return { success: false, error: error.response?.data?.message || error.response?.data?.error || 'Login failed' };
     }
   };
 
@@ -102,16 +105,22 @@ export const AuthProvider = ({ children }) => {
         response = await authApi.register(userData);
       }
 
-      const { token, user: newUser } = response.data;
+      // Handle the response structure from the backend
+      const responseData = response.data;
+      const token = responseData.token || responseData.data?.token;
+      const newUser = responseData.user || responseData.data?.user || responseData.data;
 
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      setUser(newUser);
-      setIsAuthenticated(true);
-
-      return { success: true };
+      if (token) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(newUser));
+        setUser(newUser);
+        setIsAuthenticated(true);
+        return { success: true, user: newUser };
+      } else {
+        return { success: false, error: 'Registration successful but login failed' };
+      }
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Registration failed' };
+      return { success: false, error: error.response?.data?.message || error.response?.data?.error || 'Registration failed' };
     }
   };
 

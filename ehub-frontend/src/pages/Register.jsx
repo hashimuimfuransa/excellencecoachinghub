@@ -57,6 +57,7 @@ const Register = () => {
     });
 
     if (result.success) {
+      // User is automatically logged in after successful registration
       // Navigate based on selected role
       if (formData.role === 'student') {
         navigate('/select-level');
@@ -71,27 +72,28 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    // Further reduced padding on mobile devices to match login page
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 py-1 px-4 sm:px-6 lg:px-8 md:py-6">
+      <div className="max-w-md w-full space-y-6">
         <div className="text-center">
-          <div className="mb-6">
-            <div className="w-14 sm:w-16 h-14 sm:h-16 bg-primary-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-white font-bold text-xl sm:text-2xl">e</span>
+          <div className="mb-3">
+            <div className="w-12 sm:w-14 h-12 sm:h-14 bg-primary-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg">
+              <span className="text-white font-bold text-lg sm:text-xl">e</span>
             </div>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('join_ecoach')}</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{t('join_ecoach')}</h2>
         </div>
 
         <div className="card">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-sm">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
                 {t('full_name')}
               </label>
               <input
@@ -99,7 +101,7 @@ const Register = () => {
                 name="fullName"
                 type="text"
                 required
-                className="input-field"
+                className="input-field text-sm"
                 placeholder={t('enter_full_name')}
                 value={formData.fullName}
                 onChange={handleChange}
@@ -107,7 +109,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-1">
                 {t('email_or_phone')}
               </label>
               <input
@@ -115,7 +117,7 @@ const Register = () => {
                 name="identifier"
                 type="text"
                 required
-                className="input-field"
+                className="input-field text-sm"
                 placeholder={t('enter_email_or_phone')}
                 value={formData.identifier}
                 onChange={handleChange}
@@ -123,13 +125,13 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
                 {t('i_am_a')}
               </label>
               <select
                 id="role"
                 name="role"
-                className="input-field"
+                className="input-field text-sm"
                 value={formData.role}
                 onChange={handleChange}
               >
@@ -140,7 +142,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 {t('password')}
               </label>
               <div className="relative">
@@ -149,7 +151,7 @@ const Register = () => {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   required
-                  className="input-field pr-10"
+                  className="input-field pr-10 text-sm"
                   placeholder={t('create_password')}
                   value={formData.password}
                   onChange={handleChange}
@@ -160,11 +162,11 @@ const Register = () => {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                     </svg>
                   ) : (
-                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
@@ -174,7 +176,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                 {t('confirm_password')}
               </label>
               <div className="relative">
@@ -183,7 +185,7 @@ const Register = () => {
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   required
-                  className="input-field pr-10"
+                  className="input-field pr-10 text-sm"
                   placeholder={t('confirm_password')}
                   value={formData.confirmPassword}
                   onChange={handleChange}
@@ -194,11 +196,11 @@ const Register = () => {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
-                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                     </svg>
                   ) : (
-                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
@@ -211,17 +213,17 @@ const Register = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed py-2.5 text-sm"
               >
                 {loading ? t('creating_account') + '...' : t('create_account')}
               </button>
             </div>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
+          <div className="mt-4 text-center">
+            <p className="text-gray-600 text-sm">
               {t('already_have_account')}{' '}
-              <Link to="/login" className="text-primary-600 hover:text-primary-500 font-medium">
+              <Link to="/login" className="text-primary-600 hover:text-primary-500 font-medium text-sm">
                 {t('sign_in')}
               </Link>
             </p>

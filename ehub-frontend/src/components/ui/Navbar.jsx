@@ -84,21 +84,19 @@ const Navbar = () => {
             </div>
           )}
 
-          {/* Mobile menu button */}
-          {isAuthenticated && (
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 focus:outline-none"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-          )}
+          {/* Mobile menu button - Always show for all users */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 focus:outline-none"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {mobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
 
           {/* Right side items - Always show language selector */}
           <div className="hidden md:flex items-center space-x-4">
@@ -168,74 +166,79 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile menu - Show language selector for all users, auth menu only for authenticated users */}
-      {mobileMenuOpen && (
+      {/* Mobile menu - Show language selector outside menu for all users */}
+      {(mobileMenuOpen || !isAuthenticated) && (
         <div className="md:hidden border-t border-gray-200">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            {/* Language selector for mobile */}
-            <div className="px-3 py-2">
+          {/* Language selector always visible outside mobile menu */}
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">{t('language')}</span>
               <LanguageSelector />
             </div>
-            
-            {isAuthenticated && (
-              <>
-                <Link
-                  to={getDashboardLink()}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                >
-                  {t('dashboard')}
-                </Link>
-
-                {user?.role === 'student' && (
-                  <Link
-                    to="/homework"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                  >
-                    {t('homework')}
-                  </Link>
-                )}
-
-                {user?.role === 'teacher' && (
-                  <Link
-                    to="/students"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                  >
-                    {t('students')}
-                  </Link>
-                )}
-
-                <Link
-                  to="/leaderboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                >
-                  {t('leaderboard')}
-                </Link>
-              </>
-            )}
-            
-            {!isAuthenticated && (
-              <div className="pt-2 border-t border-gray-200 space-y-1">
-                <Link
-                  to="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                >
-                  {t('sign_in')}
-                </Link>
-                <Link
-                  to="/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:text-primary-700 hover:bg-gray-50"
-                >
-                  {t('get_started')}
-                </Link>
-              </div>
-            )}
           </div>
+          
+          {mobileMenuOpen && (
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              {isAuthenticated && (
+                <>
+                  <Link
+                    to={getDashboardLink()}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                  >
+                    {t('dashboard')}
+                  </Link>
+
+                  {user?.role === 'student' && (
+                    <Link
+                      to="/homework"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                    >
+                      {t('homework')}
+                    </Link>
+                  )}
+
+                  {user?.role === 'teacher' && (
+                    <Link
+                      to="/students"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                    >
+                      {t('students')}
+                    </Link>
+                  )}
+
+                  <Link
+                    to="/leaderboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                  >
+                    {t('leaderboard')}
+                  </Link>
+                </>
+              )}
+              
+              {!isAuthenticated && (
+                <div className="pt-2 space-y-1">
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                  >
+                    {t('sign_in')}
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:text-primary-700 hover:bg-gray-50"
+                  >
+                    {t('get_started')}
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </nav>

@@ -1,7 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const Home = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
       {/* Hero Section */}
@@ -14,7 +17,7 @@ const Home = () => {
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-              Welcome to <span className="text-primary-600">ecoach</span>
+              {t('welcome')} to <span className="text-primary-600">ecoach</span>
               <br />
               <span className="text-lg sm:text-2xl md:text-3xl font-semibold text-gray-700">Your Learning Adventure Awaits!</span>
             </h1>
@@ -24,10 +27,10 @@ const Home = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Link to="/register" className="btn-primary text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200">
-                🚀 Get Started Free
+                🚀 {t('get_started')} Free
               </Link>
               <Link to="/login" className="btn-secondary text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200">
-                Sign In
+                {t('sign_in')}
               </Link>
             </div>
 

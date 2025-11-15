@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     identifier: '', // Changed from email to identifier
     password: '',
@@ -54,10 +56,10 @@ const Login = () => {
           navigate('/dashboard');
         }
       } else {
-        setError(result.error);
+        setError(t('google_sign_in_failed'));
       }
     } catch (err) {
-      setError('Google sign-in failed. Please try again.');
+      setError(t('google_sign_in_failed'));
     }
     setGoogleLoading(false);
   };
@@ -100,9 +102,9 @@ const Login = () => {
               <span className="text-white font-bold text-xl sm:text-2xl">e</span>
             </div>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Welcome back! 👋</h2>
-          <p className="text-xs sm:text-sm text-primary-600 font-medium mb-1">ecoach by Excellence Coaching Hub (ECH)</p>
-          <p className="text-sm sm:text-base text-gray-600">Continue your learning journey</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('welcome_back')}</h2>
+          <p className="text-xs sm:text-sm text-primary-600 font-medium mb-1">{t('ecoach_by_ech')}</p>
+          <p className="text-sm sm:text-base text-gray-600">{t('continue_learning_journey')}</p>
         </div>
 
         <div className="card">
@@ -130,7 +132,7 @@ const Login = () => {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              {googleLoading ? 'Signing in...' : 'Continue with Google'}
+              {googleLoading ? t('signing_in') + '...' : t('continue_with_google')}
             </button>
 
             {/* Divider */}
@@ -139,7 +141,7 @@ const Login = () => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with email or phone</span>
+                <span className="px-2 bg-white text-gray-500">{t('or_continue_with')}</span>
               </div>
             </div>
           </div>
@@ -148,7 +150,7 @@ const Login = () => {
 
             <div>
               <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
-                Email or Phone Number
+                {t('email_or_phone')}
               </label>
               <input
                 id="identifier"
@@ -156,7 +158,7 @@ const Login = () => {
                 type="text"
                 required
                 className="input-field"
-                placeholder="Enter your email or phone number"
+                placeholder={t('enter_email_or_phone')}
                 value={formData.identifier}
                 onChange={handleChange}
               />
@@ -164,7 +166,7 @@ const Login = () => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t('password')}
               </label>
               <div className="relative">
                 <input
@@ -173,7 +175,7 @@ const Login = () => {
                   type={showPassword ? "text" : "password"}
                   required
                   className="input-field pr-10"
-                  placeholder="Enter your password"
+                  placeholder={t('enter_password')}
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -202,26 +204,25 @@ const Login = () => {
                 disabled={loading}
                 className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? t('signing_in') + '...' : t('sign_in')}
               </button>
             </div>
           </form>
 
           <div className="mt-6 text-center space-y-3">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-blue-800 text-sm font-medium mb-2">🎓 New to ecoach?</p>
+              <p className="text-blue-800 text-sm font-medium mb-2">🎓 {t('new_to_ecoach')}</p>
               <p className="text-blue-700 text-sm">
-                If this is your first time or you don&apos;t have an account yet,
-                please{' '}
+                {t('no_account_yet')}{' '}
                 <Link to="/register" className="text-primary-600 hover:text-primary-500 font-semibold underline">
-                  create a new account
+                  {t('register')}
                 </Link>{' '}
-                to get started with your learning journey!
+                {t('get_started_learning')}
               </p>
             </div>
             <p className="text-gray-600">
-              Already have an account?{' '}
-              <span className="text-primary-600 font-medium">Sign in above</span>
+              {t('already_have_account')}{' '}
+              <span className="text-primary-600 font-medium">{t('sign_in_above')}</span>
             </p>
           </div>
         </div>

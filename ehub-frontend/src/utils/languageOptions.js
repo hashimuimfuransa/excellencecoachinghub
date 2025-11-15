@@ -1,11 +1,7 @@
 export const languageOptions = [
-  { value: 'english', label: 'English' },
-  { value: 'spanish', label: 'Spanish' },
-  { value: 'french', label: 'French' },
-  { value: 'german', label: 'German' },
-  { value: 'chinese', label: 'Chinese' },
-  { value: 'japanese', label: 'Japanese' },
-  { value: 'other', label: 'Other' },
+  { value: 'rw', label: 'Kinyarwanda' },
+  { value: 'en', label: 'English' },
+  { value: 'fr', label: 'Français' },
 ];
 
 export const levelOptions = {

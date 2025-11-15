@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 const Register = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     identifier: '',
     fullName: '', // Changed from firstName/lastName to fullName
@@ -54,7 +56,7 @@ const Register = () => {
         setError(result.error);
       }
     } catch (err) {
-      setError('Google registration failed. Please try again.');
+      setError(t('google_registration_failed'));
     }
     setGoogleLoading(false);
   };
@@ -71,7 +73,7 @@ const Register = () => {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('passwords_do_not_match'));
       return;
     }
 
@@ -81,7 +83,7 @@ const Register = () => {
     const lastName = nameParts.slice(1).join(' ') || '';
 
     if (!firstName) {
-      setError('Please enter your full name');
+      setError(t('enter_full_name'));
       return;
     }
 
@@ -118,9 +120,9 @@ const Register = () => {
               <span className="text-white font-bold text-xl sm:text-2xl">🚀</span>
             </div>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Join ecoach</h2>
-          <p className="text-xs sm:text-sm text-primary-600 font-medium mb-1">by Excellence Coaching Hub (ECH)</p>
-          <p className="text-sm sm:text-base text-gray-600">Start your exciting learning adventure today!</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('join_ecoach')}</h2>
+          <p className="text-xs sm:text-sm text-primary-600 font-medium mb-1">{t('by_ech')}</p>
+          <p className="text-sm sm:text-base text-gray-600">{t('start_learning_adventure')}</p>
         </div>
 
         <div className="card">
@@ -148,7 +150,7 @@ const Register = () => {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              {googleLoading ? 'Creating account...' : 'Continue with Google'}
+              {googleLoading ? t('creating_account') + '...' : t('continue_with_google')}
             </button>
 
             {/* Divider */}
@@ -157,7 +159,7 @@ const Register = () => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or create account with email or phone</span>
+                <span className="px-2 bg-white text-gray-500">{t('or_create_account')}</span>
               </div>
             </div>
           </div>
@@ -166,7 +168,7 @@ const Register = () => {
 
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+                {t('full_name')}
               </label>
               <input
                 id="fullName"
@@ -174,7 +176,7 @@ const Register = () => {
                 type="text"
                 required
                 className="input-field"
-                placeholder="Enter your full name"
+                placeholder={t('enter_full_name')}
                 value={formData.fullName}
                 onChange={handleChange}
               />
@@ -182,7 +184,7 @@ const Register = () => {
 
             <div>
               <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
-                Email or Phone Number
+                {t('email_or_phone')}
               </label>
               <input
                 id="identifier"
@@ -190,7 +192,7 @@ const Register = () => {
                 type="text"
                 required
                 className="input-field"
-                placeholder="Enter your email or phone number"
+                placeholder={t('enter_email_or_phone')}
                 value={formData.identifier}
                 onChange={handleChange}
               />
@@ -198,7 +200,7 @@ const Register = () => {
 
             <div>
               <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
-                I am a
+                {t('i_am_a')}
               </label>
               <select
                 id="role"
@@ -207,15 +209,15 @@ const Register = () => {
                 value={formData.role}
                 onChange={handleChange}
               >
-                <option value="student">Student</option>
-                <option value="teacher">Teacher</option>
-                <option value="parent">Parent</option>
+                <option value="student">{t('student')}</option>
+                <option value="teacher">{t('teacher')}</option>
+                <option value="parent">{t('parent')}</option>
               </select>
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t('password')}
               </label>
               <div className="relative">
                 <input
@@ -224,7 +226,7 @@ const Register = () => {
                   type={showPassword ? "text" : "password"}
                   required
                   className="input-field pr-10"
-                  placeholder="Create a password"
+                  placeholder={t('create_password')}
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -249,7 +251,7 @@ const Register = () => {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
+                {t('confirm_password')}
               </label>
               <div className="relative">
                 <input
@@ -258,7 +260,7 @@ const Register = () => {
                   type={showConfirmPassword ? "text" : "password"}
                   required
                   className="input-field pr-10"
-                  placeholder="Confirm your password"
+                  placeholder={t('confirm_password')}
                   value={formData.confirmPassword}
                   onChange={handleChange}
                 />
@@ -287,16 +289,16 @@ const Register = () => {
                 disabled={loading}
                 className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating account...' : 'Create Account'}
+                {loading ? t('creating_account') + '...' : t('create_account')}
               </button>
             </div>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Already have an account?{' '}
+              {t('already_have_account')}{' '}
               <Link to="/login" className="text-primary-600 hover:text-primary-500 font-medium">
-                Sign in
+                {t('sign_in')}
               </Link>
             </p>
           </div>

@@ -1,18 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { languageOptions } from '../../utils/languageOptions';
 
 const LanguageSelector = () => {
-  const [selectedLanguage, setSelectedLanguage] = useState('english');
+  const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
+  // Set the initial language based on i18n language
+  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
+
+  // Update selected language when i18n language changes
+  useEffect(() => {
+    setSelectedLanguage(i18n.language);
+  }, [i18n.language]);
+
   const handleLanguageChange = (languageValue) => {
-    setSelectedLanguage(languageValue);
+    i18n.changeLanguage(languageValue);
     setIsOpen(false);
-    // In a real app, you'd save this to user preferences and update the app language
+    // Save to localStorage
     localStorage.setItem('preferred-language', languageValue);
   };
 
   const currentLanguage = languageOptions.find(lang => lang.value === selectedLanguage);
+
+  // Flag emojis for the languages
+  const getFlagEmoji = (languageCode) => {
+    switch (languageCode) {
+      case 'rw': return '🇷🇼';
+      case 'en': return '🇺🇸';
+      case 'fr': return '🇫🇷';
+      default: return '🌐';
+    }
+  };
 
   return (
     <div className="relative">
@@ -21,7 +40,7 @@ const LanguageSelector = () => {
         className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-700 hover:text-primary-600 focus:outline-none"
       >
         <span className="text-lg">
-          {selectedLanguage === 'english' ? '🇺🇸' : '🇫🇷'}
+          {getFlagEmoji(selectedLanguage)}
         </span>
         <span className="hidden sm:block">{currentLanguage?.label}</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,7 +59,7 @@ const LanguageSelector = () => {
                   selectedLanguage === language.value ? 'bg-primary-50 text-primary-700' : 'text-gray-700'
                 }`}
               >
-                <span>{language.value === 'english' ? '🇺🇸' : '🇫🇷'}</span>
+                <span>{getFlagEmoji(language.value)}</span>
                 <span>{language.label}</span>
               </button>
             ))}

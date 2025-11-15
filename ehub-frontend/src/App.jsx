@@ -5,6 +5,9 @@ import { SocketProvider } from './context/SocketContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import Navbar from './components/ui/Navbar';
 
+// Import internationalization
+import './i18n';
+
 // Import pages
 import Home from './pages/Home';
 import Login from './pages/Login';

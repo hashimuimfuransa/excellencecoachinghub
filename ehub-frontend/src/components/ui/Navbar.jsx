@@ -1,11 +1,13 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import NotificationBell from './NotificationBell';
 import LanguageSelector from './LanguageSelector';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
@@ -35,7 +37,7 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link to={getDashboardLink()} className="flex-shrink-0 flex items-center">
+            <Link to={isAuthenticated ? getDashboardLink() : "/"} className="flex-shrink-0 flex items-center">
               <img 
                 src="/logo.webp" 
                 alt="ecoach Logo" 
@@ -52,7 +54,7 @@ const Navbar = () => {
                 to={getDashboardLink()}
                 className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                Dashboard
+                {t('dashboard')}
               </Link>
 
               {user?.role === 'student' && (
@@ -60,7 +62,7 @@ const Navbar = () => {
                   to="/homework"
                   className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Homework
+                  {t('homework')}
                 </Link>
               )}
 
@@ -69,7 +71,7 @@ const Navbar = () => {
                   to="/students"
                   className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Students
+                  {t('students')}
                 </Link>
               )}
 
@@ -77,7 +79,7 @@ const Navbar = () => {
                 to="/leaderboard"
                 className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                Leaderboard
+                {t('leaderboard')}
               </Link>
             </div>
           )}
@@ -98,11 +100,13 @@ const Navbar = () => {
             </button>
           )}
 
-          {/* Right side items */}
+          {/* Right side items - Always show language selector */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Always show language selector for all users */}
+            <LanguageSelector />
+            
             {isAuthenticated ? (
               <>
-                <LanguageSelector />
                 <NotificationBell />
 
                 {/* User Menu */}
@@ -127,19 +131,19 @@ const Navbar = () => {
                       to="/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      Profile Settings
+                      {t('profile_settings')}
                     </Link>
                     <Link
                       to="/settings"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      Preferences
+                      {t('preferences')}
                     </Link>
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      Sign Out
+                      {t('sign_out')}
                     </button>
                   </div>
                 </div>
@@ -150,13 +154,13 @@ const Navbar = () => {
                   to="/login"
                   className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Sign In
+                  {t('sign_in')}
                 </Link>
                 <Link
                   to="/register"
                   className="bg-primary-600 text-white hover:bg-primary-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Get Started
+                  {t('get_started')}
                 </Link>
               </>
             )}
@@ -164,45 +168,73 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile menu - Only show when authenticated and menu is open */}
-      {isAuthenticated && mobileMenuOpen && (
+      {/* Mobile menu - Show language selector for all users, auth menu only for authenticated users */}
+      {mobileMenuOpen && (
         <div className="md:hidden border-t border-gray-200">
           <div className="px-2 pt-2 pb-3 space-y-1">
-            <Link
-              to={getDashboardLink()}
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-            >
-              Dashboard
-            </Link>
+            {/* Language selector for mobile */}
+            <div className="px-3 py-2">
+              <LanguageSelector />
+            </div>
+            
+            {isAuthenticated && (
+              <>
+                <Link
+                  to={getDashboardLink()}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                >
+                  {t('dashboard')}
+                </Link>
 
-            {user?.role === 'student' && (
-              <Link
-                to="/homework"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-              >
-                Homework
-              </Link>
+                {user?.role === 'student' && (
+                  <Link
+                    to="/homework"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                  >
+                    {t('homework')}
+                  </Link>
+                )}
+
+                {user?.role === 'teacher' && (
+                  <Link
+                    to="/students"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                  >
+                    {t('students')}
+                  </Link>
+                )}
+
+                <Link
+                  to="/leaderboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                >
+                  {t('leaderboard')}
+                </Link>
+              </>
             )}
-
-            {user?.role === 'teacher' && (
-              <Link
-                to="/students"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-              >
-                Students
-              </Link>
+            
+            {!isAuthenticated && (
+              <div className="pt-2 border-t border-gray-200 space-y-1">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+                >
+                  {t('sign_in')}
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:text-primary-700 hover:bg-gray-50"
+                >
+                  {t('get_started')}
+                </Link>
+              </div>
             )}
-
-            <Link
-              to="/leaderboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-            >
-              Leaderboard
-            </Link>
           </div>
         </div>
       )}

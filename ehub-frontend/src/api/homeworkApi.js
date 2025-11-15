@@ -32,11 +32,7 @@ export const homeworkApi = {
   // Homework help system
   getHomeworkHelp: () => axiosClient.get('/homework/help'),
   getHomeworkHelpById: (id) => axiosClient.get(`/homework/help/${id}`),
-  uploadHomeworkHelp: (formData) => axiosClient.post('/homework/help/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  }),
+  uploadHomeworkHelp: (data) => axiosClient.post('/homework/help/upload', data), // Changed to send JSON data
   downloadHomeworkHelp: (fileUrl) => axiosClient.get(fileUrl, { responseType: 'blob' }),
   
   // Interactive homework

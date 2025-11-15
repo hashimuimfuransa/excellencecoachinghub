@@ -6,10 +6,7 @@ export interface IHomeworkHelp extends Document {
   subject: string;
   description: string;
   file?: {
-    filename: string;
-    originalName: string;
     fileUrl: string;
-    fileSize: number;
     uploadedAt: Date;
   };
   comments: Array<{
@@ -47,10 +44,7 @@ const HomeworkHelpSchema = new Schema<IHomeworkHelp>(
       maxlength: [5000, 'Description cannot exceed 5000 characters']
     },
     file: {
-      filename: String,
-      originalName: String,
       fileUrl: String,
-      fileSize: Number,
       uploadedAt: {
         type: Date,
         default: Date.now

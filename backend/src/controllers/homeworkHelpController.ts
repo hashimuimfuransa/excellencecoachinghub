@@ -1,22 +1,17 @@
 import { Request, Response } from 'express';
 import { HomeworkHelp } from '../models';
-import { uploadFile } from '../utils/fileUpload';
-import fs from 'fs';
+import { Types } from 'mongoose';
+import { AuthRequest } from '../middleware/auth';
 
-export const uploadHomeworkHelp = async (req: Request, res: Response) => {
+export const uploadHomeworkHelp = async (req: AuthRequest, res: Response) => {
   try {
-    const { subject, description } = req.body;
-    const file = req.file;
+    // Get data from request body (now JSON instead of FormData)
+    const { homeworkTitle, subject, message, fileUrl } = req.body;
 
-    if (!subject || !description) {
+    // Validate required fields
+    if (!homeworkTitle || !subject || !message) {
       return res.status(400).json({
-        message: 'Subject and description are required'
-      });
-    }
-
-    if (!file) {
-      return res.status(400).json({
-        message: 'File is required'
+        message: 'Homework title, subject, and message are required'
       });
     }
 
@@ -26,43 +21,30 @@ export const uploadHomeworkHelp = async (req: Request, res: Response) => {
       });
     }
 
-    const fileSize = file.size / (1024 * 1024);
-    if (fileSize > 50) {
-      return res.status(400).json({
-        message: 'File size cannot exceed 50MB'
-      });
-    }
-
     const user = req.user;
     const studentName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || 'Student';
 
+    // Process file data if provided (Uploadcare URL)
     let fileData = null;
-    if (file) {
+    if (fileUrl) {
+      // Validate that it's a proper URL
       try {
-        const uploadedFile = await uploadFile(file, 'homework-help');
-        if (uploadedFile) {
-          fileData = {
-            filename: file.filename,
-            originalName: file.originalname,
-            fileUrl: uploadedFile.url,
-            fileSize: file.size,
-            uploadedAt: new Date()
-          };
-        }
-      } catch (uploadError) {
-        console.error('Error uploading to Cloudinary:', uploadError);
-        return res.status(400).json({
-          message: 'Failed to upload file to server',
-          error: uploadError instanceof Error ? uploadError.message : 'Unknown error'
-        });
+        new URL(fileUrl);
+        fileData = {
+          fileUrl: fileUrl,
+          uploadedAt: new Date()
+        };
+      } catch (urlError) {
+        console.warn('Invalid file URL provided:', fileUrl);
+        // Don't fail the request if file URL is invalid, just ignore it
       }
     }
 
     const homeworkHelp = new HomeworkHelp({
-      student: user._id,
+      student: new Types.ObjectId(user._id.toString()),
       studentName,
-      subject,
-      description,
+      subject, // This is correct
+      description: message, // Map 'message' to 'description'
       file: fileData,
       comments: []
     });
@@ -76,10 +58,6 @@ export const uploadHomeworkHelp = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error uploading homework help:', error);
 
-    if ((req.file as any) && (req.file as any).path && fs.existsSync((req.file as any).path)) {
-      fs.unlinkSync((req.file as any).path);
-    }
-
     res.status(500).json({
       message: 'Error uploading homework',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -87,7 +65,7 @@ export const uploadHomeworkHelp = async (req: Request, res: Response) => {
   }
 };
 
-export const getHomeworkHelp = async (req: Request, res: Response) => {
+export const getHomeworkHelp = async (req: AuthRequest, res: Response) => {
   try {
     const homeworkHelp = await HomeworkHelp.find()
       .populate('student', 'firstName lastName email avatar')
@@ -108,7 +86,7 @@ export const getHomeworkHelp = async (req: Request, res: Response) => {
   }
 };
 
-export const getHomeworkHelpById = async (req: Request, res: Response) => {
+export const getHomeworkHelpById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -135,7 +113,7 @@ export const getHomeworkHelpById = async (req: Request, res: Response) => {
   }
 };
 
-export const addCommentToHomeworkHelp = async (req: Request, res: Response) => {
+export const addCommentToHomeworkHelp = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { comment } = req.body;
@@ -171,7 +149,7 @@ export const addCommentToHomeworkHelp = async (req: Request, res: Response) => {
 
     const newComment = {
       author: authorName,
-      authorId: user._id,
+      authorId: new Types.ObjectId(user._id.toString()),
       text: comment,
       createdAt: new Date()
     };
@@ -196,7 +174,7 @@ export const addCommentToHomeworkHelp = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteHomeworkHelp = async (req: Request, res: Response) => {
+export const deleteHomeworkHelp = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -214,16 +192,20 @@ export const deleteHomeworkHelp = async (req: Request, res: Response) => {
       });
     }
 
-    if (homeworkHelp.student.toString() !== req.user._id.toString()) {
+    // Check if user is the owner or a teacher/admin
+    const isOwner = homeworkHelp.student.toString() === req.user._id.toString();
+    const isTeacherOrAdmin = req.user.role === 'teacher' || req.user.role === 'admin';
+
+    if (!isOwner && !isTeacherOrAdmin) {
       return res.status(403).json({
-        message: 'You can only delete your own homework submissions'
+        message: 'Not authorized to delete this homework help request'
       });
     }
 
     await HomeworkHelp.findByIdAndDelete(id);
 
     res.json({
-      message: 'Homework help deleted successfully'
+      message: 'Homework help request deleted successfully'
     });
   } catch (error) {
     console.error('Error deleting homework help:', error);
@@ -234,7 +216,8 @@ export const deleteHomeworkHelp = async (req: Request, res: Response) => {
   }
 };
 
-export const getStudentHomeworkHelp = async (req: Request, res: Response) => {
+// Get homework help requests for a specific student
+export const getStudentHomeworkHelp = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -243,17 +226,18 @@ export const getStudentHomeworkHelp = async (req: Request, res: Response) => {
     }
 
     const homeworkHelp = await HomeworkHelp.find({ student: req.user._id })
+      .populate('student', 'firstName lastName email avatar')
       .populate('comments.authorId', 'firstName lastName avatar')
       .sort({ createdAt: -1 });
 
     res.json({
-      message: 'Student homework help retrieved successfully',
+      message: 'Student homework help items retrieved successfully',
       data: homeworkHelp
     });
   } catch (error) {
     console.error('Error getting student homework help:', error);
     res.status(500).json({
-      message: 'Error retrieving homework help',
+      message: 'Error retrieving student homework help',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

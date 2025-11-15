@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { homeworkApi } from '../api/homeworkApi';
 import { useNavigate } from 'react-router-dom';
+import { homeworkApi } from '../api/homeworkApi';
+import { Widget } from '@uploadcare/react-widget';
 
 const HomeworkHelpStudent = () => {
   const navigate = useNavigate();
@@ -8,12 +9,20 @@ const HomeworkHelpStudent = () => {
     homeworkTitle: '',
     subject: '',
     message: '',
-    file: null,
+    fileUrl: '' // Changed from file to fileUrl for Uploadcare
   });
-  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Get Uploadcare public key from environment or window object
+  const uploadcarePublicKey = (
+    (typeof process !== 'undefined' && process.env?.REACT_APP_UPLOADCARE_PUBLIC_KEY)
+    || (typeof window !== 'undefined' && window.UPLOADCARE_PUBLIC_KEY)
+    || ''
+  );
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -23,40 +32,26 @@ const HomeworkHelpStudent = () => {
     }));
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setHelpData(prev => ({
-        ...prev,
-        file: file
-      }));
-
-      // Create preview for images
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setPreview(e.target.result);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setPreview(null);
-      }
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
+    // Validate required fields
+    if (!helpData.homeworkTitle || !helpData.subject || !helpData.message) {
+      setError('Please fill in all required fields.');
+      setLoading(false);
+      return;
+    }
 
     try {
-      const formData = new FormData();
-      formData.append('homeworkTitle', helpData.homeworkTitle);
-      formData.append('subject', helpData.subject);
-      formData.append('message', helpData.message);
-      if (helpData.file) {
-        formData.append('file', helpData.file);
-      }
+      // Create form data with text fields and file URL
+      const formData = {
+        homeworkTitle: helpData.homeworkTitle,
+        subject: helpData.subject,
+        message: helpData.message,
+        fileUrl: helpData.fileUrl // Include the Uploadcare file URL if available
+      };
 
       // Submit to backend
       await homeworkApi.uploadHomeworkHelp(formData);
@@ -149,32 +144,60 @@ const HomeworkHelpStudent = () => {
 
           <div className="mb-8">
             <label className="block text-gray-700 font-medium mb-2">Upload Your Homework (Optional)</label>
-            <div className="flex items-center justify-center w-full">
-              <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <svg className="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
-                  </svg>
-                  <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                  <p className="text-xs text-gray-500">PNG, JPG, GIF, PDF, DOC up to 10MB</p>
-                </div>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  onChange={handleFileChange}
-                  accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                />
-              </label>
+            <div className="mb-4">
+              <Widget
+                publicKey={uploadcarePublicKey}
+                multiple={false}
+                tabs="file url"
+                onFileSelect={(file) => {
+                  if (!file) {
+                    setHelpData(prev => ({ ...prev, fileUrl: '' }));
+                    return;
+                  }
+                  
+                  setUploading(true);
+                  setUploadProgress(0);
+                  
+                  // Track widget progress
+                  file.progress((info) => {
+                    const pct = Math.round((info.progress || 0) * 100);
+                    setUploadProgress(pct);
+                  });
+                  
+                  file.done((fileInfo) => {
+                    const cdnUrl = fileInfo?.cdnUrl || (fileInfo?.cdnUrl && fileInfo?.cdnUrlModifiers ? `${fileInfo.cdnUrl}${fileInfo.cdnUrlModifiers}` : '') || fileInfo?.originalUrl;
+                    setHelpData(prev => ({ ...prev, fileUrl: cdnUrl || '' }));
+                    setUploading(false);
+                    setUploadProgress(100);
+                  });
+                  
+                  file.fail((error) => {
+                    console.error('Uploadcare upload failed:', error);
+                    setUploading(false);
+                    setUploadProgress(0);
+                    setError('File upload failed. Please try again.');
+                  });
+                }}
+              />
             </div>
-            {preview && (
-              <div className="mt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Preview:</h3>
-                <img src={preview} alt="Preview" className="max-h-48 rounded-lg" />
+            
+            {uploading && (
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">Uploading... {uploadProgress}%</p>
               </div>
             )}
-            {helpData.file && (
-              <div className="mt-2 text-sm text-gray-600">
-                Selected file: {helpData.file.name}
+            
+            {helpData.fileUrl && !uploading && (
+              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700">
+                  ✓ File uploaded successfully! It will be attached to your help request.
+                </p>
               </div>
             )}
           </div>
@@ -183,7 +206,7 @@ const HomeworkHelpStudent = () => {
             <h3 className="font-medium text-blue-800 mb-2">💡 How Homework Help Works</h3>
             <ul className="list-disc list-inside text-blue-700 text-sm space-y-1">
               <li>Teachers and classmates can view your uploaded homework</li>
-              <li>They&#39;ll provide feedback and suggestions to help you</li>
+              <li>They&apos;ll provide feedback and suggestions to help you</li>
               <li>Your work will be kept private and only shared with your teacher and classmates</li>
             </ul>
           </div>
@@ -193,15 +216,16 @@ const HomeworkHelpStudent = () => {
               type="button"
               onClick={() => navigate('/homework')}
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              disabled={loading || uploading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50"
             >
-              {loading ? 'Submitting...' : 'Submit Help Request'}
+              {loading || uploading ? 'Submitting...' : 'Submit Help Request'}
             </button>
           </div>
         </form>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
 import { Widget } from '@uploadcare/react-widget';
 import { useTranslation } from 'react-i18next';
+import BottomNavbar from '../components/ui/BottomNavbar';
 
 const HomeworkHelpStudent = () => {
   const navigate = useNavigate();
@@ -71,7 +72,7 @@ const HomeworkHelpStudent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4 pb-20 md:pb-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <button 
@@ -232,6 +233,7 @@ const HomeworkHelpStudent = () => {
           </div>
         </form>
       </div>
+      <BottomNavbar />
     </div>
   );
 };

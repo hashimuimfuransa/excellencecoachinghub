@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { teacherApi } from '../api/teacherApi'; // Use teacherApi instead
+import BottomNavbar from '../components/ui/BottomNavbar';
 
 const ManageStudents = () => {
   const navigate = useNavigate();
@@ -60,7 +61,7 @@ const ManageStudents = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4 sm:p-6 pb-20 md:pb-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <button 
@@ -188,6 +189,7 @@ const ManageStudents = () => {
           </div>
         </div>
       </div>
+      <BottomNavbar />
     </div>
   );
 };

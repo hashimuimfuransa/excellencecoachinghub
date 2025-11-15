@@ -158,5 +158,13 @@
   "work_private": "Akazi kihariye",
   "please_fill_required_fields": "Nyamunekauzuza uzuza ibisabwa byose.",
   "failed_submit_help_request": "Ntibyashobotse kohereza ubusabe bw'ubufasha. Ongera ugerageze.",
-  "file_upload_failed": "Ntibyashobotse kohereza idosiye. Ongera ugerageze."
+  "file_upload_failed": "Ntibyashobotse kohereza idosiye. Ongera ugerageze.",
+  "upload_your_homework": "Ohereza umukoro wawe",
+  "homework_from_school_help": "Umukoro w'ishuri ushaka kubona ubufasha",
+  "do_homework": "Kora umukoro wawe",
+  "homework_from_teacher": "Umukoro w'umwarimu wawe",
+  "see_marks_ranking": "Reba amanota & urutonde",
+  "ranking_from_all_students": "Reba uko uri mu rutonde rw'abanyeshuri bose",
+  "need_help_contact_us": "Ukeneye ubufasha? Twandikire",
+  "phone": "Telefone"
 }

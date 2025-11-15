@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { teacherApi } from '../../api/teacherApi'; // Use teacherApi instead
+import BottomNavbar from '../ui/BottomNavbar';
 
 const TeacherDashboard = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -81,7 +82,7 @@ const TeacherDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-blue-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-blue-100 py-8 px-4 sm:px-6 lg:px-8 pb-20 md:pb-8">
       <div className="max-w-7xl mx-auto">
         {/* Welcome Section */}
         <div className="text-center mb-10">
@@ -314,6 +315,7 @@ const TeacherDashboard = () => {
           )}
         </div>
       </div>
+      <BottomNavbar />
     </div>
   );
 };

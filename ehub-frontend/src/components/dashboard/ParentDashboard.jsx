@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { parentApi } from '../../api/parentApi';
 import { useTranslation } from 'react-i18next';
 import AddChildForm from './AddChildForm';
+import BottomNavbar from '../ui/BottomNavbar';
 
 const ParentDashboard = () => {
   const [children, setChildren] = useState([]);
@@ -112,37 +113,37 @@ const ParentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-yellow-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-yellow-50 p-4 sm:p-6 pb-20 md:pb-6">
       <div className="max-w-4xl mx-auto">
-        {/* Welcome Section */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-red-600 bg-clip-text text-transparent mb-3">
+        {/* Welcome Section - Reduced size and improved mobile responsiveness */}
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-red-600 bg-clip-text text-transparent mb-2">
             👋 {t('welcome_back_parent')}
           </h1>
-          <p className="text-gray-700 font-medium">
+          <p className="text-gray-700 text-sm sm:text-base">
             {t('support_your_child_learning_journey')}
           </p>
         </div>
 
-        {/* Child Selector */}
-        <div className="bg-white rounded-2xl shadow-lg p-5 mb-6">
+        {/* Child Selector - More mobile responsive */}
+        <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-900">{t('select_your_child')}</h2>
+            <h2 className="text-lg font-bold text-gray-900">{t('select_your_child')}</h2>
             <button 
               onClick={handleAddAnotherChild}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm"
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-xs"
             >
-              + Add Child
+              + {t('add_child')}
             </button>
           </div>
           
           {children.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {children.map((child) => (
                 <button
                   key={child.id}
                   onClick={() => handleChildSelect(child)}
-                  className={`px-4 py-2 rounded-full font-medium transition-all ${
+                  className={`px-3 py-1 rounded-full font-medium text-sm transition-all ${
                     selectedChild?.id === child.id
                       ? 'bg-primary-500 text-white shadow-md'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -154,7 +155,7 @@ const ParentDashboard = () => {
             </div>
           ) : (
             <div className="text-center py-4">
-              <p className="text-gray-600">No children added yet</p>
+              <p className="text-gray-600 text-sm">{t('no_children_added_yet')}</p>
             </div>
           )}
         </div>
@@ -188,33 +189,33 @@ const ParentDashboard = () => {
               </div>
             </div>
 
-            {/* Main Action Buttons */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
+            {/* Main Action Buttons - More mobile responsive */}
+            <div className="grid grid-cols-3 gap-2 mb-6">
               {/* Homework Button */}
               <Link 
                 to="/homework" 
-                className="bg-blue-500 rounded-2xl p-4 text-white text-center shadow hover:shadow-md transition-all"
+                className="bg-blue-500 rounded-xl p-3 text-white text-center shadow hover:shadow-md transition-all"
               >
-                <div className="text-3xl mb-2">📝</div>
-                <h3 className="text-sm font-bold">{t('view_homework')}</h3>
+                <div className="text-2xl mb-1">📝</div>
+                <h3 className="text-xs font-bold">{t('view_homework')}</h3>
               </Link>
 
               {/* Help Button */}
               <Link 
                 to="/homework/help"
-                className="bg-red-500 rounded-2xl p-4 text-white text-center shadow hover:shadow-md transition-all cursor-pointer"
+                className="bg-red-500 rounded-xl p-3 text-white text-center shadow hover:shadow-md transition-all cursor-pointer"
               >
-                <div className="text-3xl mb-2">🆘</div>
-                <h3 className="text-sm font-bold">{t('help_child')}</h3>
+                <div className="text-2xl mb-1">🆘</div>
+                <h3 className="text-xs font-bold">{t('help_child')}</h3>
               </Link>
 
               {/* Leaderboard Button */}
               <Link 
                 to="/leaderboard" 
-                className="bg-purple-500 rounded-2xl p-4 text-white text-center shadow hover:shadow-md transition-all"
+                className="bg-purple-500 rounded-xl p-3 text-white text-center shadow hover:shadow-md transition-all"
               >
-                <div className="text-3xl mb-2">🏆</div>
-                <h3 className="text-sm font-bold">{t('leaderboard')}</h3>
+                <div className="text-2xl mb-1">🏆</div>
+                <h3 className="text-xs font-bold">{t('leaderboard')}</h3>
               </Link>
             </div>
 
@@ -339,6 +340,7 @@ const ParentDashboard = () => {
           </div>
         )}
       </div>
+      <BottomNavbar />
     </div>
   );
 };

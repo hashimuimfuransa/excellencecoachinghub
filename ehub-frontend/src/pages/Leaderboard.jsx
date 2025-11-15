@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
+import BottomNavbar from '../components/ui/BottomNavbar';
 
 const Leaderboard = () => {
   const [students, setStudents] = useState([]);
@@ -42,7 +43,7 @@ const Leaderboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-red-50 to-pink-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-red-50 to-pink-50 p-4 sm:p-6 pb-20 md:pb-6">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-yellow-500 via-red-500 to-pink-500 bg-clip-text text-transparent mb-4 animate-pulse">
@@ -166,6 +167,7 @@ const Leaderboard = () => {
           </Link>
         </div>
       </div>
+      <BottomNavbar />
     </div>
   );
 };

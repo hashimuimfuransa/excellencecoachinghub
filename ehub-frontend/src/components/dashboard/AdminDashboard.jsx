@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../../api/adminApi';
+import BottomNavbar from '../ui/BottomNavbar';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -64,7 +65,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-educational-light p-6">
+    <div className="min-h-screen bg-educational-light p-6 pb-20 md:pb-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard ⚙️</h1>
@@ -235,6 +236,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+      <BottomNavbar />
     </div>
   );
 };

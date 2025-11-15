@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
 import { useTranslation } from 'react-i18next';
+import BottomNavbar from '../components/ui/BottomNavbar';
 
 const InteractiveHomework = () => {
   const { id } = useParams();
@@ -186,7 +187,7 @@ const InteractiveHomework = () => {
                    [];
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6 pb-20 md:pb-6">
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">{homework.title}</h1>
         <p className="text-gray-600 mb-4">{homework.description}</p>
@@ -367,6 +368,8 @@ const InteractiveHomework = () => {
           )}
         </div>
       )}
+      
+      <BottomNavbar />
     </div>
   );
 };

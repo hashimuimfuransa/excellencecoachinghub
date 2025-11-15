@@ -115,7 +115,7 @@
   "your_learning_preferences": "Your Learning Preferences",
   "hide": "Hide",
   "show": "Show",
-  "current_selection": "Current selection",
+  "current": "Current",
   "not_selected": "Not selected",
   "my_homework": "My Homework",
   "view_and_complete_assignments": "View & complete assignments",
@@ -158,5 +158,13 @@
   "work_private": "Your work will be kept private",
   "please_fill_required_fields": "Please fill in all required fields.",
   "failed_submit_help_request": "Failed to submit help request. Please try again.",
-  "file_upload_failed": "File upload failed. Please try again."
+  "file_upload_failed": "File upload failed. Please try again.",
+  "upload_your_homework": "Upload Your Homework",
+  "homework_from_school_help": "Homework from school that you need help with",
+  "do_homework": "Do Homework",
+  "homework_from_teacher": "Homework provided by your teacher",
+  "see_marks_ranking": "See Marks & Ranking",
+  "ranking_from_all_students": "See how you rank among all students",
+  "need_help_contact_us": "Need Help? Contact Us",
+  "phone": "Phone"
 }

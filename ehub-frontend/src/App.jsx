@@ -116,7 +116,7 @@ const AppContent = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex flex-col gap-0">
       <Navbar />
       {/* Strongly pull content upward to reduce space between navbar and login/register forms */}
-      <main className="flex-grow -mt-8 md:mt-0 pt-0">
+      <main className="flex-grow -mt-8 md:mt-0 pt-0 pb-16 md:pb-0">
         <Routes>
           <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Home />} />
           <Route path="/login" element={<Login />} />

@@ -32,9 +32,10 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    // Improved navbar styling for better mobile appearance
+    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex justify-between h-14 md:h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link to={isAuthenticated ? getDashboardLink() : "/"} className="flex-shrink-0 flex items-center">
@@ -43,16 +44,16 @@ const Navbar = () => {
                 alt="ecoach Logo" 
                 className="h-8 w-auto"
               />
-              <span className="ml-2 text-xl font-bold text-gray-900 hidden sm:block"></span>
+              <span className="ml-2 text-lg md:text-xl font-bold text-gray-900 hidden sm:block">eCoach</span>
             </Link>
           </div>
 
           {/* Navigation Links - Only show when authenticated */}
           {isAuthenticated && (
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
               <Link
                 to={getDashboardLink()}
-                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-gray-700 hover:text-primary-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 {t('dashboard')}
               </Link>
@@ -60,7 +61,7 @@ const Navbar = () => {
               {user?.role === 'student' && (
                 <Link
                   to="/homework"
-                  className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-gray-700 hover:text-primary-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   {t('homework')}
                 </Link>
@@ -69,7 +70,7 @@ const Navbar = () => {
               {user?.role === 'teacher' && (
                 <Link
                   to="/students"
-                  className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-gray-700 hover:text-primary-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   {t('students')}
                 </Link>
@@ -77,7 +78,7 @@ const Navbar = () => {
 
               <Link
                 to="/leaderboard"
-                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-gray-700 hover:text-primary-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 {t('leaderboard')}
               </Link>
@@ -87,7 +88,7 @@ const Navbar = () => {
           {/* Mobile menu button - Always show for all users */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 focus:outline-none"
+            className="md:hidden p-1.5 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {mobileMenuOpen ? (
@@ -99,14 +100,14 @@ const Navbar = () => {
           </button>
 
           {/* Right side items - Always show language selector */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
             {/* Always show language selector for all users */}
             <LanguageSelector />
             
             {isAuthenticated ? (
               <>
                 <NotificationBell />
-
+                
                 {/* User Menu */}
                 <div className="relative group">
                   <button className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none">
@@ -115,14 +116,14 @@ const Navbar = () => {
                         {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
                       </span>
                     </div>
-                    <span className="hidden md:block text-sm font-medium">
+                    <span className="hidden lg:block text-sm font-medium">
                       {user?.firstName} {user?.lastName}
                     </span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-
+                  
                   {/* Dropdown Menu */}
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     <Link
@@ -150,13 +151,13 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-gray-700 hover:text-primary-600 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
                 >
                   {t('sign_in')}
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-primary-600 text-white hover:bg-primary-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="bg-primary-600 text-white hover:bg-primary-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
                 >
                   {t('get_started')}
                 </Link>
@@ -166,10 +167,10 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile menu - Show language selector outside menu for all users */}
-      {(mobileMenuOpen || !isAuthenticated) && (
-        <div className="md:hidden border-t border-gray-200">
-          {/* Language selector always visible outside mobile menu */}
+      {/* Improved mobile menu with better styling and spacing */}
+      <div className={`md:hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'block' : 'hidden'}`}>
+        <div className="border-t border-gray-200 bg-white shadow-lg">
+          {/* Language selector */}
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">{t('language')}</span>
@@ -177,70 +178,94 @@ const Navbar = () => {
             </div>
           </div>
           
-          {mobileMenuOpen && (
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {isAuthenticated && (
-                <>
-                  <Link
-                    to={getDashboardLink()}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                  >
-                    {t('dashboard')}
-                  </Link>
+          <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-120px)] overflow-y-auto">
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to={getDashboardLink()}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                >
+                  {t('dashboard')}
+                </Link>
 
-                  {user?.role === 'student' && (
-                    <Link
-                      to="/homework"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                    >
-                      {t('homework')}
-                    </Link>
-                  )}
+                {user?.role === 'student' && (
+                  <Link
+                    to="/homework"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                  >
+                    {t('homework')}
+                  </Link>
+                )}
 
-                  {user?.role === 'teacher' && (
-                    <Link
-                      to="/students"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                    >
-                      {t('students')}
-                    </Link>
-                  )}
+                {user?.role === 'teacher' && (
+                  <Link
+                    to="/students"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                  >
+                    {t('students')}
+                  </Link>
+                )}
 
-                  <Link
-                    to="/leaderboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                  >
-                    {t('leaderboard')}
-                  </Link>
-                </>
-              )}
-              
-              {!isAuthenticated && (
-                <div className="pt-2 space-y-1">
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
-                  >
-                    {t('sign_in')}
-                  </Link>
-                  <Link
-                    to="/register"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:text-primary-700 hover:bg-gray-50"
-                  >
-                    {t('get_started')}
-                  </Link>
-                </div>
-              )}
-            </div>
-          )}
+                <Link
+                  to="/leaderboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                >
+                  {t('leaderboard')}
+                </Link>
+
+                <div className="border-t border-gray-200 my-1"></div>
+
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                >
+                  {t('profile_settings')}
+                </Link>
+
+                <Link
+                  to="/settings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                >
+                  {t('preferences')}
+                </Link>
+
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                >
+                  {t('sign_out')}
+                </button>
+              </>
+            ) : (
+              <div className="space-y-2 py-2">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2.5 rounded-md text-base font-medium text-center text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                >
+                  {t('sign_in')}
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2.5 rounded-md text-base font-medium text-center bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                >
+                  {t('get_started')}
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </nav>
   );
 };

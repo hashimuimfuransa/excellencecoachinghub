@@ -112,11 +112,11 @@ const AppContent = () => {
   const { isAuthenticated } = useAuth();
 
   return (
-    // Removed default spacing completely with gap-0 and negative margin
+    // Completely removed default spacing and added negative margin to pull content up
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex flex-col gap-0">
       <Navbar />
-      {/* Increased negative margin to pull content even closer to navbar on mobile */}
-      <main className="flex-grow -mt-2 md:mt-0">
+      {/* Strongly pull content upward to reduce space between navbar and login/register forms */}
+      <main className="flex-grow -mt-8 md:mt-0 pt-0">
         <Routes>
           <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Home />} />
           <Route path="/login" element={<Login />} />

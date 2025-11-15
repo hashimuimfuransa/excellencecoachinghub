@@ -192,12 +192,12 @@ const Sidebar = ({ isOpen, onClose }) => {
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-primary-700">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.name}
+                  {user?.firstName} {user?.lastName}
                 </p>
                 <p className="text-xs text-gray-500 capitalize">
                   {user?.role}

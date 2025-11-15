@@ -4,12 +4,11 @@ import { useAuth } from '../hooks/useAuth';
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    identifier: '', // Changed from email to identifier
-    firstName: '',
-    lastName: '',
+    identifier: '',
+    fullName: '', // Changed from firstName/lastName to fullName
     password: '',
     confirmPassword: '',
-    role: 'student', // default role
+    role: 'student',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,12 +75,22 @@ const Register = () => {
       return;
     }
 
+    // Split full name into first and last name for backend
+    const nameParts = formData.fullName.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    if (!firstName) {
+      setError('Please enter your full name');
+      return;
+    }
+
     setLoading(true);
 
     const result = await register({
-      identifier: formData.identifier, // Changed from email to identifier
-      firstName: formData.firstName,
-      lastName: formData.lastName,
+      identifier: formData.identifier,
+      firstName: firstName,
+      lastName: lastName,
       password: formData.password,
       role: formData.role,
     });
@@ -155,37 +164,20 @@ const Register = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
-                </label>
-                <input
-                  id="firstName"
-                  name="firstName"
-                  type="text"
-                  required
-                  className="input-field"
-                  placeholder="Enter your first name"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
-                </label>
-                <input
-                  id="lastName"
-                  name="lastName"
-                  type="text"
-                  required
-                  className="input-field"
-                  placeholder="Enter your last name"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                />
-              </div>
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name
+              </label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                required
+                className="input-field"
+                placeholder="Enter your full name"
+                value={formData.fullName}
+                onChange={handleChange}
+              />
             </div>
 
             <div>

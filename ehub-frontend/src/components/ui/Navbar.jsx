@@ -30,19 +30,16 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white shadow-lg border-b border-gray-200">
+    <nav className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* Logo and Brand */}
+          {/* Logo */}
           <div className="flex items-center">
-            <Link to={isAuthenticated ? getDashboardLink() : "/"} className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">e</span>
+            <Link to={getDashboardLink()} className="flex-shrink-0 flex items-center">
+              <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-lg">e</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-gray-900">ecoach</span>
-                <span className="text-xs text-primary-600 font-medium">by ECH</span>
-              </div>
+              <span className="ml-2 text-xl font-bold text-gray-900 hidden sm:block">ecoach</span>
             </Link>
           </div>
 
@@ -111,10 +108,12 @@ const Navbar = () => {
                   <button className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none">
                     <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-primary-700">
-                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
                       </span>
                     </div>
-                    <span className="hidden md:block text-sm font-medium">{user?.name}</span>
+                    <span className="hidden md:block text-sm font-medium">
+                      {user?.firstName} {user?.lastName}
+                    </span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>

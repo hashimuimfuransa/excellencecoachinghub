@@ -118,15 +118,12 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-yellow-50 p-4 sm:p-6 pb-24 md:pb-8">
       <div className="max-w-4xl mx-auto">
-        {/* Welcome Section - More attractive and prominent with animations */}
-        <div className="mb-10 text-center bg-white rounded-2xl shadow-lg p-6 animate-fade-in-up">
-          <div className="inline-block p-3 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 mb-4 animate-float">
-            <span className="text-4xl">👋</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+        {/* Welcome Section - Reduced size */}
+        <div className="mb-6 text-center">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
             {t('welcome_back')}, <span className="text-purple-600">{user?.firstName || user?.name || 'Student'}</span>!
           </h1>
-          <p className="text-gray-600 text-base">
+          <p className="text-gray-600 text-sm">
             {t('lets_get_your_homework_done_today')}
           </p>
         </div>

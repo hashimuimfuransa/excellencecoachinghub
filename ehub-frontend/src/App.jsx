@@ -253,7 +253,6 @@ const AppContent = () => {
           />
         </Routes>
       </main>
-      <Footer />
     </div>
   );
 };

@@ -65,7 +65,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-educational-light p-6 pb-20 md:pb-6">
+    <div className="min-h-screen bg-educational-light p-6 pb-20 md:pb-6 pt-16">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard ⚙️</h1>
@@ -200,7 +200,7 @@ const AdminDashboard = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Parents</span>
-                <span className="text-sm font-medium">+8</span>
+                <span className="text-sm font-medium">+5</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div className="bg-purple-500 h-2 rounded-full" style={{ width: '35%' }}></div>
@@ -209,14 +209,14 @@ const AdminDashboard = () => {
           </div>
 
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Content Uploads (Last 7 Days)</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Content Overview</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="text-lg">📹</span>
-                  <span className="text-sm">Videos</span>
+                  <span className="text-lg">📚</span>
+                  <span className="text-sm">Lessons</span>
                 </div>
-                <span className="font-medium">12</span>
+                <span className="font-medium">42</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">

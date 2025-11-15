@@ -72,7 +72,7 @@ const HomeworkHelpStudent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4 pb-20 md:pb-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4 pb-20 md:pb-4 pt-16">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <button 

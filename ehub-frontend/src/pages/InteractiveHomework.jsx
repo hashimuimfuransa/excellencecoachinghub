@@ -187,7 +187,7 @@ const InteractiveHomework = () => {
                    [];
 
   return (
-    <div className="max-w-4xl mx-auto p-6 pb-20 md:pb-6">
+    <div className="max-w-4xl mx-auto p-6 pb-20 md:pb-6 pt-16">
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">{homework.title}</h1>
         <p className="text-gray-600 mb-4">{homework.description}</p>
@@ -199,153 +199,238 @@ const InteractiveHomework = () => {
             <span className="mx-2">•</span>
             <span>{t('language')}: {homework.language?.charAt(0).toUpperCase() + homework.language?.slice(1)}</span>
           </div>
-          {score && (
-            <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-              {t('score')}: {score.earned}/{score.total} ({score.percentage}%)
-            </div>
-          )}
+          <div className="text-sm font-medium text-gray-700">
+            {homework.maxPoints} {t('points')}
+          </div>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('questions')}</h2>
-        {questions && questions.length > 0 ? (
-          questions.map((element, index) => (
-            <div key={index} className="border border-gray-200 rounded-lg p-4 mb-6">
-              <h3 className="text-lg font-medium text-gray-800 mb-3">{element.question}</h3>
-              
-              {element.type === 'multiple-choice' && (
-                <div className="space-y-2">
-                  {element.options?.map((option, optIndex) => (
-                    <label key={optIndex} className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="radio"
-                        name={`quiz-${index}`}
-                        value={option}
-                        checked={answers[index] === option}
-                        onChange={(e) => handleAnswerChange(index, e.target.value)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="ml-3 text-gray-700">{option}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-              
-              {element.type === 'matching' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">{t('left_column')}</h4>
-                    <div className="space-y-3">
-                      {element.leftItems?.map((item, itemIndex) => (
-                        <div key={itemIndex} className="p-3 bg-blue-50 rounded-lg">
-                          {/* Display image if available */}
-                          {element.leftItemImages?.[itemIndex] && (
-                            <div className="mb-2">
-                              <img 
-                                src={element.leftItemImages[itemIndex]} 
-                                alt={`${t('item')} ${String.fromCharCode(65 + itemIndex)}`}
-                                className="max-w-full h-32 object-contain rounded"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          )}
-                          <span className="font-medium">{String.fromCharCode(65 + itemIndex)}. {item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">{t('right_column')}</h4>
-                    <div className="space-y-3">
-                      {element.rightItems?.map((item, itemIndex) => (
-                        <div key={itemIndex} className="p-3 bg-green-50 rounded-lg">
-                          {/* Display image if available */}
-                          {element.rightItemImages?.[itemIndex] && (
-                            <div className="mb-2">
-                              <img 
-                                src={element.rightItemImages[itemIndex]} 
-                                alt={`${t('option')} ${itemIndex + 1}`}
-                                className="max-w-full h-32 object-contain rounded"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          )}
-                          <span className="font-medium">{itemIndex + 1}. {item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <h4 className="font-medium text-gray-700 mb-2">{t('make_your_matches')}</h4>
-                    <div className="space-y-3">
-                      {element.leftItems?.map((item, leftIndex) => (
-                        <div key={leftIndex} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                          {/* Display image if available */}
-                          {element.leftItemImages?.[leftIndex] && (
-                            <div className="mr-3">
-                              <img 
-                                src={element.leftItemImages[leftIndex]} 
-                                alt={`${t('item')} ${String.fromCharCode(65 + leftIndex)}`}
-                                className="h-12 w-12 object-contain rounded"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          )}
-                          <span className="font-medium mr-4">{String.fromCharCode(65 + leftIndex)}. {item}</span>
-                          <span className="mx-2 text-gray-500">{t('matches')}</span>
-                          <select
-                            value={answers[index]?.matches?.[`left-${leftIndex}`] || ''}
-                            onChange={(e) => {
-                              const newAnswers = { ...answers };
-                              if (!newAnswers[index]) {
-                                newAnswers[index] = { matches: {} };
-                              } else if (!newAnswers[index].matches) {
-                                newAnswers[index] = { ...newAnswers[index], matches: {} };
-                              }
-                              newAnswers[index].matches[`left-${leftIndex}`] = e.target.value;
-                              setAnswers(newAnswers);
-                            }}
-                            className="ml-2 flex-grow px-3 py-2 border border-gray-300 rounded-lg"
-                          >
-                            <option value="">{t('select_match')}</option>
-                            {element.rightItems?.map((rightItem, rightIndex) => (
-                              <option key={rightIndex} value={`right-${rightIndex}`}>
-                                {rightIndex + 1}. {rightItem}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {element.type === 'short-answer' && (
-                <textarea
-                  value={answers[index] || ''}
-                  onChange={(e) => handleAnswerChange(index, e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  rows="4"
-                  placeholder={t('enter_your_answer')}
-                />
-              )}
-              
-              <div className="mt-3 text-sm text-gray-500">
-                {t('points')}: {element.points}
-              </div>
-            </div>
-          ))
+        {(!questions || questions.length === 0) ? (
+          <div className="text-center py-8">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">{t('no_questions_available')}</h3>
+            <p className="text-gray-600">{t('try_adjusting_filters')}</p>
+          </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            {t('no_questions_available')}
+          <div className="space-y-8">
+            {questions.map((element, index) => (
+              <div key={index} className="border-b border-gray-200 pb-6 last:border-b-0 last:pb-0">
+                {element.type === 'multiple-choice' && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-3">
+                      {index + 1}. {element.question}
+                    </h3>
+                    <div className="space-y-2">
+                      {element.options?.map((option, optionIndex) => (
+                        <label key={optionIndex} className="flex items-center">
+                          <input
+                            type="radio"
+                            name={`question-${index}`}
+                            value={option}
+                            checked={answers[index] === option}
+                            onChange={() => handleAnswerChange(index, option)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="ml-3 text-gray-700">{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {element.type === 'short-answer' && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-880 mb-3">
+                      {index + 1}. {element.question}
+                    </h3>
+                    <textarea
+                      value={answers[index] || ''}
+                      onChange={(e) => handleAnswerChange(index, e.target.value)}
+                      placeholder={t('enter_your_answer')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      rows="3"
+                    />
+                  </div>
+                )}
+
+                {element.type === 'matching' && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-3">
+                      {index + 1}. {t('make_your_matches')}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-medium text-gray-700 mb-2">{t('left_column')}</h4>
+                        <div className="space-y-2">
+                          {element.leftItems?.map((item, leftIndex) => (
+                            <div key={leftIndex} className="p-2 bg-gray-50 rounded">
+                              <p>{item}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-700 mb-2">{t('right_column')}</h4>
+                        <div className="space-y-2">
+                          {element.rightItems?.map((item, rightIndex) => (
+                            <div key={rightIndex} className="p-2 bg-gray-50 rounded">
+                              <p>{item}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <h4 className="font-medium text-gray-700 mb-2">{t('matches')}</h4>
+                      <div className="space-y-2">
+                        {element.leftItems?.map((leftItem, leftIndex) => (
+                          <div key={leftIndex} className="flex items-center">
+                            <span className="w-1/3 text-gray-700">{leftItem}</span>
+                            <span className="mx-2 text-gray-500">→</span>
+                            <select
+                              value={answers[index]?.matches?.[`left-${leftIndex}`] || ''}
+                              onChange={(e) => {
+                                const currentMatches = answers[index]?.matches || {};
+                                handleAnswerChange(index, {
+                                  ...answers[index],
+                                  matches: {
+                                    ...currentMatches,
+                                    [`left-${leftIndex}`]: e.target.value
+                                  }
+                                });
+                              }}
+                              className="w-1/2 px-2 py-1 border border-gray-300 rounded"
+                            >
+                              <option value="">{t('select_match')}</option>
+                              {element.rightItems?.map((rightItem, rightIndex) => (
+                                <option key={rightIndex} value={`right-${rightIndex}`}>
+                                  {rightItem}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {element.type === 'drag-and-drop' && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-3">
+                      {index + 1}. {element.question}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-medium text-gray-700 mb-2">{t('items')}</h4>
+                        <div className="space-y-2">
+                          {element.items?.map((item, itemIndex) => (
+                            <div key={itemIndex} className="p-2 bg-gray-50 rounded cursor-move">
+                              <p>{item}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-700 mb-2">{t('options')}</h4>
+                        <div className="space-y-2">
+                          {element.options?.map((option, optionIndex) => (
+                            <div key={optionIndex} className="p-2 bg-gray-50 rounded">
+                              <p>{option}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {element.type === 'fill-in-the-blank' && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-3">
+                      {index + 1}. {element.question}
+                    </h3>
+                    <div className="space-y-2">
+                      {element.blanks?.map((blank, blankIndex) => (
+                        <div key={blankIndex} className="flex items-center">
+                          <span className="mr-2">{blank.before}</span>
+                          <input
+                            type="text"
+                            value={answers[index]?.blanks?.[blankIndex] || ''}
+                            onChange={(e) => {
+                              const currentBlanks = answers[index]?.blanks || {};
+                              handleAnswerChange(index, {
+                                ...answers[index],
+                                blanks: {
+                                  ...currentBlanks,
+                                  [blankIndex]: e.target.value
+                                }
+                              });
+                            }}
+                            className="px-2 py-1 border border-gray-300 rounded w-32"
+                          />
+                          <span className="ml-2">{blank.after}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {element.type === 'true-false' && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-3">
+                      {index + 1}. {element.question}
+                    </h3>
+                    <div className="space-y-2">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name={`question-${index}`}
+                          value="true"
+                          checked={answers[index] === 'true'}
+                          onChange={() => handleAnswerChange(index, 'true')}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-gray-700">{t('yes')}</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name={`question-${index}`}
+                          value="false"
+                          checked={answers[index] === 'false'}
+                          onChange={() => handleAnswerChange(index, 'false')}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-gray-700">{t('no')}</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {element.type === 'image' && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-3">
+                      {index + 1}. {element.caption}
+                    </h3>
+                    <img 
+                      src={element.url} 
+                      alt={element.alt || element.caption} 
+                      className="max-w-full h-auto rounded-lg"
+                    />
+                  </div>
+                )}
+
+                {element.type === 'text' && (
+                  <div>
+                    <div 
+                      className="prose max-w-none"
+                      dangerouslySetInnerHTML={{ __html: element.content }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

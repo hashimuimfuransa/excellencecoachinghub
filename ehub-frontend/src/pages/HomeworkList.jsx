@@ -105,7 +105,7 @@ const HomeworkList = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 pb-20 md:pb-4">
+    <div className="max-w-6xl mx-auto p-4 pb-20 md:pb-4 pt-16">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-gray-800">{t('homework')}</h1>
         <button

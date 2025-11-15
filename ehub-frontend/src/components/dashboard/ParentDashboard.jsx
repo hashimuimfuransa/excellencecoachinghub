@@ -113,7 +113,7 @@ const ParentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-yellow-50 p-4 sm:p-6 pb-20 md:pb-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-yellow-50 p-4 sm:p-6 pb-20 md:pb-6 pt-16">
       <div className="max-w-4xl mx-auto">
         {/* Welcome Section - Reduced size and improved mobile responsiveness */}
         <div className="mb-6 text-center">
@@ -200,130 +200,99 @@ const ParentDashboard = () => {
                 <h3 className="text-xs font-bold">{t('view_homework')}</h3>
               </Link>
 
-              {/* Help Button */}
-              <Link 
-                to="/homework/help"
-                className="bg-red-500 rounded-xl p-3 text-white text-center shadow hover:shadow-md transition-all cursor-pointer"
-              >
-                <div className="text-2xl mb-1">🆘</div>
-                <h3 className="text-xs font-bold">{t('help_child')}</h3>
-              </Link>
-
               {/* Leaderboard Button */}
               <Link 
                 to="/leaderboard" 
                 className="bg-purple-500 rounded-xl p-3 text-white text-center shadow hover:shadow-md transition-all"
               >
                 <div className="text-2xl mb-1">🏆</div>
-                <h3 className="text-xs font-bold">{t('leaderboard')}</h3>
+                <h3 className="text-xs font-bold">{t('view_leaderboard')}</h3>
               </Link>
+
+              {/* Help Button */}
+              <button 
+                onClick={() => navigate('/homework/help')}
+                className="bg-red-500 rounded-xl p-3 text-white text-center shadow hover:shadow-md transition-all"
+              >
+                <div className="text-2xl mb-1">🆘</div>
+                <h3 className="text-xs font-bold">{t('get_help')}</h3>
+              </button>
             </div>
 
-            {/* Child's Recent Homework */}
-            {childHomework.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
-                <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-lg font-bold text-gray-900">
-                    📝 {selectedChild.firstName || selectedChild.name}{t('s_recent_homework')}
-                  </h2>
-                  <button 
-                    onClick={() => navigate('/homework')}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    {t('see_all')} →
-                  </button>
-                </div>
-                <div className="space-y-2">
+            {/* Child's Homework */}
+            <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-900">{t('your_child_homework')}</h2>
+                <Link to="/homework" className="text-primary-600 hover:text-primary-800 text-sm font-medium">
+                  {t('view_all')}
+                </Link>
+              </div>
+              
+              {childHomework.length > 0 ? (
+                <div className="space-y-3">
                   {childHomework.slice(0, 3).map((hw) => (
-                    <div 
-                      key={hw.id} 
-                      className="bg-blue-50 border-l-2 border-blue-500 rounded-lg p-3"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex-1">
-                          <h4 className="font-bold text-gray-900 text-sm truncate">{hw.title}</h4>
-                          <p className="text-xs text-gray-600">
-                            {t('due')}: {new Date(hw.dueDate).toLocaleDateString()}
-                          </p>
+                    <div key={hw._id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{hw.title}</h3>
+                          <p className="text-gray-600 text-sm">{hw.subject}</p>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           hw.status === 'completed' 
                             ? 'bg-green-100 text-green-800' 
                             : hw.status === 'pending' 
                               ? 'bg-yellow-100 text-yellow-800' 
-                              : 'bg-gray-100 text-gray-800'
+                              : 'bg-blue-100 text-blue-800'
                         }`}>
-                          {hw.status}
+                          {hw.status === 'completed' ? t('completed') : 
+                           hw.status === 'pending' ? t('pending') : t('assigned')}
                         </span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Child's Help Requests */}
-            <div className="bg-white rounded-2xl shadow-lg p-4">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-bold text-gray-900">
-                  🤝 {selectedChild.firstName || selectedChild.name}{t('s_help_requests')}
-                </h2>
-                <Link
-                  to="/homework/help"
-                  className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-full text-xs"
-                >
-                  {t('view_all')}
-                </Link>
-              </div>
-
-              {childProgress.helpRequests && childProgress.helpRequests.length > 0 ? (
-                <div className="space-y-2">
-                  {childProgress.helpRequests.slice(0, 3).map((help) => (
-                    <div 
-                      key={help.id} 
-                      className="bg-yellow-50 border-l-2 border-yellow-500 rounded-lg p-3"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-sm">
-                              {help.teacherName ? help.teacherName.charAt(0).toUpperCase() : '👩‍🏫'}
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-gray-900 text-sm">{help.teacherName || t('teacher')}</h4>
-                              <p className="text-xs text-gray-600">{help.subject || t('general')}</p>
-                            </div>
-                          </div>
-                          <p className="text-gray-700 text-xs truncate">{help.description}</p>
-                        </div>
-                        <div className="text-right">
-                          {help.file && (
-                            <a
-                              href={help.file}
-                              download
-                              className="inline-flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded-full text-xs"
-                            >
-                              📥
-                            </a>
-                          )}
-                        </div>
+                      <div className="mt-2 flex justify-between items-center">
+                        <p className="text-gray-500 text-xs">
+                          {t('due')}: {new Date(hw.dueDate).toLocaleDateString()}
+                        </p>
+                        <button 
+                          onClick={() => navigate(`/homework/${hw._id}`)}
+                          className="bg-primary-500 hover:bg-primary-600 text-white font-bold py-1 px-3 rounded-full text-xs transition-colors"
+                        >
+                          {hw.status === 'completed' ? t('review') : t('start')}
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <div className="text-3xl mb-2">🤝</div>
-                  <h3 className="font-bold text-gray-900 mb-1">{t('no_help_requests_yet')}</h3>
-                  <p className="text-gray-600 text-xs mb-3">{t('child_hasnt_requested_help')}</p>
-                  <button
+                <div className="text-center py-6">
+                  <div className="text-4xl mb-2">📚</div>
+                  <p className="text-gray-600 text-sm">{t('no_homework_assigned')}</p>
+                  <button 
                     onClick={() => navigate('/homework/help')}
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full text-sm"
+                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full text-sm mt-3"
                   >
                     {t('request_help_for_child')}
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-white rounded-2xl shadow-lg p-4">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{t('quick_actions')}</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  onClick={() => navigate('/homework/help')}
+                  className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full text-sm"
+                >
+                  {t('request_help_for_child')}
+                </button>
+                <button 
+                  onClick={() => window.open('mailto:support@excellencecoachinghub.com', '_blank')}
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full text-sm"
+                >
+                  {t('contact_teacher')}
+                </button>
+              </div>
             </div>
           </>
         ) : children.length > 0 ? (

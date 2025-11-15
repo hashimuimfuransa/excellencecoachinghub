@@ -18,8 +18,20 @@ const StudentHomeworkCreator = () => {
     setCreating(true);
     
     try {
+      // Prepare homework data based on type
+      const homeworkData = {
+        title,
+        description,
+        subject,
+        type: homeworkType,
+        drawingData: homeworkType === 'drawing' ? drawingData : undefined,
+        mathProblem: homeworkType === 'math' ? mathProblem : undefined,
+        scienceExperiment: homeworkType === 'science' ? scienceExperiment : undefined
+      };
+      
       // In a real app, you would submit the homework to the backend
       // For now, we'll simulate the submission
+      console.log('Submitting homework:', homeworkData);
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       setSuccess(true);

@@ -259,9 +259,7 @@ const UserManagement: React.FC = () => {
       errors.firstName = 'First name cannot exceed 50 characters';
     }
 
-    if (!createUserForm.lastName.trim()) {
-      errors.lastName = 'Last name is required';
-    } else if (createUserForm.lastName.trim().length > 50) {
+    if (createUserForm.lastName.trim().length > 50) {
       errors.lastName = 'Last name cannot exceed 50 characters';
     }
 

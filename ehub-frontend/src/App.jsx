@@ -9,10 +9,10 @@ import Navbar from './components/ui/Navbar';
 import './i18n';
 
 // Import pages
-import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import TestLanguagePage from './pages/TestLanguagePage';
+import Home from './pages/Home';
 
 import SelectLevel from './pages/SelectLevel';
 import Homework from './pages/Homework';
@@ -116,7 +116,7 @@ const AppContent = () => {
       <Navbar />
       <main className="flex-grow">
         <Routes>
-          <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/test-language" element={<TestLanguagePage />} />

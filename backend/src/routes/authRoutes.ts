@@ -71,18 +71,8 @@ const registerValidation = [
   body('lastName')
     .optional()
     .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters')
-    .custom((value, { req }) => {
-      // If firstName is provided, lastName is required, or if name is not provided, both are required
-      if (req.body.firstName && !value) {
-        throw new Error('Last name is required when first name is provided');
-      }
-      if (!req.body.name && !req.body.firstName) {
-        throw new Error('Either name or firstName/lastName must be provided');
-      }
-      return true;
-    }),
+    .isLength({ min: 0, max: 50 })
+    .withMessage('Last name must be between 0 and 50 characters'),
   body('role')
     .optional()
     .isIn(['admin', 'teacher', 'student', 'professional', 'employer', 'parent'])
@@ -114,9 +104,24 @@ const loginValidation = [
 
 const forgotPasswordValidation = [
   body('email')
+    .optional() // Make email optional
     .isEmail()
     .normalizeEmail()
-    .withMessage('Please provide a valid email')
+    .withMessage('Please provide a valid email'),
+  body('identifier')
+    .optional() // Add identifier field as alternative
+    .custom((value: string) => {
+      // Check if it's a valid email or phone number
+      if (value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
+        
+        if (!emailRegex.test(value) && !phoneRegex.test(value)) {
+          throw new Error('Please provide a valid email or phone number');
+        }
+      }
+      return true;
+    })
 ];
 
 const resetPasswordValidation = [

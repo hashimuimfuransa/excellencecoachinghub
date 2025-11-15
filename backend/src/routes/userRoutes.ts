@@ -129,8 +129,6 @@ const updateUserValidation = [
   body('lastName')
     .optional()
     .trim()
-    .notEmpty()
-    .withMessage('Last name cannot be empty')
     .isLength({ max: 50 })
     .withMessage('Last name cannot exceed 50 characters'),
   body('email')
@@ -172,8 +170,6 @@ const updateProfileValidation = [
   body('lastName')
     .optional()
     .trim()
-    .notEmpty()
-    .withMessage('Last name cannot be empty')
     .isLength({ max: 50 })
     .withMessage('Last name cannot exceed 50 characters'),
   body('email')

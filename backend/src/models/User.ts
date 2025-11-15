@@ -193,7 +193,7 @@ export interface IUserModel extends Model<IUserDocument> {
 const userSchema = new Schema<IUserDocument>({
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: false, // Make email optional
     unique: true,
     lowercase: true,
     trim: true,

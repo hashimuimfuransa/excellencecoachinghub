@@ -243,10 +243,10 @@ export const authService = {
   },
 
   // Forgot password - use backend + EmailJS for real emails
-  forgotPassword: async (email: string): Promise<void> => {
+  forgotPassword: async (identifier: string): Promise<void> => {
     try {
       // First, call the backend to generate the reset token
-      const response = await apiService.post('/auth/forgot-password', { email }) as ForgotPasswordResponse;
+      const response = await apiService.post('/auth/forgot-password', { identifier }) as ForgotPasswordResponse;
 
       if (!response.success) {
         throw new Error(response.message || 'Failed to send password reset email');

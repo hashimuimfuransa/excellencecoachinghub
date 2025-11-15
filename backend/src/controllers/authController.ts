@@ -402,22 +402,34 @@ export const testEmail = async (req: Request, res: Response, next: NextFunction)
 // @access  Public
 export const forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email } = req.body;
+    const { email, identifier } = req.body;
+    const searchIdentifier = identifier || email;
 
-    if (!email) {
+    if (!searchIdentifier) {
       res.status(400).json({
         success: false,
-        error: 'Email is required'
+        error: 'Email or phone number is required'
       });
       return;
     }
 
-    const user = await User.findByEmail(email);
+    // Find user by email or phone number
+    let user;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (emailRegex.test(searchIdentifier)) {
+      // It's an email
+      user = await User.findByEmail(searchIdentifier);
+    } else {
+      // It's a phone number
+      user = await User.findOne({ phone: searchIdentifier });
+    }
 
     if (!user) {
-      res.status(404).json({
-        success: false,
-        error: 'No user found with this email address'
+      // Don't reveal whether user exists or not for security reasons
+      res.status(200).json({
+        success: true,
+        message: 'If an account exists with that email or phone number, you will receive password reset instructions.'
       });
       return;
     }

@@ -22,16 +22,25 @@ import { authService } from '../../services/authService';
 import isValid from 'date-fns/isValid';
 
 // Validation rules
-const emailValidation = {
-  required: 'Email is required',
-  pattern: {
-    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-    message: 'Please enter a valid email address'
+const identifierValidation = {
+  required: 'Email or phone number is required',
+  validate: (value: string) => {
+    if (!value) return 'Email or phone number is required';
+    
+    // Check if it's a valid email
+    const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+    if (emailRegex.test(value)) return true;
+    
+    // Check if it's a valid phone number (10+ digits, allowing spaces, dashes, parentheses)
+    const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
+    if (phoneRegex.test(value)) return true;
+    
+    return 'Please enter a valid email or phone number';
   }
 };
 
 interface ForgotPasswordForm {
-  email: string;
+  identifier: string;
 }
 
 const ForgotPasswordPage: React.FC = () => {
@@ -42,15 +51,15 @@ const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState<ForgotPasswordForm>({
-    email: ''
+    identifier: ''
   });
   
   const [errors, setErrors] = useState<Partial<ForgotPasswordForm>>({});
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ email: event.target.value });
+    setFormData({ identifier: event.target.value });
     // Clear error when user starts typing
-    if (errors.email) {
+    if (errors.identifier) {
       setErrors({});
     }
   };
@@ -58,9 +67,17 @@ const ForgotPasswordPage: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: Partial<ForgotPasswordForm> = {};
     
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+    if (!formData.identifier.trim()) {
+      newErrors.identifier = 'Email or phone number is required';
+    } else {
+      // Check if it's a valid email
+      const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+      // Check if it's a valid phone number (10+ digits, allowing spaces, dashes, parentheses)
+      const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
+      
+      if (!emailRegex.test(formData.identifier) && !phoneRegex.test(formData.identifier)) {
+        newErrors.identifier = 'Please enter a valid email or phone number';
+      }
     }
     
     setErrors(newErrors);
@@ -78,7 +95,7 @@ const ForgotPasswordPage: React.FC = () => {
     setError(null);
 
     try {
-      await authService.forgotPassword(formData.email);
+      await authService.forgotPassword(formData.identifier);
       setSuccess(true);
       toast.success('Password reset email sent! Please check your inbox and spam folder.');
     } catch (error: any) {
@@ -205,15 +222,15 @@ const ForgotPasswordPage: React.FC = () => {
               margin="normal"
               required
               fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
+              id="identifier"
+              label="Email or Phone Number"
+              name="identifier"
               autoComplete="email"
               autoFocus
-              value={formData.email}
+              value={formData.identifier}
               onChange={handleInputChange}
-              error={!!errors.email}
-              helperText={errors.email}
+              error={!!errors.identifier}
+              helperText={errors.identifier}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">

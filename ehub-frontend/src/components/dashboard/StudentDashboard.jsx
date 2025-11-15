@@ -116,9 +116,9 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-yellow-50 p-4 sm:p-6 pb-24 md:pb-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-yellow-50 p-4 sm:p-6 pb-24 md:pb-8 pt-16">
       <div className="max-w-4xl mx-auto">
-        {/* Welcome Section - Reduced size */}
+        {/* Welcome Section - Reduced size with proper spacing from navbar */}
         <div className="mb-6 text-center">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
             {t('welcome_back')}, <span className="text-purple-600">{user?.firstName || user?.name || 'Student'}</span>!

@@ -82,11 +82,11 @@ const TeacherDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-blue-100 py-8 px-4 sm:px-6 lg:px-8 pb-20 md:pb-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-blue-100 py-8 px-4 sm:px-6 lg:px-8 pb-20 md:pb-8 pt-16">
       <div className="max-w-7xl mx-auto">
         {/* Welcome Section */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Teacher Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Teacher Dashboard</h1>
           <p className="text-xl text-gray-600">Welcome back! Here&#39;s what&#39;s happening with your students today.</p>
         </div>
 

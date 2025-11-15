@@ -36,10 +36,12 @@ const Navbar = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link to={getDashboardLink()} className="flex-shrink-0 flex items-center">
-              <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">e</span>
-              </div>
-              <span className="ml-2 text-xl font-bold text-gray-900 hidden sm:block">ecoach</span>
+              <img 
+                src="/logo.webp" 
+                alt="ecoach Logo" 
+                className="h-8 w-auto"
+              />
+              <span className="ml-2 text-xl font-bold text-gray-900 hidden sm:block"></span>
             </Link>
           </div>
 

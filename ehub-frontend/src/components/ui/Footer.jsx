@@ -8,9 +8,11 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">e</span>
-              </div>
+              <img 
+                src="/logo.webp" 
+                alt="ecoach Logo" 
+                className="h-8 w-auto"
+              />
               <div className="flex flex-col">
                 <span className="text-xl font-bold">ecoach</span>
                 <span className="text-xs text-primary-400">by Excellence Coaching Hub (ECH)</span>

@@ -148,9 +148,11 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* Header */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">e</span>
-              </div>
+              <img 
+                src="/logo.webp" 
+                alt="ecoach Logo" 
+                className="h-8 w-auto"
+              />
               <span className="text-xl font-bold text-gray-900">ecoach</span>
             </div>
             <button

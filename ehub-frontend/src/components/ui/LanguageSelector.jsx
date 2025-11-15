@@ -46,7 +46,7 @@ const LanguageSelector = () => {
         </span>
         <span className="hidden sm:block">{currentLanguage?.label}</span>
         {/* Always show abbreviation for better mobile visibility */}
-        <span className="sm:hidden font-bold">{currentLanguage?.value.toUpperCase()}</span>
+        <span className="sm:hidden font-bold">{selectedLanguage?.toUpperCase()}</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
@@ -56,8 +56,8 @@ const LanguageSelector = () => {
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200">
           {/* Header to clearly indicate purpose */}
           <div className="px-4 py-2 text-xs font-semibold text-gray-500 border-b border-gray-100">
-            {currentLanguage?.value === 'rw' ? 'Hitamo Ururimi' : 
-             currentLanguage?.value === 'fr' ? 'Choisir la langue' : 'Select Language'}
+            {selectedLanguage === 'rw' ? 'Hitamo Ururimi' : 
+             selectedLanguage === 'fr' ? 'Choisir la langue' : 'Select Language'}
           </div>
           <div className="py-1">
             {languageOptions.map((language) => (

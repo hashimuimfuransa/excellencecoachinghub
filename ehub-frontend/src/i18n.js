@@ -28,10 +28,6 @@ i18n
     fallbackLng: 'en', // fallback language if translation is missing
     interpolation: {
       escapeValue: false // react already safes from xss
-    },
-    detection: {
-      // cache the language in localStorage
-      caches: ['localStorage']
     }
   });
 

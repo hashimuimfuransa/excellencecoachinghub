@@ -793,6 +793,8 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
           lastLogin: user.lastLogin,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
+          level: user.level,
+          language: user.language,
           // Include any additional profile fields
           ...updateData
         }

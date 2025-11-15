@@ -275,7 +275,7 @@ const StudentDashboard: React.FC = () => {
             mb: { xs: 1, sm: 2 }
           }}
         >
-          Welcome back, {user?.firstName}!
+          Welcome, {user?.firstName}!
         </Typography>
         <Typography 
           variant={isMobile ? "body2" : "body1"} 
@@ -285,7 +285,7 @@ const StudentDashboard: React.FC = () => {
             mx: { xs: 'auto', sm: 0 }
           }}
         >
-          Continue your learning journey and achieve your goals.
+          Continue learning and achieve your goals.
         </Typography>
       </Box>
 
@@ -320,7 +320,7 @@ const StudentDashboard: React.FC = () => {
                 lineHeight: 1.2
               }}
             >
-              Enrolled Courses
+              Courses
             </Typography>
           </StatsCard>
         </Grid>
@@ -354,7 +354,7 @@ const StudentDashboard: React.FC = () => {
                 lineHeight: 1.2
               }}
             >
-              Pending Assessments
+              Assessments
             </Typography>
           </StatsCard>
         </Grid>
@@ -388,7 +388,7 @@ const StudentDashboard: React.FC = () => {
                 lineHeight: 1.2
               }}
             >
-              Enhanced Tests
+              Tests
             </Typography>
           </StatsCard>
         </Grid>
@@ -422,7 +422,7 @@ const StudentDashboard: React.FC = () => {
                 lineHeight: 1.2
               }}
             >
-              Avg Progress
+              Progress
             </Typography>
           </StatsCard>
         </Grid>
@@ -448,7 +448,7 @@ const StudentDashboard: React.FC = () => {
                     color: 'primary.main'
                   }}
                 >
-                  My Courses
+                  Courses
                 </Typography>
                 <ResponsiveButton 
                   size={buttonSize}
@@ -474,7 +474,7 @@ const StudentDashboard: React.FC = () => {
                 >
                   <School sx={{ fontSize: { xs: 36, sm: 48 }, mb: 2, opacity: 0.5 }} />
                   <Typography variant={isMobile ? "subtitle1" : "h6"} gutterBottom>
-                    No Enrolled Courses
+                    No Courses
                   </Typography>
                   <Typography 
                     variant="body2" 
@@ -482,7 +482,7 @@ const StudentDashboard: React.FC = () => {
                     mb={2}
                     sx={{ maxWidth: '80%' }}
                   >
-                    Start your learning journey by enrolling in a course.
+                    Enroll in a course to get started.
                   </Typography>
                   <ResponsiveButton
                     variant="contained"
@@ -490,7 +490,7 @@ const StudentDashboard: React.FC = () => {
                     onClick={() => navigate('/courses')}
                     size={buttonSize}
                   >
-                    Browse Courses
+                    Browse
                   </ResponsiveButton>
                 </Box>
               ) : (

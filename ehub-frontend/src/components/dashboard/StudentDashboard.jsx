@@ -107,7 +107,7 @@ const StudentDashboard = () => {
             <div className="w-24 h-24 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-bounce flex items-center justify-center mx-auto mb-4">
               <span className="text-4xl">📚</span>
             </div>
-            <div className="animate-pulse text-xl font-bold text-gray-700">{t('loading_your_dashboard')}</div>
+            <div className="animate-pulse text-xl font-bold text-gray-700">Loading...</div>
           </div>
         </div>
       </div>
@@ -117,23 +117,20 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-yellow-50 p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Welcome Section with 3D-like effect */}
-        <div className="mb-8 text-center transform transition-transform hover:scale-105">
-          <div className="relative inline-block">
-            <div className="absolute -inset-2 bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 rounded-lg blur opacity-75 animate-pulse"></div>
-            <h1 className="relative text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent mb-3 animate-bounce">
-              👋 {t('welcome_back')}
-            </h1>
-          </div>
-          <p className="text-base sm:text-lg text-gray-700 font-medium mt-4 animate-fade-in">
+        {/* Welcome Section */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-red-600 bg-clip-text text-transparent mb-3">
+            👋 {t('welcome_back')}
+          </h1>
+          <p className="text-gray-700 font-medium">
             {t('lets_get_your_homework_done_today')}
           </p>
         </div>
 
-        {/* Level and Language Selection - Minimized View */}
-        <div className="bg-white rounded-3xl shadow-2xl p-6 mb-8">
+        {/* Level and Language Selection - Simplified View */}
+        <div className="bg-white rounded-2xl shadow-lg p-5 mb-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">{t('your_learning_preferences')}</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('preferences')}</h2>
             <button 
               onClick={() => setShowPreferences(!showPreferences)}
               className="text-primary-600 hover:text-primary-800 font-medium"
@@ -143,30 +140,30 @@ const StudentDashboard = () => {
           </div>
           
           {/* Current Selection Display */}
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+          <div className="mt-3 p-2 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600">
-              {t('current_selection')}: <span className="font-semibold">{getLevelLabel(selectedLevel) || t('not_selected')}</span> - 
-              <span className="font-semibold"> {getLanguageLabel(selectedLanguage) || t('not_selected')}</span>
+              {getLevelLabel(selectedLevel) || t('not_selected')} - 
+              {getLanguageLabel(selectedLanguage) || t('not_selected')}
             </p>
           </div>
           
-          {/* Expanded Preferences - Only shown when showPreferences is true */}
+          {/* Expanded Preferences */}
           {showPreferences && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Level Selection */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('level')}</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <h3 className="text-md font-semibold text-gray-900 mb-2">{t('level')}</h3>
+                  <div className="grid grid-cols-2 gap-1">
                     {Object.entries(levelOptions).map(([category, levels]) => (
-                      <div key={category} className="space-y-2">
-                        <h4 className="font-medium text-gray-700 capitalize text-sm">{t(category)}</h4>
-                        <div className="space-y-2">
+                      <div key={category} className="space-y-1">
+                        <h4 className="font-medium text-gray-700 capitalize text-xs">{category}</h4>
+                        <div className="space-y-1">
                           {levels.map((level) => (
                             <button
                               key={level.value}
                               onClick={() => handleLevelChange(level.value)}
-                              className={`w-full p-2 text-sm rounded-xl border-2 transition-all duration-200 ${
+                              className={`w-full p-1 text-xs rounded-lg border ${
                                 selectedLevel === level.value
                                   ? 'border-primary-500 bg-primary-50 text-primary-700 font-bold'
                                   : 'border-gray-200 hover:border-primary-300 text-gray-700'
@@ -183,24 +180,24 @@ const StudentDashboard = () => {
 
                 {/* Language Selection */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('language')}</h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <h3 className="text-md font-semibold text-gray-900 mb-2">{t('language')}</h3>
+                  <div className="grid grid-cols-2 gap-1">
                     {languageOptions.map((language) => (
                       <button
                         key={language.value}
                         onClick={() => handleLanguageChange(language.value)}
-                        className={`p-3 rounded-xl border-2 transition-all duration-200 ${
+                        className={`p-2 rounded-lg border ${
                           selectedLanguage === language.value
                             ? 'border-primary-500 bg-primary-50 text-primary-700 font-bold'
                             : 'border-gray-200 hover:border-primary-300 text-gray-700'
                         }`}
                       >
-                        <div className="text-lg mb-1">
-                          {language.value === 'rw' && '🇷🇼'}
-                          {language.value === 'en' && '🇺🇸'}
-                          {language.value === 'fr' && '🇫🇷'}
+                        <div className="text-md mb-1">
+                          {language.value === 'kinyarwanda' && '🇷🇼'}
+                          {language.value === 'english' && '🇺🇸'}
+                          {language.value === 'french' && '🇫🇷'}
                         </div>
-                        <div className="text-sm font-medium">{language.label}</div>
+                        <div className="text-xs font-medium">{language.label}</div>
                       </button>
                     ))}
                   </div>
@@ -210,88 +207,63 @@ const StudentDashboard = () => {
           )}
         </div>
 
-        {/* Main Action Buttons with 3D animations */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+        {/* Main Action Buttons - Simplified */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
           {/* Homework Button */}
           <Link 
             to="/homework" 
-            className="group relative bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-6 text-white text-center shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 animate-float"
+            className="bg-blue-500 rounded-2xl p-4 text-white text-center shadow hover:shadow-md transition-all"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-700 rounded-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-            <div className="relative z-10">
-              <div className="text-5xl mb-4 transform group-hover:rotate-12 transition-transform duration-300 animate-pulse-slow">📝</div>
-              <h3 className="text-2xl font-bold mb-2">{t('my_homework')}</h3>
-              <p className="text-blue-100">{t('view_and_complete_assignments')}</p>
-            </div>
-            <div className="absolute bottom-4 right-4 text-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              👉
-            </div>
+            <div className="text-3xl mb-2">📝</div>
+            <h3 className="text-sm font-bold">{t('homework')}</h3>
           </Link>
 
           {/* Help Button */}
           <Link 
             to="/homework/help/request"
-            className="group relative bg-gradient-to-br from-red-500 to-red-600 rounded-3xl p-6 text-white text-center shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 cursor-pointer animate-bounce-slow"
+            className="bg-red-500 rounded-2xl p-4 text-white text-center shadow hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-red-400 to-red-700 rounded-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-            <div className="relative z-10">
-              <div className="text-5xl mb-4 transform group-hover:rotate-12 transition-transform duration-300 animate-spin-slow">🆘</div>
-              <h3 className="text-2xl font-bold mb-2">{t('need_help')}</h3>
-              <p className="text-red-100">{t('ask_teachers_and_friends')}</p>
-            </div>
-            <div className="absolute bottom-4 right-4 text-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              👉
-            </div>
+            <div className="text-3xl mb-2">🆘</div>
+            <h3 className="text-sm font-bold">{t('help')}</h3>
           </Link>
 
           {/* Leaderboard Button */}
           <Link 
             to="/leaderboard" 
-            className="group relative bg-gradient-to-br from-purple-500 to-purple-600 rounded-3xl p-6 text-white text-center shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 animate-pulse"
+            className="bg-purple-500 rounded-2xl p-4 text-white text-center shadow hover:shadow-md transition-all"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-700 rounded-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-            <div className="relative z-10">
-              <div className="text-5xl mb-4 transform group-hover:rotate-12 transition-transform duration-300">🏆</div>
-              <h3 className="text-2xl font-bold mb-2 animate-rainbow">{t('leaderboard')}</h3>
-              <p className="text-purple-100">{t('see_top_students')}</p>
-            </div>
-            <div className="absolute bottom-4 right-4 text-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              👉
-            </div>
+            <div className="text-3xl mb-2">🏆</div>
+            <h3 className="text-sm font-bold">{t('leaderboard')}</h3>
           </Link>
         </div>
 
-        {/* Homework Section - Only show pending homework */}
+        {/* Homework Section - Simplified */}
         {homework.length > 0 && (
-          <div className="bg-white rounded-3xl shadow-2xl p-6 mb-8 transform transition-transform hover:scale-[1.02]">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                <span className="text-3xl mr-2 animate-pulse">📝</span> {t('your_pending_homework')}
+          <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-lg font-bold text-gray-900">
+                📝 {t('your_pending_homework')}
               </h2>
-              <Link to="/homework" className="text-blue-600 hover:text-blue-800 font-bold flex items-center">
-                {t('see_all')} <span className="ml-1">→</span>
+              <Link to="/homework" className="text-blue-600 hover:text-blue-800 text-sm">
+                {t('see_all')} →
               </Link>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-2">
               {homework.slice(0, 3).map((hw, index) => (
                 <div 
                   key={hw.id} 
-                  className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 shimmer"
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  className="bg-blue-50 border-l-2 border-blue-500 rounded-lg p-3"
                 >
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 text-lg mb-1">📌 {hw.title}</h4>
-                      <p className="text-sm text-gray-600">
-                        📅 {t('due')}: <span className="font-semibold">{new Date(hw.dueDate).toLocaleDateString()}</span>
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        📚 {getLevelLabel(hw.level)} | 🌐 {getLanguageLabel(hw.language)}
+                      <h4 className="font-bold text-gray-900 text-sm truncate">{hw.title}</h4>
+                      <p className="text-xs text-gray-600">
+                        {t('due')}: {new Date(hw.dueDate).toLocaleDateString()}
                       </p>
                     </div>
                     <Link 
                       to={`/homework/${hw.id}`} 
-                      className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full whitespace-nowrap transition-all duration-300 transform hover:scale-110"
+                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-full"
                     >
                       {t('start_now')}
                     </Link>
@@ -302,50 +274,48 @@ const StudentDashboard = () => {
           </div>
         )}
 
-        {/* Homework Help Section */}
-        <div className="bg-white rounded-3xl shadow-2xl p-6 transform transition-transform hover:scale-[1.02]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-              <span className="text-3xl mr-2 animate-bounce">🤝</span> {t('help_from_classmates')}
+        {/* Homework Help Section - Simplified */}
+        <div className="bg-white rounded-2xl shadow-lg p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-bold text-gray-900">
+              🤝 {t('help_from_classmates')}
             </h2>
             <Link
               to="/homework/help/request"
-              className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full text-sm transition-all duration-300 transform hover:scale-110"
+              className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-full text-xs"
             >
-              + {t('ask_for_help')}
+              + {t('ask')}
             </Link>
           </div>
 
           {homeworkHelp.length > 0 ? (
-            <div className="space-y-4">
-              {homeworkHelp.slice(0, 5).map((help, index) => (
+            <div className="space-y-2">
+              {homeworkHelp.slice(0, 3).map((help) => (
                 <div 
                   key={help.id} 
-                  className="bg-gradient-to-br from-yellow-50 to-orange-50 border-l-4 border-yellow-500 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 shimmer"
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  className="bg-yellow-50 border-l-2 border-yellow-500 rounded-lg p-3"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center text-white font-bold text-xl transform hover:rotate-12 transition-transform duration-300 animate-float">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-sm">
                           {help.studentName ? help.studentName.charAt(0).toUpperCase() : '👤'}
                         </div>
                         <div>
-                          <h4 className="font-bold text-gray-900">{help.studentName || t('classmate')}</h4>
-                          <p className="text-xs text-gray-600">📚 {help.subject || t('general')}</p>
+                          <h4 className="font-bold text-gray-900 text-sm">{help.studentName || t('classmate')}</h4>
+                          <p className="text-xs text-gray-600">{help.subject || t('general')}</p>
                         </div>
                       </div>
-                      <p className="text-gray-700 mt-2">{help.description}</p>
-                      <p className="text-xs text-gray-500 mt-2">📤 {new Date(help.createdAt).toLocaleDateString()}</p>
+                      <p className="text-gray-700 text-xs truncate">{help.description}</p>
                     </div>
                     <div className="text-right">
                       {help.file && (
                         <a
                           href={help.file}
                           download
-                          className="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-full text-sm transition-all duration-300 transform hover:scale-110"
+                          className="inline-flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded-full text-xs"
                         >
-                          📥 {t('download')}
+                          📥
                         </a>
                       )}
                     </div>
@@ -354,13 +324,13 @@ const StudentDashboard = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4 animate-bounce">🤝</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('no_help_requests_yet')}</h3>
-              <p className="text-gray-600 text-lg mb-6">{t('be_first_to_ask_or_help')}</p>
+            <div className="text-center py-4">
+              <div className="text-3xl mb-2">🤝</div>
+              <h3 className="font-bold text-gray-900 mb-1">{t('no_help_requests_yet')}</h3>
+              <p className="text-gray-600 text-xs mb-3">{t('be_first_to_ask_or_help')}</p>
               <button
                 onClick={() => navigate('/homework/help/request')}
-                className="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-110"
+                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full text-sm"
               >
                 {t('ask_for_help')}
               </button>
@@ -370,39 +340,19 @@ const StudentDashboard = () => {
 
         {/* Empty State */}
         {homework.length === 0 && homeworkHelp.length === 0 && (
-          <div className="bg-white rounded-3xl shadow-2xl text-center py-12 mt-8 transform transition-transform hover:scale-[1.02]">
-            <div className="text-7xl mb-6 animate-bounce">🎉</div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">{t('all_caught_up')}</h3>
-            <p className="text-gray-600 text-xl mb-8">{t('you_dont_have_any_pending_homework')}</p>
+          <div className="bg-white rounded-2xl shadow-lg text-center py-8 mt-6">
+            <div className="text-4xl mb-3">🎉</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{t('all_caught_up')}</h3>
+            <p className="text-gray-600 text-sm mb-4">{t('you_dont_have_any_pending_homework')}</p>
             <button
               onClick={() => navigate('/homework/help/request')}
-              className="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-10 rounded-full text-xl transition-all duration-300 transform hover:scale-110"
+              className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full text-sm"
             >
               {t('ask_for_help')}
             </button>
           </div>
         )}
-
-        {/* Upload Modal */}
       </div>
-
-      {/* Custom styles for animations */}
-      <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes scale-in {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.5s ease-out;
-        }
-        .animate-scale-in {
-          animation: scale-in 0.3s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 };

@@ -7,6 +7,7 @@ import { levelOptions, languageOptions } from '../utils/languageOptions';
 const SelectLevel = () => {
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('');
+  const [expandedCategory, setExpandedCategory] = useState('primary'); // Default to primary expanded
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, updateProfile } = useAuth();
@@ -39,6 +40,10 @@ const SelectLevel = () => {
     }
   };
 
+  const toggleCategory = (category) => {
+    setExpandedCategory(expandedCategory === category ? null : category);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full space-y-8">
@@ -52,26 +57,38 @@ const SelectLevel = () => {
             {/* Level Selection */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('select_your_level')}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {Object.entries(levelOptions).map(([category, levels]) => (
-                  <div key={category} className="space-y-2">
-                    <h4 className="font-medium text-gray-700 capitalize">{t(category)}</h4>
-                    <div className="space-y-2">
-                      {levels.map((level) => (
-                        <button
-                          key={level.value}
-                          onClick={() => setSelectedLevel(level.value)}
-                          className={`w-full p-3 rounded-xl border-2 transition-all duration-200 ${
-                            selectedLevel === level.value
-                              ? 'border-primary-500 bg-primary-50 text-primary-700'
-                              : 'border-gray-200 hover:border-primary-300 text-gray-700'
-                          }`}
-                        >
-                          {level.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+              
+              {/* Category Tabs */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {Object.keys(levelOptions).map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => toggleCategory(category)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      expandedCategory === category
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {t(category)}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Levels for the selected category */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {expandedCategory && levelOptions[expandedCategory]?.map((level) => (
+                  <button
+                    key={level.value}
+                    onClick={() => setSelectedLevel(level.value)}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                      selectedLevel === level.value
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 hover:border-primary-300 text-gray-700'
+                    }`}
+                  >
+                    <div className="font-medium">{level.label}</div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -79,7 +96,7 @@ const SelectLevel = () => {
             {/* Language Selection */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('select_your_language')}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {languageOptions.map((language) => (
                   <button
                     key={language.value}

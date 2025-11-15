@@ -12,6 +12,7 @@ import './i18n';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import TestLanguagePage from './pages/TestLanguagePage';
 
 import SelectLevel from './pages/SelectLevel';
 import Homework from './pages/Homework';
@@ -118,6 +119,7 @@ const AppContent = () => {
           <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/test-language" element={<TestLanguagePage />} />
 
           <Route
             path="/select-level"

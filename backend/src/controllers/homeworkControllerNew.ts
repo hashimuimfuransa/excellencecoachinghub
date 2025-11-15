@@ -87,8 +87,24 @@ export const createHomework = asyncHandler(async (req: Request, res: Response) =
 // Get all homework
 export const getAllHomework = asyncHandler(async (req: Request, res: Response) => {
   try {
-    // Fetch published assignments from database
-    const homework = await Assignment.find({ status: 'published' })
+    // Get query parameters for filtering
+    const { level, language } = req.query;
+    
+    // Build query object
+    const query: any = { status: 'published' };
+    
+    // Add level filter if provided
+    if (level && level !== '') {
+      query.level = level;
+    }
+    
+    // Add language filter if provided
+    if (language && language !== '') {
+      query.language = language;
+    }
+    
+    // Fetch published assignments from database with filters
+    const homework = await Assignment.find(query)
       .select('title description level language dueDate maxPoints status extractedQuestions')
       .sort({ createdAt: -1 });
 
@@ -342,11 +358,11 @@ export const getCourseHomework = asyncHandler(async (req: Request, res: Response
       query.course = courseId;
     }
     
-    if (level) {
+    if (level && level !== '') {
       query.level = level;
     }
     
-    if (language) {
+    if (language && language !== '') {
       query.language = language;
     }
     

@@ -1,19 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { homeworkApi } from '../../api/homeworkApi';
+import { useAuth } from '../../hooks/useAuth';
+import { levelOptions, languageOptions } from '../../utils/languageOptions';
+import { useTranslation } from 'react-i18next';
 import './animations.css';
 
 const StudentDashboard = () => {
   const [homework, setHomework] = useState([]);
   const [homeworkHelp, setHomeworkHelp] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLevel, setSelectedLevel] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('');
+  const [showPreferences, setShowPreferences] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { user, updateProfile } = useAuth();
 
+  // Initialize level and language from user profile
+  useEffect(() => {
+    if (user?.level) {
+      setSelectedLevel(user.level);
+    }
+    if (user?.language) {
+      setSelectedLanguage(user.language);
+    }
+  }, [user]);
+
+  // Fetch homework based on selected level and language
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load homework data
-        const homeworkPromise = homeworkApi.getHomework().catch(() => ({ data: [] }));
+        // Load homework data with filters
+        const homeworkPromise = homeworkApi.getHomework(null, selectedLevel, selectedLanguage).catch(() => ({ data: [] }));
         const helpPromise = homeworkApi.getHomeworkHelp().catch(() => ({ data: [] }));
 
         const [homeworkResponse, helpResponse] = await Promise.all([homeworkPromise, helpPromise]);
@@ -39,7 +58,46 @@ const StudentDashboard = () => {
     };
 
     loadData();
-  }, []);
+  }, [selectedLevel, selectedLanguage]);
+
+  // Update user profile when level or language changes
+  const updatePreferences = async (level, language) => {
+    try {
+      const result = await updateProfile({ level, language });
+      if (!result.success) {
+        console.error('Failed to update profile:', result.error);
+      }
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+    }
+  };
+
+  // Handle level change
+  const handleLevelChange = (level) => {
+    setSelectedLevel(level);
+    updatePreferences(level, selectedLanguage);
+  };
+
+  // Handle language change
+  const handleLanguageChange = (language) => {
+    setSelectedLanguage(language);
+    updatePreferences(selectedLevel, language);
+  };
+
+  // Get level label
+  const getLevelLabel = (levelValue) => {
+    for (const category in levelOptions) {
+      const level = levelOptions[category].find(l => l.value === levelValue);
+      if (level) return level.label;
+    }
+    return levelValue;
+  };
+
+  // Get language label
+  const getLanguageLabel = (languageValue) => {
+    const language = languageOptions.find(l => l.value === languageValue);
+    return language ? language.label : languageValue;
+  };
 
   if (loading) {
     return (
@@ -49,7 +107,7 @@ const StudentDashboard = () => {
             <div className="w-24 h-24 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-bounce flex items-center justify-center mx-auto mb-4">
               <span className="text-4xl">📚</span>
             </div>
-            <div className="animate-pulse text-xl font-bold text-gray-700">Loading your dashboard...</div>
+            <div className="animate-pulse text-xl font-bold text-gray-700">{t('loading_your_dashboard')}</div>
           </div>
         </div>
       </div>
@@ -64,12 +122,92 @@ const StudentDashboard = () => {
           <div className="relative inline-block">
             <div className="absolute -inset-2 bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 rounded-lg blur opacity-75 animate-pulse"></div>
             <h1 className="relative text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent mb-3 animate-bounce">
-              👋 Welcome Back!
+              👋 {t('welcome_back')}
             </h1>
           </div>
           <p className="text-base sm:text-lg text-gray-700 font-medium mt-4 animate-fade-in">
-            Let&#39;s get your homework done today! 📚
+            {t('lets_get_your_homework_done_today')}
           </p>
+        </div>
+
+        {/* Level and Language Selection - Minimized View */}
+        <div className="bg-white rounded-3xl shadow-2xl p-6 mb-8">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-gray-900">{t('your_learning_preferences')}</h2>
+            <button 
+              onClick={() => setShowPreferences(!showPreferences)}
+              className="text-primary-600 hover:text-primary-800 font-medium"
+            >
+              {showPreferences ? t('hide') : t('show')}
+            </button>
+          </div>
+          
+          {/* Current Selection Display */}
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              {t('current_selection')}: <span className="font-semibold">{getLevelLabel(selectedLevel) || t('not_selected')}</span> - 
+              <span className="font-semibold"> {getLanguageLabel(selectedLanguage) || t('not_selected')}</span>
+            </p>
+          </div>
+          
+          {/* Expanded Preferences - Only shown when showPreferences is true */}
+          {showPreferences && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Level Selection */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('level')}</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {Object.entries(levelOptions).map(([category, levels]) => (
+                      <div key={category} className="space-y-2">
+                        <h4 className="font-medium text-gray-700 capitalize text-sm">{t(category)}</h4>
+                        <div className="space-y-2">
+                          {levels.map((level) => (
+                            <button
+                              key={level.value}
+                              onClick={() => handleLevelChange(level.value)}
+                              className={`w-full p-2 text-sm rounded-xl border-2 transition-all duration-200 ${
+                                selectedLevel === level.value
+                                  ? 'border-primary-500 bg-primary-50 text-primary-700 font-bold'
+                                  : 'border-gray-200 hover:border-primary-300 text-gray-700'
+                              }`}
+                            >
+                              {level.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Language Selection */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('language')}</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {languageOptions.map((language) => (
+                      <button
+                        key={language.value}
+                        onClick={() => handleLanguageChange(language.value)}
+                        className={`p-3 rounded-xl border-2 transition-all duration-200 ${
+                          selectedLanguage === language.value
+                            ? 'border-primary-500 bg-primary-50 text-primary-700 font-bold'
+                            : 'border-gray-200 hover:border-primary-300 text-gray-700'
+                        }`}
+                      >
+                        <div className="text-lg mb-1">
+                          {language.value === 'rw' && '🇷🇼'}
+                          {language.value === 'en' && '🇺🇸'}
+                          {language.value === 'fr' && '🇫🇷'}
+                        </div>
+                        <div className="text-sm font-medium">{language.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Main Action Buttons with 3D animations */}
@@ -82,8 +220,8 @@ const StudentDashboard = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-700 rounded-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
             <div className="relative z-10">
               <div className="text-5xl mb-4 transform group-hover:rotate-12 transition-transform duration-300 animate-pulse-slow">📝</div>
-              <h3 className="text-2xl font-bold mb-2">My Homework</h3>
-              <p className="text-blue-100">View &amp; complete assignments</p>
+              <h3 className="text-2xl font-bold mb-2">{t('my_homework')}</h3>
+              <p className="text-blue-100">{t('view_and_complete_assignments')}</p>
             </div>
             <div className="absolute bottom-4 right-4 text-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               👉
@@ -98,8 +236,8 @@ const StudentDashboard = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-red-400 to-red-700 rounded-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
             <div className="relative z-10">
               <div className="text-5xl mb-4 transform group-hover:rotate-12 transition-transform duration-300 animate-spin-slow">🆘</div>
-              <h3 className="text-2xl font-bold mb-2">Need Help?</h3>
-              <p className="text-red-100">Ask teachers &amp; friends</p>
+              <h3 className="text-2xl font-bold mb-2">{t('need_help')}</h3>
+              <p className="text-red-100">{t('ask_teachers_and_friends')}</p>
             </div>
             <div className="absolute bottom-4 right-4 text-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               👉
@@ -114,8 +252,8 @@ const StudentDashboard = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-700 rounded-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
             <div className="relative z-10">
               <div className="text-5xl mb-4 transform group-hover:rotate-12 transition-transform duration-300">🏆</div>
-              <h3 className="text-2xl font-bold mb-2 animate-rainbow">Leaderboard</h3>
-              <p className="text-purple-100">See top students</p>
+              <h3 className="text-2xl font-bold mb-2 animate-rainbow">{t('leaderboard')}</h3>
+              <p className="text-purple-100">{t('see_top_students')}</p>
             </div>
             <div className="absolute bottom-4 right-4 text-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               👉
@@ -128,10 +266,10 @@ const StudentDashboard = () => {
           <div className="bg-white rounded-3xl shadow-2xl p-6 mb-8 transform transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                <span className="text-3xl mr-2 animate-pulse">📝</span> Your Pending Homework
+                <span className="text-3xl mr-2 animate-pulse">📝</span> {t('your_pending_homework')}
               </h2>
               <Link to="/homework" className="text-blue-600 hover:text-blue-800 font-bold flex items-center">
-                See all <span className="ml-1">→</span>
+                {t('see_all')} <span className="ml-1">→</span>
               </Link>
             </div>
             <div className="space-y-4">
@@ -145,14 +283,17 @@ const StudentDashboard = () => {
                     <div className="flex-1">
                       <h4 className="font-bold text-gray-900 text-lg mb-1">📌 {hw.title}</h4>
                       <p className="text-sm text-gray-600">
-                        📅 Due: <span className="font-semibold">{new Date(hw.dueDate).toLocaleDateString()}</span>
+                        📅 {t('due')}: <span className="font-semibold">{new Date(hw.dueDate).toLocaleDateString()}</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        📚 {getLevelLabel(hw.level)} | 🌐 {getLanguageLabel(hw.language)}
                       </p>
                     </div>
                     <Link 
                       to={`/homework/${hw.id}`} 
                       className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full whitespace-nowrap transition-all duration-300 transform hover:scale-110"
                     >
-                      Start Now
+                      {t('start_now')}
                     </Link>
                   </div>
                 </div>
@@ -165,13 +306,13 @@ const StudentDashboard = () => {
         <div className="bg-white rounded-3xl shadow-2xl p-6 transform transition-transform hover:scale-[1.02]">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-              <span className="text-3xl mr-2 animate-bounce">🤝</span> Help from Classmates
+              <span className="text-3xl mr-2 animate-bounce">🤝</span> {t('help_from_classmates')}
             </h2>
             <Link
               to="/homework/help/request"
               className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full text-sm transition-all duration-300 transform hover:scale-110"
             >
-              + Ask for Help
+              + {t('ask_for_help')}
             </Link>
           </div>
 
@@ -190,8 +331,8 @@ const StudentDashboard = () => {
                           {help.studentName ? help.studentName.charAt(0).toUpperCase() : '👤'}
                         </div>
                         <div>
-                          <h4 className="font-bold text-gray-900">{help.studentName || 'Classmate'}</h4>
-                          <p className="text-xs text-gray-600">📚 {help.subject || 'General'}</p>
+                          <h4 className="font-bold text-gray-900">{help.studentName || t('classmate')}</h4>
+                          <p className="text-xs text-gray-600">📚 {help.subject || t('general')}</p>
                         </div>
                       </div>
                       <p className="text-gray-700 mt-2">{help.description}</p>
@@ -204,7 +345,7 @@ const StudentDashboard = () => {
                           download
                           className="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-full text-sm transition-all duration-300 transform hover:scale-110"
                         >
-                          📥 Download
+                          📥 {t('download')}
                         </a>
                       )}
                     </div>
@@ -215,13 +356,13 @@ const StudentDashboard = () => {
           ) : (
             <div className="text-center py-8">
               <div className="text-6xl mb-4 animate-bounce">🤝</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">No Help Requests Yet!</h3>
-              <p className="text-gray-600 text-lg mb-6">Be the first to ask or help a classmate! 🎯</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('no_help_requests_yet')}</h3>
+              <p className="text-gray-600 text-lg mb-6">{t('be_first_to_ask_or_help')}</p>
               <button
                 onClick={() => navigate('/homework/help/request')}
                 className="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-110"
               >
-                Ask for Help
+                {t('ask_for_help')}
               </button>
             </div>
           )}
@@ -231,13 +372,13 @@ const StudentDashboard = () => {
         {homework.length === 0 && homeworkHelp.length === 0 && (
           <div className="bg-white rounded-3xl shadow-2xl text-center py-12 mt-8 transform transition-transform hover:scale-[1.02]">
             <div className="text-7xl mb-6 animate-bounce">🎉</div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">All Caught Up!</h3>
-            <p className="text-gray-600 text-xl mb-8">You don&#39;t have any pending homework. Great job! 🎓</p>
+            <h3 className="text-3xl font-bold text-gray-900 mb-4">{t('all_caught_up')}</h3>
+            <p className="text-gray-600 text-xl mb-8">{t('you_dont_have_any_pending_homework')}</p>
             <button
               onClick={() => navigate('/homework/help/request')}
               className="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-10 rounded-full text-xl transition-all duration-300 transform hover:scale-110"
             >
-              Ask for Help Anyway
+              {t('ask_for_help')}
             </button>
           </div>
         )}

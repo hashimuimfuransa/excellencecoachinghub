@@ -29,6 +29,7 @@ export interface IUserDocument extends Document {
   pushNotifications?: boolean;
   theme?: string;
   language?: string;
+  level?: string;
   // Email subscription preferences
   jobRecommendationEmails?: boolean;
   unsubscribeToken?: string;
@@ -305,6 +306,10 @@ const userSchema = new Schema<IUserDocument>({
   language: {
     type: String,
     default: 'en'
+  },
+  level: {
+    type: String,
+    default: ''
   },
   // Email subscription preferences
   jobRecommendationEmails: {

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
+import { useTranslation } from 'react-i18next';
 
 const InteractiveHomework = () => {
   const { id } = useParams();
+  const { t, i18n } = useTranslation();
   const [homework, setHomework] = useState(null);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
@@ -147,8 +149,8 @@ const InteractiveHomework = () => {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800">Homework not found</h2>
-          <p className="text-gray-600 mt-2">The requested homework could not be found.</p>
+          <h2 className="text-xl font-semibold text-gray-800">{t('homework_not_found')}</h2>
+          <p className="text-gray-600 mt-2">{t('homework_not_found_message')}</p>
         </div>
       </div>
     );
@@ -159,15 +161,15 @@ const InteractiveHomework = () => {
   // Function to get level label
   const getLevelLabel = (level) => {
     const levelMap = {
-      'nursery-1': 'Nursery 1',
-      'nursery-2': 'Nursery 2',
-      'nursery-3': 'Nursery 3',
-      'p1': 'P1',
-      'p2': 'P2',
-      'p3': 'P3',
-      'p4': 'P4',
-      'p5': 'P5',
-      'p6': 'P6'
+      'nursery-1': t('nursery_1'),
+      'nursery-2': t('nursery_2'),
+      'nursery-3': t('nursery_3'),
+      'p1': t('p1'),
+      'p2': t('p2'),
+      'p3': t('p3'),
+      'p4': t('p4'),
+      'p5': t('p5'),
+      'p6': t('p6')
     };
     return levelMap[level] || level;
   };
@@ -190,22 +192,22 @@ const InteractiveHomework = () => {
         <p className="text-gray-600 mb-4">{homework.description}</p>
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-500">
-            <span>Due: {new Date(homework.dueDate).toLocaleDateString()}</span>
+            <span>{t('due')}: {new Date(homework.dueDate).toLocaleDateString()}</span>
             <span className="mx-2">•</span>
-            <span>Level: {getLevelLabel(homework.level)}</span>
+            <span>{t('level')}: {getLevelLabel(homework.level)}</span>
             <span className="mx-2">•</span>
-            <span>Language: {homework.language?.charAt(0).toUpperCase() + homework.language?.slice(1)}</span>
+            <span>{t('language')}: {homework.language?.charAt(0).toUpperCase() + homework.language?.slice(1)}</span>
           </div>
           {score && (
             <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-              Score: {score.earned}/{score.total} ({score.percentage}%)
+              {t('score')}: {score.earned}/{score.total} ({score.percentage}%)
             </div>
           )}
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Questions</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('questions')}</h2>
         {questions && questions.length > 0 ? (
           questions.map((element, index) => (
             <div key={index} className="border border-gray-200 rounded-lg p-4 mb-6">
@@ -232,7 +234,7 @@ const InteractiveHomework = () => {
               {element.type === 'matching' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-medium text-gray-700 mb-2">Left Column</h4>
+                    <h4 className="font-medium text-gray-700 mb-2">{t('left_column')}</h4>
                     <div className="space-y-3">
                       {element.leftItems?.map((item, itemIndex) => (
                         <div key={itemIndex} className="p-3 bg-blue-50 rounded-lg">
@@ -241,7 +243,7 @@ const InteractiveHomework = () => {
                             <div className="mb-2">
                               <img 
                                 src={element.leftItemImages[itemIndex]} 
-                                alt={`Item ${String.fromCharCode(65 + itemIndex)}`}
+                                alt={`${t('item')} ${String.fromCharCode(65 + itemIndex)}`}
                                 className="max-w-full h-32 object-contain rounded"
                                 onError={(e) => {
                                   e.target.style.display = 'none';
@@ -255,7 +257,7 @@ const InteractiveHomework = () => {
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-700 mb-2">Right Column</h4>
+                    <h4 className="font-medium text-gray-700 mb-2">{t('right_column')}</h4>
                     <div className="space-y-3">
                       {element.rightItems?.map((item, itemIndex) => (
                         <div key={itemIndex} className="p-3 bg-green-50 rounded-lg">
@@ -264,7 +266,7 @@ const InteractiveHomework = () => {
                             <div className="mb-2">
                               <img 
                                 src={element.rightItemImages[itemIndex]} 
-                                alt={`Option ${itemIndex + 1}`}
+                                alt={`${t('option')} ${itemIndex + 1}`}
                                 className="max-w-full h-32 object-contain rounded"
                                 onError={(e) => {
                                   e.target.style.display = 'none';
@@ -278,7 +280,7 @@ const InteractiveHomework = () => {
                     </div>
                   </div>
                   <div className="md:col-span-2">
-                    <h4 className="font-medium text-gray-700 mb-2">Make your matches</h4>
+                    <h4 className="font-medium text-gray-700 mb-2">{t('make_your_matches')}</h4>
                     <div className="space-y-3">
                       {element.leftItems?.map((item, leftIndex) => (
                         <div key={leftIndex} className="flex items-center p-3 bg-gray-50 rounded-lg">
@@ -287,7 +289,7 @@ const InteractiveHomework = () => {
                             <div className="mr-3">
                               <img 
                                 src={element.leftItemImages[leftIndex]} 
-                                alt={`Item ${String.fromCharCode(65 + leftIndex)}`}
+                                alt={`${t('item')} ${String.fromCharCode(65 + leftIndex)}`}
                                 className="h-12 w-12 object-contain rounded"
                                 onError={(e) => {
                                   e.target.style.display = 'none';
@@ -296,7 +298,7 @@ const InteractiveHomework = () => {
                             </div>
                           )}
                           <span className="font-medium mr-4">{String.fromCharCode(65 + leftIndex)}. {item}</span>
-                          <span className="mx-2 text-gray-500">matches</span>
+                          <span className="mx-2 text-gray-500">{t('matches')}</span>
                           <select
                             value={answers[index]?.matches?.[`left-${leftIndex}`] || ''}
                             onChange={(e) => {
@@ -311,7 +313,7 @@ const InteractiveHomework = () => {
                             }}
                             className="ml-2 flex-grow px-3 py-2 border border-gray-300 rounded-lg"
                           >
-                            <option value="">Select match</option>
+                            <option value="">{t('select_match')}</option>
                             {element.rightItems?.map((rightItem, rightIndex) => (
                               <option key={rightIndex} value={`right-${rightIndex}`}>
                                 {rightIndex + 1}. {rightItem}
@@ -331,18 +333,18 @@ const InteractiveHomework = () => {
                   onChange={(e) => handleAnswerChange(index, e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   rows="4"
-                  placeholder="Enter your answer here..."
+                  placeholder={t('enter_your_answer')}
                 />
               )}
               
               <div className="mt-3 text-sm text-gray-500">
-                Points: {element.points}
+                {t('points')}: {element.points}
               </div>
             </div>
           ))
         ) : (
           <div className="text-center py-8 text-gray-500">
-            No questions available for this homework.
+            {t('no_questions_available')}
           </div>
         )}
       </div>
@@ -354,14 +356,14 @@ const InteractiveHomework = () => {
             disabled={submitting || !questions || questions.length === 0}
             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
           >
-            {submitting ? 'Submitting...' : 'Submit Homework'}
+            {submitting ? t('submitting') : t('submit_homework')}
           </button>
         </div>
       ) : (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-          <p className="font-medium">Homework submitted successfully!</p>
+          <p className="font-medium">{t('homework_submitted_successfully')}</p>
           {score && (
-            <p className="mt-1">Your score: {score.earned}/{score.total} ({score.percentage}%)</p>
+            <p className="mt-1">{t('your_score')}: {score.earned}/{score.total} ({score.percentage}%)</p>
           )}
         </div>
       )}

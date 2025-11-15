@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { levelOptions, languageOptions } from '../utils/languageOptions';
 
 const SelectLevel = () => {
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, updateProfile } = useAuth();
 
   // Pre-fill selections if they exist in user data
@@ -21,7 +23,7 @@ const SelectLevel = () => {
 
   const handleSubmit = async () => {
     if (!selectedLevel || !selectedLanguage) {
-      alert('Please select both level and language');
+      alert(t('please_select_both_level_and_language'));
       return;
     }
 
@@ -33,7 +35,7 @@ const SelectLevel = () => {
     if (result.success) {
       navigate('/dashboard');
     } else {
-      alert('Failed to update profile. Please try again.');
+      alert(t('failed_to_update_profile_please_try_again'));
     }
   };
 
@@ -41,19 +43,19 @@ const SelectLevel = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full space-y-8">
         <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Choose Your Learning Path</h2>
-          <p className="text-sm sm:text-base text-gray-600">Select your level and preferred language</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('choose_your_learning_path')}</h2>
+          <p className="text-sm sm:text-base text-gray-600">{t('select_your_level_and_preferred_language')}</p>
         </div>
 
         <div className="card">
           <div className="space-y-6">
             {/* Level Selection */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Your Level</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('select_your_level')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {Object.entries(levelOptions).map(([category, levels]) => (
                   <div key={category} className="space-y-2">
-                    <h4 className="font-medium text-gray-700 capitalize">{category}</h4>
+                    <h4 className="font-medium text-gray-700 capitalize">{t(category)}</h4>
                     <div className="space-y-2">
                       {levels.map((level) => (
                         <button
@@ -76,7 +78,7 @@ const SelectLevel = () => {
 
             {/* Language Selection */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Your Language</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('select_your_language')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {languageOptions.map((language) => (
                   <button
@@ -89,13 +91,9 @@ const SelectLevel = () => {
                     }`}
                   >
                     <div className="text-2xl mb-2">
-                      {language.value === 'english' && '🇺🇸'}
-                      {language.value === 'spanish' && '🇪🇸'}
-                      {language.value === 'french' && '🇫🇷'}
-                      {language.value === 'german' && '🇩🇪'}
-                      {language.value === 'chinese' && '🇨🇳'}
-                      {language.value === 'japanese' && '🇯🇵'}
-                      {language.value === 'other' && '🌐'}
+                      {language.value === 'rw' && '🇷🇼'}
+                      {language.value === 'en' && '🇺🇸'}
+                      {language.value === 'fr' && '🇫🇷'}
                     </div>
                     <div className="font-medium">{language.label}</div>
                   </button>
@@ -110,7 +108,7 @@ const SelectLevel = () => {
                 disabled={!selectedLevel || !selectedLanguage}
                 className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continue to Dashboard
+                {t('continue_to_dashboard')}
               </button>
             </div>
           </div>
@@ -121,7 +119,7 @@ const SelectLevel = () => {
             onClick={() => navigate('/select-role')}
             className="btn-secondary"
           >
-            Back
+            {t('back')}
           </button>
         </div>
       </div>

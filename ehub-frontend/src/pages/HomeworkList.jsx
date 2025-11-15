@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
+import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { levelOptions } from '../utils/languageOptions';
 
 const HomeworkList = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { user } = useAuth();
   
   const [homeworkList, setHomeworkList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,18 +17,28 @@ const HomeworkList = () => {
   
   // Define language options
   const languageOptions = [
-    { value: '', label: 'All Languages' },
+    { value: '', label: t('all_languages') },
     { value: 'english', label: 'English' },
     { value: 'french', label: 'French' },
     { value: 'kinyarwanda', label: 'Kinyarwanda' }
   ];
 
+  // Initialize with user's preferences
+  useEffect(() => {
+    if (user?.level) {
+      setSelectedLevel(user.level);
+    }
+    if (user?.language) {
+      setSelectedLanguage(user.language);
+    }
+  }, [user]);
+
   // Get all level options for the dropdown
   const getAllLevelOptions = () => {
     const allLevels = [
-      { value: '', label: 'All Levels' },
-      { label: 'Nursery', options: levelOptions.nursery },
-      { label: 'Primary', options: levelOptions.primary }
+      { value: '', label: t('all_levels') },
+      { label: t('nursery'), options: levelOptions.nursery },
+      { label: t('primary'), options: levelOptions.primary }
     ];
     return allLevels;
   };
@@ -71,15 +85,15 @@ const HomeworkList = () => {
   // Function to get level label
   const getLevelLabel = (level) => {
     const levelMap = {
-      'nursery-1': 'Nursery 1',
-      'nursery-2': 'Nursery 2',
-      'nursery-3': 'Nursery 3',
-      'p1': 'P1',
-      'p2': 'P2',
-      'p3': 'P3',
-      'p4': 'P4',
-      'p5': 'P5',
-      'p6': 'P6'
+      'nursery-1': t('nursery_1'),
+      'nursery-2': t('nursery_2'),
+      'nursery-3': t('nursery_3'),
+      'p1': t('p1'),
+      'p2': t('p2'),
+      'p3': t('p3'),
+      'p4': t('p4'),
+      'p5': t('p5'),
+      'p6': t('p6')
     };
     return levelMap[level] || level;
   };
@@ -87,12 +101,12 @@ const HomeworkList = () => {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Interactive Homework</h1>
+        <h1 className="text-3xl font-bold text-gray-800">{t('interactive_homework')}</h1>
         <button
           onClick={() => navigate('/homework/create')}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Create Homework
+          {t('create_homework')}
         </button>
       </div>
 
@@ -101,7 +115,7 @@ const HomeworkList = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="level">
-              Level
+              {t('level')}
             </label>
             <select
               id="level"
@@ -129,7 +143,7 @@ const HomeworkList = () => {
           
           <div>
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="language">
-              Language
+              {t('language')}
             </label>
             <select
               id="language"
@@ -148,15 +162,25 @@ const HomeworkList = () => {
           <div className="flex items-end">
             <button
               onClick={() => {
-                setSelectedLevel('');
-                setSelectedLanguage('');
+                setSelectedLevel(user?.level || '');
+                setSelectedLanguage(user?.language || '');
               }}
               className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
             >
-              Clear Filters
+              {t('reset_to_my_preferences')}
             </button>
           </div>
         </div>
+        
+        {/* Current Preferences Display */}
+        {user?.level || user?.language ? (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              {t('your_saved_preferences')}: <span className="font-semibold">{getLevelLabel(user.level) || t('not_set')}</span> - 
+              <span className="font-semibold"> {user.language?.charAt(0).toUpperCase() + user.language?.slice(1) || t('not_set')}</span>
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {/* Homework List */}
@@ -166,17 +190,17 @@ const HomeworkList = () => {
         </div>
       ) : (!homeworkList || homeworkList.length === 0) ? (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
-          <h3 className="text-xl font-medium text-gray-800 mb-2">No homework found</h3>
+          <h3 className="text-xl font-medium text-gray-800 mb-2">{t('no_homework_found')}</h3>
           <p className="text-gray-600">
             {selectedLevel || selectedLanguage 
-              ? 'Try adjusting your filters or create a new homework assignment.'
-              : 'There are no homework assignments available yet.'}
+              ? t('try_adjusting_filters')
+              : t('no_homework_assignments_available')}
           </p>
           <button
             onClick={() => navigate('/homework/create')}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Create Homework
+            {t('create_homework')}
           </button>
         </div>
       ) : (
@@ -202,15 +226,15 @@ const HomeworkList = () => {
                 </div>
                 
                 <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
-                  <span>Due: {new Date(homework.dueDate).toLocaleDateString()}</span>
-                  <span>{homework.maxPoints} points</span>
+                  <span>{t('due')}: {new Date(homework.dueDate).toLocaleDateString()}</span>
+                  <span>{homework.maxPoints} {t('points')}</span>
                 </div>
                 
                 <button
                   onClick={() => navigate(`/homework/${homework._id}`)}
                   className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  View Homework
+                  {t('view_homework')}
                 </button>
               </div>
             </div>

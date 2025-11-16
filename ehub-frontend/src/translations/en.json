@@ -43,13 +43,13 @@
   "passwords_do_not_match": "Passwords do not match",
   "enter_full_name": "Please enter your full name",
   "join_ecoach": "Join ecoach",
+  "join_ecoach_as_teacher": "Join ecoach as Teacher",
   "creating_account": "Creating account",
   "create_account": "Create account",
   "full_name": "Full Name",
   "i_am_a": "I am a",
   "student": "Student",
   "teacher": "Teacher",
-  "parent": "Parent",
   "confirm_password": "Confirm Password",
   "create_password": "Create a password",
   "already_have_account": "Already have an account?",
@@ -166,5 +166,10 @@
   "see_marks_ranking": "See Marks & Ranking",
   "ranking_from_all_students": "See how you rank among all students",
   "need_help_contact_us": "Need Help? Contact Us",
-  "phone": "Phone"
+  "phone": "Phone",
+  "find_assignments_here": "Find and complete your assignments",
+  "your_preferences": "Your Preferences",
+  "drag_drop_or_click": "Drag & drop files or click to browse",
+  "call_now": "Call Now",
+  "back_to_dashboard": "Back to Dashboard"
 }

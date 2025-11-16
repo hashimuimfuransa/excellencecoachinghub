@@ -11,6 +11,7 @@ import './i18n';
 // Import pages
 import Login from './pages/Login';
 import Register from './pages/Register';
+import TeacherRegister from './pages/TeacherRegister';
 import TestLanguagePage from './pages/TestLanguagePage';
 import Home from './pages/Home';
 
@@ -36,7 +37,6 @@ import Footer from './components/ui/Footer';
 // Import dashboards
 import StudentDashboard from './components/dashboard/StudentDashboard';
 import TeacherDashboard from './components/dashboard/TeacherDashboard';
-import ParentDashboard from './components/dashboard/ParentDashboard';
 import AdminDashboard from './components/dashboard/AdminDashboard';
 
 const DashboardRouter = () => {
@@ -48,8 +48,8 @@ const DashboardRouter = () => {
   const hasCachedUser = localStorage.getItem('user');
 
   React.useEffect(() => {
-    // Only redirect if user is student or parent and doesn't have a level set
-    if ((user?.role === 'student' || user?.role === 'parent') && !user?.level && !redirected) {
+    // Only redirect if user is student and doesn't have a level set
+    if (user?.role === 'student' && !user?.level && !redirected) {
       setRedirected(true);
       navigate('/select-level', { replace: true });
     }
@@ -64,8 +64,8 @@ const DashboardRouter = () => {
     );
   }
 
-  // If user is student or parent and doesn't have a level, show nothing while redirecting
-  if ((user?.role === 'student' || user?.role === 'parent') && !user?.level) {
+  // If user is student and doesn't have a level, show nothing while redirecting
+  if (user?.role === 'student' && !user?.level) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
@@ -78,8 +78,6 @@ const DashboardRouter = () => {
       return <StudentDashboard />;
     case 'teacher':
       return <TeacherDashboard />;
-    case 'parent':
-      return <ParentDashboard />;
     case 'admin':
       return <AdminDashboard />;
     default:
@@ -93,8 +91,6 @@ const DashboardRouter = () => {
               return <StudentDashboard />;
             case 'teacher':
               return <TeacherDashboard />;
-            case 'parent':
-              return <ParentDashboard />;
             case 'admin':
               return <AdminDashboard />;
             default:
@@ -121,12 +117,13 @@ const AppContent = () => {
           <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/teacher" element={<TeacherRegister />} />
           <Route path="/test-language" element={<TestLanguagePage />} />
 
           <Route
             path="/select-level"
             element={
-              <ProtectedRoute allowedRoles={['student', 'parent']}>
+              <ProtectedRoute allowedRoles={['student']}>
                 <SelectLevel />
               </ProtectedRoute>
             }

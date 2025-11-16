@@ -130,15 +130,6 @@ const SelectLevel = () => {
             </div>
           </div>
         </div>
-
-        <div className="text-center">
-          <button
-            onClick={() => navigate('/select-role')}
-            className="btn-secondary"
-          >
-            {t('back')}
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -34,8 +34,8 @@ const Login = () => {
 
     if (result.success) {
       const { user } = result;
-      // Check if user needs to select level (student or parent without level)
-      if ((user?.role === 'student' || user?.role === 'parent') && !user?.level) {
+      // Check if user needs to select level (student without level)
+      if (user?.role === 'student' && !user?.level) {
         navigate('/select-level');
       } else {
         navigate('/dashboard');

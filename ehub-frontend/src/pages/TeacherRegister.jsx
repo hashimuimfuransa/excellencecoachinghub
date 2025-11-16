@@ -3,14 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 
-const Register = () => {
+const TeacherRegister = () => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     identifier: '',
     fullName: '',
     password: '',
     confirmPassword: '',
-    // Removed role field as it's now auto-set to student
+    role: 'teacher', // Auto-set to teacher
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,19 +48,18 @@ const Register = () => {
 
     setLoading(true);
 
-    // Auto-set role to student
     const result = await register({
       identifier: formData.identifier,
       firstName: firstName,
       lastName: lastName,
       password: formData.password,
-      role: 'student',
+      role: formData.role, // Always teacher
     });
 
     if (result.success) {
       // User is automatically logged in after successful registration
-      // Navigate to select level for students
-      navigate('/select-level');
+      // Navigate to dashboard for teachers
+      navigate('/dashboard');
     } else {
       setError(result.error);
     }
@@ -78,7 +77,7 @@ const Register = () => {
               <span className="text-white font-bold text-2xl">e</span>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('join_ecoach')}</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('join_ecoach_as_teacher')}</h2>
         </div>
 
         <div className="card p-6">
@@ -214,4 +213,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default TeacherRegister;

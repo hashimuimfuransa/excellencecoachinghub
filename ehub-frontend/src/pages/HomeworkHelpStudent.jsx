@@ -72,82 +72,99 @@ const HomeworkHelpStudent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4 pb-20 md:pb-4 pt-16">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 pb-20 md:pb-4 pt-16">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <button 
-            onClick={() => navigate(-1)}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-3"
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center text-gray-600 hover:text-indigo-700 mb-3 transition-colors duration-200"
           >
-            <span className="mr-1">←</span> {t('back')}
+            <span className="mr-1">←</span> {t('back_to_dashboard')}
           </button>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('get_help')}</h1>
-          <p className="text-gray-600 text-sm">{t('upload_for_help')}</p>
+          <div className="text-center mb-6">
+            <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-3xl">📤</span>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('get_help')}</h1>
+            <p className="text-gray-600">{t('upload_for_help')}</p>
+          </div>
         </div>
 
         {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded mb-4 text-sm">
-            {t('help_submitted')}
+          <div className="bg-green-100 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg mb-6 animate-fade-in-up">
+            <div className="flex items-center">
+              <span className="text-xl mr-2">✅</span>
+              <p className="font-medium">{t('help_submitted')}</p>
+            </div>
           </div>
         )}
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
-            {error}
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-6 animate-fade-in-up">
+            <div className="flex items-center">
+              <span className="text-xl mr-2">⚠️</span>
+              <p className="font-medium">{error}</p>
+            </div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-4">
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">{t('title')}</label>
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-6 transition-all duration-300 hover:shadow-2xl">
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <div className="space-y-2">
+              <label className="block text-gray-700 font-semibold text-sm mb-1">{t('title')}</label>
               <input
                 type="text"
                 name="homeworkTitle"
                 value={helpData.homeworkTitle}
                 onChange={handleInputChange}
-                className="w-full px-3 py-1 border border-gray-300 rounded text-sm"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 text-gray-700 placeholder-gray-400"
                 placeholder={t('e.g._math')}
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">{t('subject')}</label>
+            <div className="space-y-2">
+              <label className="block text-gray-700 font-semibold text-sm mb-1">{t('subject')}</label>
               <select
                 name="subject"
                 value={helpData.subject}
                 onChange={handleInputChange}
-                className="w-full px-3 py-1 border border-gray-300 rounded text-sm"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 text-gray-700"
                 required
               >
                 <option value="">{t('select_subject')}</option>
-                <option value="Mathematics">{t('math')}</option>
-                <option value="Science">{t('science')}</option>
-                <option value="English">{t('english')}</option>
-                <option value="History">{t('history')}</option>
-                <option value="Art">{t('art')}</option>
-                <option value="Other">{t('other')}</option>
+                <option value="Mathematics">📊 {t('math')}</option>
+                <option value="Science">🔬 {t('science')}</option>
+                <option value="English">📖 {t('english')}</option>
+                <option value="History">🏛️ {t('history')}</option>
+                <option value="Art">🎨 {t('art')}</option>
+                <option value="Other">📝 {t('other')}</option>
               </select>
             </div>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-medium mb-1">{t('describe_problem')}</label>
+          <div className="mb-8">
+            <label className="block text-gray-700 font-semibold text-sm mb-1">{t('describe_problem')}</label>
             <textarea
               name="message"
               value={helpData.message}
               onChange={handleInputChange}
-              rows={3}
-              className="w-full px-3 py-1 border border-gray-300 rounded text-sm"
+              rows={4}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 text-gray-700 placeholder-gray-400"
               placeholder={t('explain_problem')}
               required
             />
           </div>
 
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-medium mb-1">{t('upload_homework')}</label>
-            <div className="mb-3">
+          <div className="mb-8">
+            <label className="block text-gray-700 font-semibold text-sm mb-1">{t('upload_homework')}</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-all duration-200 hover:border-indigo-400 hover:bg-indigo-50">
+              <div className="flex flex-col items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-2">
+                  <span className="text-2xl text-indigo-600">📁</span>
+                </div>
+                <p className="text-gray-600 text-sm">{t('drag_drop_or_click')}</p>
+              </div>
               <Widget
                 publicKey={uploadcarePublicKey}
                 multiple={false}
@@ -185,40 +202,52 @@ const HomeworkHelpStudent = () => {
             </div>
             
             {uploading && (
-              <div className="mt-2">
-                <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div className="mt-4">
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div 
-                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
                     style={{ width: `${uploadProgress}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-600 mt-1">{t('uploading')}... {uploadProgress}%</p>
+                <p className="text-xs text-gray-600 mt-2 text-center">{t('uploading')}... {uploadProgress}%</p>
               </div>
             )}
             
             {helpData.fileUrl && !uploading && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                <p className="text-xs text-green-700">
-                  ✓ {t('file_uploaded')}
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center">
+                <span className="text-green-500 text-xl mr-2">✓</span>
+                <p className="text-sm text-green-700">
+                  {t('file_uploaded')}
                 </p>
               </div>
             )}
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-5">
-            <h3 className="font-medium text-blue-800 text-sm mb-1">💡 {t('how_it_works')}</h3>
-            <ul className="list-disc list-inside text-blue-700 text-xs space-y-1">
-              <li>{t('teachers_classmates_view')}</li>
-              <li>{t('get_feedback')}</li>
-              <li>{t('work_private')}</li>
-            </ul>
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl p-4 mb-8">
+            <h3 className="font-bold text-indigo-800 text-lg mb-3 flex items-center">
+              <span className="text-2xl mr-2">💡</span> {t('how_it_works')}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-white p-3 rounded-lg text-center shadow-sm">
+                <div className="text-2xl mb-1">📤</div>
+                <p className="text-xs text-gray-600">{t('teachers_classmates_view')}</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg text-center shadow-sm">
+                <div className="text-2xl mb-1">💬</div>
+                <p className="text-xs text-gray-600">{t('get_feedback')}</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg text-center shadow-sm">
+                <div className="text-2xl mb-1">🔒</div>
+                <p className="text-xs text-gray-600">{t('work_private')}</p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
             <button
               type="button"
               onClick={() => navigate('/homework')}
-              className="px-4 py-1 border border-gray-300 text-gray-700 rounded text-sm"
+              className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all duration-200 text-sm"
               disabled={loading || uploading}
             >
               {t('cancel')}
@@ -226,9 +255,22 @@ const HomeworkHelpStudent = () => {
             <button
               type="submit"
               disabled={loading || uploading}
-              className="px-4 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm disabled:opacity-50"
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 text-sm flex items-center justify-center"
             >
-              {loading || uploading ? t('submitting') : t('submit')}
+              {loading || uploading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {t('submitting')}
+                </>
+              ) : (
+                <>
+                  <span className="mr-2">📤</span>
+                  {t('submit')}
+                </>
+              )}
             </button>
           </div>
         </form>

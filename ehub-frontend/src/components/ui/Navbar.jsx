@@ -22,8 +22,6 @@ const Navbar = () => {
         return '/dashboard';
       case 'teacher':
         return '/dashboard';
-      case 'parent':
-        return '/dashboard';
       case 'admin':
         return '/dashboard';
       default:

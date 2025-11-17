@@ -29,6 +29,55 @@ const Navbar = () => {
     }
   };
 
+  // Define navigation items based on user role
+  const getDesktopNavItems = () => {
+    if (user?.role === 'teacher') {
+      return [
+        { path: '/dashboard', label: 'Dashboard' },
+        { path: '/homework/manage', label: 'Homework Management' }, // Changed from '/homework' to '/homework/manage'
+        { path: '/students', label: 'Students' },
+        { path: '/leaderboard', label: 'Leaderboard' },
+      ];
+    } else if (user?.role === 'student') {
+      return [
+        { path: '/dashboard', label: t('dashboard') },
+        { path: '/homework', label: t('homework') },
+        { path: '/homework/help/request', label: t('help') },
+        { path: '/leaderboard', label: t('leaderboard') },
+      ];
+    }
+    // Default navigation for other roles or unauthenticated users
+    return [
+      { path: '/dashboard', label: t('dashboard') },
+    ];
+  };
+
+  // Define mobile navigation items based on user role
+  const getMobileNavItems = () => {
+    if (user?.role === 'teacher') {
+      return [
+        { path: '/dashboard', label: 'Dashboard' },
+        { path: '/homework/manage', label: 'Homework Management' }, // Changed from '/homework' to '/homework/manage'
+        { path: '/students', label: 'Students' },
+        { path: '/leaderboard', label: 'Leaderboard' },
+      ];
+    } else if (user?.role === 'student') {
+      return [
+        { path: '/dashboard', label: t('dashboard') },
+        { path: '/homework', label: t('homework') },
+        { path: '/homework/help/request', label: t('help') },
+        { path: '/leaderboard', label: t('leaderboard') },
+      ];
+    }
+    // Default navigation for other roles or unauthenticated users
+    return [
+      { path: '/dashboard', label: t('dashboard') },
+    ];
+  };
+
+  const desktopNavItems = getDesktopNavItems();
+  const mobileNavItems = getMobileNavItems();
+
   return (
     // Improved navbar styling for better mobile appearance
     <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -49,37 +98,15 @@ const Navbar = () => {
           {/* Navigation Links - Only show when authenticated */}
           {isAuthenticated && (
             <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
-              <Link
-                to={getDashboardLink()}
-                className="text-gray-700 hover:text-primary-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                {t('dashboard')}
-              </Link>
-
-              {user?.role === 'student' && (
+              {desktopNavItems.map((item) => (
                 <Link
-                  to="/homework"
+                  key={item.path}
+                  to={item.path}
                   className="text-gray-700 hover:text-primary-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  {t('homework')}
+                  {item.label}
                 </Link>
-              )}
-
-              {user?.role === 'teacher' && (
-                <Link
-                  to="/students"
-                  className="text-gray-700 hover:text-primary-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  {t('students')}
-                </Link>
-              )}
-
-              <Link
-                to="/leaderboard"
-                className="text-gray-700 hover:text-primary-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                {t('leaderboard')}
-              </Link>
+              ))}
             </div>
           )}
 
@@ -179,41 +206,16 @@ const Navbar = () => {
           <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-120px)] overflow-y-auto">
             {isAuthenticated ? (
               <>
-                <Link
-                  to={getDashboardLink()}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
-                >
-                  {t('dashboard')}
-                </Link>
-
-                {user?.role === 'student' && (
+                {mobileNavItems.map((item) => (
                   <Link
-                    to="/homework"
+                    key={item.path}
+                    to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
                     className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
                   >
-                    {t('homework')}
+                    {item.label}
                   </Link>
-                )}
-
-                {user?.role === 'teacher' && (
-                  <Link
-                    to="/students"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
-                  >
-                    {t('students')}
-                  </Link>
-                )}
-
-                <Link
-                  to="/leaderboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
-                >
-                  {t('leaderboard')}
-                </Link>
+                ))}
 
                 <div className="border-t border-gray-200 my-1"></div>
 

@@ -2,6 +2,7 @@ import express from 'express';
 import { 
   getTeacherStats,
   getTeacherStudents,
+  getTeacherHomework,
   getTeacherSubmissions
 } from '../controllers/teacherController';
 import { protect } from '../middleware/auth';
@@ -17,6 +18,9 @@ router.get('/stats', authorizeRoles(['teacher']), getTeacherStats);
 
 // Teacher students route
 router.get('/students', authorizeRoles(['teacher']), getTeacherStudents);
+
+// Teacher homework route
+router.get('/homework', authorizeRoles(['teacher']), getTeacherHomework);
 
 // Teacher submissions route
 router.get('/submissions', authorizeRoles(['teacher']), getTeacherSubmissions);

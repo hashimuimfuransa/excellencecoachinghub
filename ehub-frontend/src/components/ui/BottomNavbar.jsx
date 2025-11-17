@@ -20,10 +20,10 @@ const BottomNavbar = () => {
         ];
       case 'teacher':
         return [
-          { path: '/dashboard', icon: '🏠', label: t('dashboard') },
-          { path: '/homework', icon: '📝', label: t('homework') },
-          { path: '/students', icon: '👥', label: t('students') },
-          { path: '/leaderboard', icon: '🏆', label: t('leaderboard') },
+          { path: '/dashboard', icon: '🏠', label: 'Dashboard' },
+          { path: '/homework/manage', icon: '📝', label: 'Homework Management' }, // Changed from '/homework' to '/homework/manage'
+          { path: '/students', icon: '👥', label: 'Students' },
+          { path: '/leaderboard', icon: '🏆', label: 'Leaderboard' },
         ];
       case 'parent':
         return [

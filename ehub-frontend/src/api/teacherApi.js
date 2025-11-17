@@ -10,7 +10,7 @@ export const teacherApi = {
   getCourses: () => axiosClient.get('/settings/teacher/courses'),
   
   // Teacher homework
-  getHomework: () => axiosClient.get('/homework-new'),
+  getHomework: () => axiosClient.get('/teacher/homework'),
   createHomework: (homeworkData) => axiosClient.post('/homework-new', homeworkData),
   updateHomework: (homeworkId, homeworkData) => axiosClient.put(`/homework-new/${homeworkId}`, homeworkData),
   deleteHomework: (homeworkId) => axiosClient.delete(`/homework-new/${homeworkId}`),

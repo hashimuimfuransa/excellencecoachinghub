@@ -20,6 +20,7 @@ export const homeworkApi = {
     return axiosClient.get(url);
   },
   createHomework: (homeworkData) => axiosClient.post('/homework-new', homeworkData),
+  updateHomework: (id, homeworkData) => axiosClient.put(`/homework-new/${id}`, homeworkData),
   getHomeworkById: (id) => axiosClient.get(`/homework-new/${id}`),
   deleteHomework: (id) => axiosClient.delete(`/homework-new/${id}`),
   

@@ -1,11 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { User } from '../models/User';
-import { Course } from '../models/Course';
-import { Enrollment } from '../models/Enrollment';
-import { Assignment, AssignmentSubmission } from '../models/Assignment';
-import { CourseStatus } from '../../../shared/types';
+import { Course, Enrollment, Assignment, AssignmentSubmission } from '../models';
 
-// Get teacher statistics
+// Get teacher's stats
 export const getTeacherStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const teacherId = req.user?._id;
@@ -20,14 +16,12 @@ export const getTeacherStats = async (req: Request, res: Response, next: NextFun
 
     // Get teacher's courses
     const teacherCourses = await Course.find({ instructor: teacherId });
-    
-    // Calculate course statistics
     const totalCourses = teacherCourses.length;
-    const activeCourses = teacherCourses.filter(course => course.status === CourseStatus.APPROVED).length;
-    const pendingCourses = teacherCourses.filter(course => course.status === CourseStatus.PENDING_APPROVAL).length;
-    const rejectedCourses = teacherCourses.filter(course => course.status === CourseStatus.REJECTED).length;
+    const activeCourses = teacherCourses.filter(course => course.status === 'published').length;
+    const pendingCourses = teacherCourses.filter(course => course.status === 'pending').length;
+    const rejectedCourses = teacherCourses.filter(course => course.status === 'rejected').length;
     
-    // Calculate total students from enrollments
+    // Calculate student statistics
     let totalStudents = 0;
     let totalEnrollments = 0;
     
@@ -183,6 +177,36 @@ export const getTeacherStudents = async (req: Request, res: Response, next: Next
         students,
         totalStudents: students.length,
         courses
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get teacher's homework assignments
+export const getTeacherHomework = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const teacherId = req.user?._id;
+    
+    if (!teacherId) {
+      res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+      return;
+    }
+
+    // Get teacher's homework assignments
+    const teacherHomework = await Assignment.find({ instructor: teacherId })
+      .select('title description level language dueDate maxPoints status createdAt updatedAt')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        homework: teacherHomework,
+        totalHomework: teacherHomework.length
       }
     });
   } catch (error) {

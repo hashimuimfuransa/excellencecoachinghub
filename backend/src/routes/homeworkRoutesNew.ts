@@ -5,6 +5,7 @@ import { authorizeRoles } from '../middleware/roleAuth';
 import { asyncHandler } from '../middleware/asyncHandler';
 import {
   createHomework,
+  updateHomework,
   getCourseHomework,
   getAllHomework,
   getHomeworkById,
@@ -48,6 +49,7 @@ router.use(auth);
 
 // Homework CRUD operations (for teachers)
 router.post('/', authorizeRoles(['teacher']), asyncHandler(createHomework));
+router.put('/:id', authorizeRoles(['teacher']), asyncHandler(updateHomework));
 router.get('/course/:courseId', authorizeRoles(['student', 'teacher']), asyncHandler(getCourseHomework));
 router.get('/all', authorizeRoles(['teacher']), asyncHandler(getAllHomework));
 // Add a default route that gets all homework (no course required)

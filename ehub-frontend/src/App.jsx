@@ -23,6 +23,7 @@ import StudentHomeworkCreator from './pages/StudentHomeworkCreator';
 import StudentCreatedHomework from './pages/StudentCreatedHomework';
 import ReviewStudentHomework from './pages/ReviewStudentHomework';
 import CreateHomework from './pages/CreateHomework';
+import EditHomework from './pages/EditHomework';
 import ManageHomework from './pages/ManageHomework';
 import HomeworkReviews from './pages/HomeworkReviews';
 import ReviewHomework from './pages/ReviewHomework';
@@ -165,6 +166,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute allowedRoles={['teacher']}>
                 <CreateHomework />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/edit/:id"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <EditHomework />
               </ProtectedRoute>
             }
           />

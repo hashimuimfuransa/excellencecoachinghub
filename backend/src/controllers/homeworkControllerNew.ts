@@ -84,6 +84,53 @@ export const createHomework = asyncHandler(async (req: Request, res: Response) =
   }
 });
 
+// Update homework
+export const updateHomework = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Find assignment by ID
+    const homework = await Assignment.findById(id);
+    
+    if (!homework) {
+      return res.status(404).json({
+        success: false,
+        message: 'Homework not found'
+      });
+    }
+    
+    // Check if user is the instructor of this homework
+    if (homework.instructor.toString() !== (req as any).user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to update this homework'
+      });
+    }
+    
+    // Update assignment in database
+    const updatedHomework = await Assignment.findByIdAndUpdate(
+      id,
+      {
+        ...req.body,
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      data: updatedHomework,
+      message: 'Homework updated successfully'
+    });
+  } catch (error: any) {
+    console.error('Error updating homework:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update homework'
+    });
+  }
+});
+
 // Get all homework
 export const getAllHomework = asyncHandler(async (req: Request, res: Response) => {
   try {

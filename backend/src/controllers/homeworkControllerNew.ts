@@ -53,6 +53,40 @@ const autoGradeSubmission = async (homework: any, submission: any) => {
         }
       }
     }
+    // Grade true-false questions
+    else if (question.type === 'true-false') {
+      if (answer.answer === question.correctAnswer) {
+        earnedPoints += question.points || 0;
+      }
+    }
+    // Grade fill-in-blank questions
+    else if (question.type === 'fill-in-blank') {
+      const correctAnswers = Array.isArray(question.correctAnswer) ? question.correctAnswer : [question.correctAnswer];
+      const userAnswer = answer.answer?.toLowerCase().trim();
+      
+      if (userAnswer && correctAnswers.some((correct: string) => 
+        question.caseSensitive ? correct === userAnswer : correct.toLowerCase() === userAnswer
+      )) {
+        earnedPoints += question.points || 0;
+      }
+    }
+    // Grade ordering questions
+    else if (question.type === 'ordering') {
+      const correctOrder = Array.isArray(question.correctAnswer) ? question.correctAnswer : [];
+      const userOrder = Array.isArray(answer.answer) ? answer.answer : [];
+      
+      if (userOrder.length === correctOrder.length) {
+        let correctPositions = 0;
+        for (let j = 0; j < correctOrder.length; j++) {
+          if (userOrder[j] === correctOrder[j]) {
+            correctPositions++;
+          }
+        }
+        
+        const positionPercentage = correctPositions / correctOrder.length;
+        earnedPoints += Math.round((question.points || 0) * positionPercentage);
+      }
+    }
   }
 
   return totalScore > 0 ? Math.round((earnedPoints / totalScore) * 100) : 0;

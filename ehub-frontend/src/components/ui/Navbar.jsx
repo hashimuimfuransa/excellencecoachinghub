@@ -80,7 +80,7 @@ const Navbar = () => {
 
   return (
     // Improved navbar styling for better mobile appearance
-    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-14 md:h-16">
           {/* Logo */}
@@ -91,18 +91,18 @@ const Navbar = () => {
                 alt="ecoach Logo" 
                 className="h-8 w-auto"
               />
-              <span className="ml-2 text-lg md:text-xl font-bold text-gray-900 hidden sm:block">eCoach</span>
+              <span className="ml-2 text-lg md:text-xl font-bold text-white hidden sm:block">eCoach</span>
             </Link>
           </div>
 
           {/* Navigation Links - Only show when authenticated */}
           {isAuthenticated && (
-            <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
+            <div className="hidden md:flex items-center space-x-1 lg:space-x-2">
               {desktopNavItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className="text-gray-700 hover:text-primary-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-blue-100 hover:text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-white hover:bg-opacity-10"
                 >
                   {item.label}
                 </Link>
@@ -113,7 +113,7 @@ const Navbar = () => {
           {/* Mobile menu button - Always show for all users */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-1.5 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="md:hidden p-1.5 rounded-md text-white hover:bg-white hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-white"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {mobileMenuOpen ? (
@@ -135,37 +135,37 @@ const Navbar = () => {
                 
                 {/* User Menu */}
                 <div className="relative group">
-                  <button className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none">
-                    <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary-700">
+                  <button className="flex items-center space-x-2 text-blue-100 hover:text-white focus:outline-none">
+                    <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-white">
                         {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
                       </span>
                     </div>
-                    <span className="hidden lg:block text-sm font-medium">
+                    <span className="hidden lg:block text-sm font-medium text-white">
                       {user?.firstName} {user?.lastName}
                     </span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
                   
                   {/* Dropdown Menu */}
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-100">
                     <Link
                       to="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                     >
                       {t('profile_settings')}
                     </Link>
                     <Link
                       to="/settings"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                     >
                       {t('preferences')}
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                     >
                       {t('sign_out')}
                     </button>
@@ -176,13 +176,13 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-primary-600 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                  className="text-blue-100 hover:text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-white hover:bg-opacity-10"
                 >
                   {t('sign_in')}
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-primary-600 text-white hover:bg-primary-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                  className="bg-white bg-opacity-20 text-white hover:bg-opacity-30 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
                 >
                   {t('get_started')}
                 </Link>
@@ -194,11 +194,11 @@ const Navbar = () => {
 
       {/* Improved mobile menu with better styling and spacing */}
       <div className={`md:hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'block' : 'hidden'}`}>
-        <div className="border-t border-gray-200 bg-white shadow-lg">
+        <div className="border-t border-white border-opacity-20 bg-white bg-opacity-95 backdrop-blur-lg shadow-xl">
           {/* Language selector */}
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+          <div className="px-4 py-3 bg-blue-500 bg-opacity-10 border-b border-white border-opacity-20">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">{t('language')}</span>
+              <span className="text-sm font-medium text-blue-100">{t('language')}</span>
               <LanguageSelector />
             </div>
           </div>
@@ -211,7 +211,7 @@ const Navbar = () => {
                     key={item.path}
                     to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                    className="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -222,7 +222,7 @@ const Navbar = () => {
                 <Link
                   to="/profile"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                  className="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
                   {t('profile_settings')}
                 </Link>
@@ -230,7 +230,7 @@ const Navbar = () => {
                 <Link
                   to="/settings"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                  className="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
                   {t('preferences')}
                 </Link>
@@ -240,7 +240,7 @@ const Navbar = () => {
                     handleLogout();
                     setMobileMenuOpen(false);
                   }}
-                  className="block w-full text-left px-3 py-2.5 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                  className="block w-full text-left px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
                   {t('sign_out')}
                 </button>
@@ -250,14 +250,14 @@ const Navbar = () => {
                 <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-md text-base font-medium text-center text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                  className="block px-3 py-2.5 rounded-lg text-base font-medium text-center text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
                   {t('sign_in')}
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-md text-base font-medium text-center bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                  className="block px-3 py-2.5 rounded-lg text-base font-medium text-center bg-blue-500 bg-opacity-10 text-blue-600 hover:bg-blue-100 transition-colors"
                 >
                   {t('get_started')}
                 </Link>

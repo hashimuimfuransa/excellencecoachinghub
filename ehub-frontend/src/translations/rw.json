@@ -176,5 +176,7 @@
   "back_to_dashboard": "Gusubira kuri ikibaho",
   "saving": "Bikwa...",
   "saved": "Yabitswe",
-  "save_error": "Ntibyashobotse kubika"
+  "save_error": "Ntibyashobotse kubika",
+  "redirecting_to_leaderboard": "Guhindukira kuri urutonde rw'abashizweho...",
+  "view_leaderboard_now": "Reba urutonde rw'abashizweho none"
 }

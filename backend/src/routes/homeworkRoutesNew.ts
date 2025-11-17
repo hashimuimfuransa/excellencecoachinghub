@@ -13,7 +13,8 @@ import {
   getStudentHomeworkSubmission,
   getHomeworkSubmissions,
   gradeHomeworkSubmission,
-  deleteHomework
+  deleteHomework,
+  getHomeworkSubmissionById
 } from '../controllers/homeworkControllerNew';
 
 const router = express.Router();
@@ -64,5 +65,6 @@ router.get('/:homeworkId/submission', authorizeRoles(['student']), asyncHandler(
 // Homework submissions management (for teachers)
 router.get('/:homeworkId/submissions', authorizeRoles(['teacher']), asyncHandler(getHomeworkSubmissions));
 router.put('/submissions/:submissionId/grade', authorizeRoles(['teacher']), asyncHandler(gradeHomeworkSubmission));
+router.get('/submissions/:submissionId', authorizeRoles(['student', 'teacher']), asyncHandler(getHomeworkSubmissionById));
 
 export default router;

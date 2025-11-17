@@ -418,6 +418,50 @@ export const getStudentHomeworkSubmission = asyncHandler(async (req: Request, re
   }
 });
 
+// Get homework submission details by submission ID
+export const getHomeworkSubmissionById = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { submissionId } = req.params;
+    
+    // Fetch submission from database with populated assignment and student details
+    const submission = await AssignmentSubmission.findById(submissionId)
+      .populate('assignment', 'title extractedQuestions')
+      .populate('student', 'firstName lastName email');
+    
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: 'Submission not found'
+      });
+    }
+    
+    // Check permissions - only the student who submitted or the teacher can view
+    const userId = (req as any).user._id;
+    const userRole = (req as any).user.role;
+    
+    const isStudentOwner = userRole === 'student' && submission.student._id.toString() === userId;
+    const isTeacher = userRole === 'teacher' && submission.assignment.instructor.toString() === userId;
+    
+    if (!isStudentOwner && !isTeacher) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view this submission'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: submission
+    });
+  } catch (error: any) {
+    console.error('Error fetching submission:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch submission'
+    });
+  }
+});
+
 // Get homework submissions (for teachers)
 export const getHomeworkSubmissions = asyncHandler(async (req: Request, res: Response) => {
   try {

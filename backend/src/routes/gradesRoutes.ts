@@ -234,17 +234,17 @@ router.get('/student', auth, async (req: Request, res: Response) => {
             percentage: Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100),
             grade: calculateGrade(Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100)),
             submittedAt: submission.submittedAt || new Date(),
-            gradedAt: submission.gradedAt || new Date(),
+            gradedAt: submission.gradedAt ? submission.gradedAt : new Date(),
             feedback: submission.feedback || '',
             timeSpent: submission.timeSpent || 0,
             attempts: submission.attemptNumber || 1,
             status: submission.status as 'submitted' | 'graded' | 'pending' | 'late' | 'draft' | 'returned',
             type: 'assessment',
             // Additional AI feedback data
-            aiGraded: submission.aiGraded,
-            correctAnswers,
-            incorrectAnswers,
-            totalQuestions,
+            aiGraded: submission.aiGraded || false,
+            correctAnswers: correctAnswers,
+            incorrectAnswers: incorrectAnswers,
+            totalQuestions: totalQuestions,
             detailedFeedback: submission.answers.map((answer, index) => {
               // Validate feedback consistency
               const feedback = answer.feedback || '';
@@ -332,12 +332,12 @@ router.get('/student', auth, async (req: Request, res: Response) => {
             courseName: course.title,
             assignmentId: assignment._id,
             assignmentTitle: assignment.title,
-            score: submission.grade || 0,
+            score: submission.grade || submission.autoGrade || 0,  // Use autoGrade if grade is not set
             maxScore: assignment.maxPoints || 100,
-            percentage: Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100),
-            grade: calculateGrade(Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100)),
+            percentage: Math.round(((submission.grade || submission.autoGrade || 0) / (assignment.maxPoints || 100)) * 100),
+            grade: calculateGrade(Math.round(((submission.grade || submission.autoGrade || 0) / (assignment.maxPoints || 100)) * 100)),
             submittedAt: submission.submittedAt || new Date(),
-            gradedAt: submission.gradedAt || new Date(),
+            gradedAt: submission.gradedAt ? submission.gradedAt : new Date(),
             feedback: feedback,
             timeSpent: submission.timeSpent || 0,
             attempts: 1,
@@ -345,13 +345,13 @@ router.get('/student', auth, async (req: Request, res: Response) => {
             type: 'assignment',
             // Additional assignment-specific data
             aiGraded: !!submission.aiGrade,
-            aiConfidence: submission.aiGrade?.confidence,
+            aiConfidence: submission.aiGrade?.confidence || 0,  // Provide default value
             detailedFeedback: detailedFeedback.map(detail => ({
-              question: `Question ${detail.questionIndex + 1}`,
+              question: `Question ${detail.questionIndex + 1}` || 'Unknown question',
               userAnswer: 'User answer not available',
               correctAnswer: 'Correct answer not available',
-              isCorrect: detail.earnedPoints === detail.maxPoints,
-              feedback: detail.feedback
+              isCorrect: (detail.earnedPoints === detail.maxPoints) || false,
+              feedback: detail.feedback || ''
             }))
           });
         }
@@ -504,7 +504,7 @@ router.get('/teacher', auth, authorizeRoles(['teacher']), async (req: Request, r
     // Get courses taught by this teacher
     const teacherCourses = await Course.find({ instructor: userId }).select('_id');
     const courseIds = teacherCourses.map(course => course._id);
-
+    
     if (courseIds.length === 0) {
       return res.json({ success: true, grades: [] });
     }
@@ -562,7 +562,7 @@ router.get('/teacher', auth, authorizeRoles(['teacher']), async (req: Request, r
             percentage: Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100),
             grade: calculateGrade(Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100)),
             submittedAt: submission.submittedAt || new Date(),
-            gradedAt: submission.gradedAt || new Date(),
+            gradedAt: submission.gradedAt ? submission.gradedAt : new Date(),
             feedback: submission.feedback || '',
             timeSpent: submission.timeSpent || 0,
             attempts: submission.attemptNumber || 1,
@@ -623,12 +623,12 @@ router.get('/teacher', auth, authorizeRoles(['teacher']), async (req: Request, r
               courseName: course.title,
               assignmentId: assignment._id,
               assignmentTitle: assignment.title,
-              score: submission.grade || 0,
+              score: submission.grade || submission.autoGrade || 0,
               maxScore: assignment.maxPoints || 100,
-              percentage: Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100),
-              grade: calculateGrade(Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100)),
+              percentage: Math.round(((submission.grade || submission.autoGrade || 0) / (assignment.maxPoints || 100)) * 100),
+              grade: calculateGrade(Math.round(((submission.grade || submission.autoGrade || 0) / (assignment.maxPoints || 100)) * 100)),
               submittedAt: submission.submittedAt || new Date(),
-              gradedAt: submission.gradedAt || new Date(),
+              gradedAt: submission.gradedAt ? submission.gradedAt : new Date(),
               feedback: submission.feedback || '',
               timeSpent: 0, // Assignment submissions don't track time spent
               attempts: 1,
@@ -641,7 +641,11 @@ router.get('/teacher', auth, authorizeRoles(['teacher']), async (req: Request, r
     }
 
     // Sort by submission date (newest first)
-    grades.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    grades.sort((a, b) => {
+      const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+      const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
     res.json({ success: true, grades });
   } catch (error) {
@@ -666,50 +670,55 @@ router.get('/teacher/course/:courseId', auth, authorizeRoles(['teacher']), async
 
     // Get assessment grades
     if (!type || type === 'all' || type === 'assessment') {
-      let assessmentQuery: any = {
-        courseId,
-        'submissions.status': { $in: ['submitted', 'graded'] }
+      let submissionQuery: any = {
+        course: courseId,
+        status: { $in: ['submitted', 'graded'] }
       };
 
       if (status && status !== 'all') {
-        assessmentQuery['submissions.status'] = status;
+        submissionQuery.status = status;
       }
 
-      assessmentQuery = applyTimeFilter(assessmentQuery, timeFilter as string);
+      submissionQuery = applyTimeFilter(submissionQuery, timeFilter as string);
 
-      const assessments = await Assessment.find(assessmentQuery)
-        .populate('courseId', 'title')
-        .populate('submissions.studentId', 'firstName lastName email');
-
-      for (const assessment of assessments) {
-        // This is incorrect - assessments don't have submissions array
-        for (const submission of []) { // Temporary fix
-          if (['submitted', 'graded'].includes(submission.status)) {
-            const student = submission.studentId as any;
-            const courseData = assessment.courseId as any;
-            
-            grades.push({
-              _id: `${assessment._id}_${submission._id}`,
-              studentId: student._id,
-              studentName: `${student.firstName} ${student.lastName}`,
-              studentEmail: student.email,
-              courseId: courseData._id,
-              courseName: courseData.title,
-              assessmentId: assessment._id,
-              assessmentTitle: assessment.title,
-              score: submission.score || 0,
-              maxScore: assessment.totalPoints || 100,
-              percentage: Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100),
-              grade: calculateGrade(Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100)),
-              submittedAt: submission.submittedAt,
-              gradedAt: submission.gradedAt,
-              feedback: submission.feedback,
-              timeSpent: submission.timeSpent || 0,
-              attempts: submission.attempts || 1,
-              status: submission.status,
-              type: 'assessment'
-            });
+      const submissions = await AssessmentSubmission.find(submissionQuery)
+        .populate({
+          path: 'assessment',
+          select: 'title totalPoints course',
+          populate: {
+            path: 'course',
+            select: 'title'
           }
+        })
+        .populate('student', 'firstName lastName email');
+
+      for (const submission of submissions) {
+        if (submission.assessment && submission.student) {
+          const assessment = submission.assessment as any;
+          const student = submission.student as any;
+          const courseData = assessment.course as any;
+          
+          grades.push({
+            _id: `${assessment._id}_${submission._id}`,
+            studentId: student._id,
+            studentName: `${student.firstName} ${student.lastName}`,
+            studentEmail: student.email,
+            courseId: courseData._id,
+            courseName: courseData.title,
+            assessmentId: assessment._id,
+            assessmentTitle: assessment.title,
+            score: submission.score || 0,
+            maxScore: assessment.totalPoints || 100,
+            percentage: Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100),
+            grade: calculateGrade(Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100)),
+            submittedAt: submission.submittedAt || new Date(),
+            gradedAt: submission.gradedAt ? submission.gradedAt : new Date(),
+            feedback: submission.feedback || '',
+            timeSpent: submission.timeSpent || 0,
+            attempts: submission.attemptNumber || 1,
+            status: submission.status,
+            type: 'assessment'
+          });
         }
       }
     }
@@ -717,26 +726,39 @@ router.get('/teacher/course/:courseId', auth, authorizeRoles(['teacher']), async
     // Get assignment grades
     if (!type || type === 'all' || type === 'assignment') {
       let assignmentQuery: any = {
-        courseId,
-        'submissions.status': { $in: ['submitted', 'graded'] }
+        course: courseId,
+        status: { $in: ['submitted', 'graded'] }
       };
 
       if (status && status !== 'all') {
-        assignmentQuery['submissions.status'] = status;
+        assignmentQuery.status = status;
       }
 
       assignmentQuery = applyTimeFilter(assignmentQuery, timeFilter as string);
 
-      const assignments = await Assignment.find(assignmentQuery)
-        .populate('courseId', 'title')
-        .populate('submissions.studentId', 'firstName lastName email');
+      const assignments = await Assignment.find({ course: courseId }).select('_id');
+      const assignmentIds = assignments.map(assignment => assignment._id);
 
-      for (const assignment of assignments) {
-        // This is incorrect - assignments don't have submissions array
-        for (const submission of []) { // Temporary fix
-          if (['submitted', 'graded'].includes(submission.status)) {
-            const student = submission.studentId as any;
-            const courseData = assignment.courseId as any;
+      if (assignmentIds.length > 0) {
+        const assignmentSubmissions = await AssignmentSubmission.find({
+          assignment: { $in: assignmentIds },
+          ...assignmentQuery
+        })
+        .populate({
+          path: 'assignment',
+          select: 'title maxPoints course',
+          populate: {
+            path: 'course',
+            select: 'title'
+          }
+        })
+        .populate('student', 'firstName lastName email');
+
+        for (const submission of assignmentSubmissions) {
+          if (submission.assignment && submission.student) {
+            const assignment = submission.assignment as any;
+            const student = submission.student as any;
+            const courseData = assignment.course as any;
             
             grades.push({
               _id: `${assignment._id}_${submission._id}`,
@@ -747,13 +769,13 @@ router.get('/teacher/course/:courseId', auth, authorizeRoles(['teacher']), async
               courseName: courseData.title,
               assignmentId: assignment._id,
               assignmentTitle: assignment.title,
-              score: submission.score || 0,
+              score: submission.grade || submission.autoGrade || 0,
               maxScore: assignment.maxPoints || 100,
-              percentage: Math.round(((submission.score || 0) / (assignment.maxPoints || 100)) * 100),
-              grade: calculateGrade(Math.round(((submission.score || 0) / (assignment.maxPoints || 100)) * 100)),
-              submittedAt: submission.submittedAt,
-              gradedAt: submission.gradedAt,
-              feedback: submission.feedback,
+              percentage: Math.round(((submission.grade || submission.autoGrade || 0) / (assignment.maxPoints || 100)) * 100),
+              grade: calculateGrade(Math.round(((submission.grade || submission.autoGrade || 0) / (assignment.maxPoints || 100)) * 100)),
+              submittedAt: submission.submittedAt || new Date(),
+              gradedAt: submission.gradedAt ? submission.gradedAt : new Date(),
+              feedback: submission.feedback || '',
               timeSpent: submission.timeSpent || 0,
               attempts: 1,
               status: submission.status,
@@ -765,7 +787,11 @@ router.get('/teacher/course/:courseId', auth, authorizeRoles(['teacher']), async
     }
 
     // Sort by submission date (newest first)
-    grades.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    grades.sort((a, b) => {
+      const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+      const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
     res.json({ success: true, grades });
   } catch (error) {
@@ -879,6 +905,7 @@ router.get('/leaderboard', auth, async (req: Request, res: Response) => {
               continue;
             }
             
+            // Use either grade or autoGrade for the score (this is the key fix)
             const score = submission.grade || submission.autoGrade || 0;
             const maxScore = assignment.maxPoints || 100;
             

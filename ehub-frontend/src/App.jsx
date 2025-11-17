@@ -19,6 +19,7 @@ import SelectLevel from './pages/SelectLevel';
 import Homework from './pages/Homework';
 import HomeworkList from './pages/HomeworkList';
 import InteractiveHomework from './pages/InteractiveHomework';
+import HomeworkReview from './pages/HomeworkReview';
 import StudentHomeworkCreator from './pages/StudentHomeworkCreator';
 import StudentCreatedHomework from './pages/StudentCreatedHomework';
 import ReviewStudentHomework from './pages/ReviewStudentHomework';
@@ -158,6 +159,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute allowedRoles={['student']}>
                 <InteractiveHomework />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/:id/review"
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <HomeworkReview />
               </ProtectedRoute>
             }
           />

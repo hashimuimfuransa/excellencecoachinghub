@@ -176,5 +176,7 @@
   "back_to_dashboard": "Retour au tableau de bord",
   "saving": "Enregistrement...",
   "saved": "Enregistré",
-  "save_error": "Échec de l'enregistrement"
+  "save_error": "Échec de l'enregistrement",
+  "redirecting_to_leaderboard": "Redirection vers le classement...",
+  "view_leaderboard_now": "Voir le classement maintenant"
 }

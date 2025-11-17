@@ -29,7 +29,8 @@ export const homeworkApi = {
   getStudentSubmission: (homeworkId) => axiosClient.get(`/homework-new/${homeworkId}/submission`),
   getHomeworkSubmissions: (homeworkId) => axiosClient.get(`/homework-new/${homeworkId}/submissions`),
   gradeHomeworkSubmission: (submissionId, gradeData) => axiosClient.put(`/homework-new/submissions/${submissionId}/grade`, gradeData),
-  
+  getHomeworkSubmissionById: (submissionId) => axiosClient.get(`/homework-new/submissions/${submissionId}`),
+
   // Homework help system
   getHomeworkHelp: () => axiosClient.get('/homework/help'),
   getHomeworkHelpById: (id) => axiosClient.get(`/homework/help/${id}`),

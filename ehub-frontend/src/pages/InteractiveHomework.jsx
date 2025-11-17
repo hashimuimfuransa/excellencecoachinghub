@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
 import { useTranslation } from 'react-i18next';
 import BottomNavbar from '../components/ui/BottomNavbar';
 
 const InteractiveHomework = () => {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const [homework, setHomework] = useState(null);
@@ -18,6 +19,9 @@ const InteractiveHomework = () => {
   const [saveStatus, setSaveStatus] = useState(''); // For showing save status to user
   const saveTimeoutRef = useRef(null); // For debouncing auto-saves
 
+  // Check if we're in review mode
+  const isReviewMode = new URLSearchParams(location.search).get('review') === 'true';
+
   // Fetch homework data from API
   useEffect(() => {
     const fetchHomework = async () => {
@@ -27,18 +31,53 @@ const InteractiveHomework = () => {
         if (response.data.success) {
           setHomework(response.data.data);
           
-          // Try to load saved progress
-          try {
-            const submissionResponse = await homeworkApi.getStudentSubmission(id);
-            if (submissionResponse.data.success && submissionResponse.data.data) {
-              // Load saved answers
-              const savedAnswers = {};
-              submissionResponse.data.data.extractedAnswers?.forEach(answer => {
-                savedAnswers[answer.questionIndex] = answer.answer;
-              });
-              setAnswers(savedAnswers);
-              setSubmitted(submissionResponse.data.data.status === 'submitted');
-            } else {
+          // If in review mode, load the submission data directly
+          if (isReviewMode) {
+            try {
+              const submissionResponse = await homeworkApi.getStudentSubmission(id);
+              if (submissionResponse.data.success && submissionResponse.data.data) {
+                // Load saved answers
+                const savedAnswers = {};
+                submissionResponse.data.data.extractedAnswers?.forEach(answer => {
+                  savedAnswers[answer.questionIndex] = answer.answer;
+                });
+                setAnswers(savedAnswers);
+                setSubmitted(true);
+                setSubmissionData(submissionResponse.data.data);
+              } else {
+                // No submission data found for review
+                setError('No submission data found for this homework. You may not have submitted it yet.');
+              }
+            } catch (submissionError) {
+              console.error('Error loading submission for review:', submissionError);
+              setError('Failed to load submission for review. You may not have submitted this homework yet.');
+            }
+          } else {
+            // Try to load saved progress (existing logic for working mode)
+            try {
+              const submissionResponse = await homeworkApi.getStudentSubmission(id);
+              if (submissionResponse.data.success && submissionResponse.data.data) {
+                // Load saved answers
+                const savedAnswers = {};
+                submissionResponse.data.data.extractedAnswers?.forEach(answer => {
+                  savedAnswers[answer.questionIndex] = answer.answer;
+                });
+                setAnswers(savedAnswers);
+                setSubmitted(submissionResponse.data.data.status === 'submitted');
+                if (submissionResponse.data.data.status === 'submitted') {
+                  setSubmissionData(submissionResponse.data.data);
+                }
+              } else {
+                // Initialize answers state with default values based on question types
+                const initialAnswers = {};
+                const questions = response.data.data.extractedQuestions || [];
+                questions.forEach((_, index) => {
+                  initialAnswers[index] = getInitialAnswerValue(questions[index]);
+                });
+                setAnswers(initialAnswers);
+              }
+            } catch (submissionError) {
+              console.log('No saved progress found, using default initialization');
               // Initialize answers state with default values based on question types
               const initialAnswers = {};
               const questions = response.data.data.extractedQuestions || [];
@@ -47,15 +86,6 @@ const InteractiveHomework = () => {
               });
               setAnswers(initialAnswers);
             }
-          } catch (submissionError) {
-            console.log('No saved progress found, using default initialization');
-            // Initialize answers state with default values based on question types
-            const initialAnswers = {};
-            const questions = response.data.data.extractedQuestions || [];
-            questions.forEach((_, index) => {
-              initialAnswers[index] = getInitialAnswerValue(questions[index]);
-            });
-            setAnswers(initialAnswers);
           }
         } else {
           setError(response.data.message || 'Failed to fetch homework');
@@ -73,12 +103,13 @@ const InteractiveHomework = () => {
     } else {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, isReviewMode]);
 
   // Auto-save effect - save progress when answers change
   useEffect(() => {
     // Don't auto-save if we're submitting or if there's no homework
-    if (submitting || !homework || submitted) return;
+    // Also don't auto-save in review mode
+    if (submitting || !homework || submitted || isReviewMode) return;
 
     // Clear any existing timeout
     if (saveTimeoutRef.current) {
@@ -96,7 +127,7 @@ const InteractiveHomework = () => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [answers, homework, submitting, submitted]);
+  }, [answers, homework, submitting, submitted, isReviewMode]);
 
   // Helper function to get initial answer value based on question type
   const getInitialAnswerValue = (question) => {
@@ -134,6 +165,9 @@ const InteractiveHomework = () => {
   };
 
   const handleAnswerChange = (elementId, answer) => {
+    // Don't allow answer changes in review mode
+    if (isReviewMode) return;
+    
     setAnswers(prev => ({
       ...prev,
       [elementId]: answer
@@ -263,6 +297,11 @@ const InteractiveHomework = () => {
       if (response.data.success) {
         setSubmitted(true);
         setSubmissionData(response.data.data);
+        
+        // Auto-redirect to leaderboard after 2 seconds
+        setTimeout(() => {
+          navigate('/leaderboard');
+        }, 2000);
       } else {
         throw new Error(response.data.message || 'Failed to submit homework');
       }
@@ -296,12 +335,20 @@ const InteractiveHomework = () => {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
           <p className="font-medium">Error: {error}</p>
         </div>
-        <button 
-          onClick={() => navigate('/homework')}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          ← Back to Homework
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button 
+            onClick={() => navigate('/homework')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            ← Back to Homework
+          </button>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -367,6 +414,135 @@ const InteractiveHomework = () => {
     return null;
   };
 
+  // Get detailed feedback for each question
+  const getQuestionFeedback = (questionIndex) => {
+    // Make sure we have submission data and answers
+    if (!submissionData || !submissionData.extractedAnswers) {
+      return {
+        isCorrect: null,
+        correctAnswer: 'Submission data not available',
+        userAnswer: 'No answer recorded',
+        feedback: 'No submission data available for this question.'
+      };
+    }
+    
+    const answer = submissionData.extractedAnswers.find(a => a.questionIndex === questionIndex);
+    if (!answer) {
+      return {
+        isCorrect: null,
+        correctAnswer: 'Answer not found',
+        userAnswer: 'No answer recorded',
+        feedback: 'No answer recorded for this question.'
+      };
+    }
+    
+    const question = homework?.extractedQuestions?.[questionIndex];
+    if (!question) {
+      return {
+        isCorrect: null,
+        correctAnswer: 'Question not found',
+        userAnswer: answer.answer,
+        feedback: 'Question data not available.'
+      };
+    }
+    
+    // For multiple choice questions
+    if (question.type === 'multiple-choice') {
+      const isCorrect = answer.answer === question.correctAnswer;
+      return {
+        isCorrect,
+        correctAnswer: question.correctAnswer,
+        userAnswer: answer.answer,
+        feedback: isCorrect ? 'Correct!' : `Incorrect. The correct answer is: ${question.correctAnswer}`
+      };
+    }
+    
+    // For true-false questions
+    if (question.type === 'true-false') {
+      const isCorrect = answer.answer === question.correctAnswer;
+      return {
+        isCorrect,
+        correctAnswer: question.correctAnswer,
+        userAnswer: answer.answer,
+        feedback: isCorrect ? 'Correct!' : `Incorrect. The correct answer is: ${question.correctAnswer}`
+      };
+    }
+    
+    // For fill-in-blank questions
+    if (question.type === 'fill-in-blank') {
+      const correctAnswers = Array.isArray(question.correctAnswer) ? question.correctAnswer : [question.correctAnswer];
+      const userAnswer = answer.answer?.toLowerCase().trim();
+      const isCorrect = userAnswer && correctAnswers.some(correct => 
+        question.caseSensitive ? correct === userAnswer : correct.toLowerCase() === userAnswer
+      );
+      
+      return {
+        isCorrect,
+        correctAnswer: correctAnswers.join(' or '),
+        userAnswer: answer.answer,
+        feedback: isCorrect ? 'Correct!' : `Incorrect. The correct answer is: ${correctAnswers.join(' or ')}`
+      };
+    }
+    
+    // For matching questions
+    if (question.type === 'matching') {
+      const userMatches = answer.answer?.matches || {};
+      const correctMatches = question.correctMatches || {};
+      let correctCount = 0;
+      let totalCount = 0;
+      
+      // Count correct matches
+      Object.entries(correctMatches).forEach(([leftItem, rightItem]) => {
+        totalCount++;
+        if (userMatches[`left-${question.leftItems?.indexOf(leftItem)}`] === `right-${question.rightItems?.indexOf(rightItem)}`) {
+          correctCount++;
+        }
+      });
+      
+      const isCorrect = correctCount === totalCount;
+      return {
+        isCorrect,
+        correctAnswer: correctMatches,
+        userAnswer: userMatches,
+        feedback: isCorrect ? `Correct! All ${totalCount} matches are correct.` : 
+                 `Incorrect. ${correctCount} out of ${totalCount} matches are correct.`
+      };
+    }
+    
+    // For ordering questions
+    if (question.type === 'ordering') {
+      const userOrder = Array.isArray(answer.answer) ? answer.answer : [];
+      const correctOrder = Array.isArray(question.correctAnswer) ? question.correctAnswer : [];
+      
+      const isCorrect = userOrder.length === correctOrder.length && 
+                       userOrder.every((item, index) => item === correctOrder[index]);
+      
+      return {
+        isCorrect,
+        correctAnswer: correctOrder.map(index => question.options?.[index]).join(' → '),
+        userAnswer: userOrder.map(index => question.options?.[index]).join(' → '),
+        feedback: isCorrect ? 'Correct!' : 'Incorrect. Check the correct order.'
+      };
+    }
+    
+    // For short-answer questions
+    if (question.type === 'short-answer' || question.type === 'text') {
+      return {
+        isCorrect: null, // Can't automatically determine for text answers
+        correctAnswer: question.correctAnswer || 'See teacher feedback',
+        userAnswer: answer.answer,
+        feedback: 'Answer submitted. Teacher will provide detailed feedback.'
+      };
+    }
+    
+    return {
+      isCorrect: null,
+      correctAnswer: 'Unknown question type',
+      userAnswer: answer.answer,
+      feedback: 'Unable to provide feedback for this question type.'
+    };
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-20 md:pb-6 pt-16 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
@@ -379,8 +555,8 @@ const InteractiveHomework = () => {
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 sm:px-4 sm:py-2 rounded-full text-sm font-semibold whitespace-nowrap">
               {homework.maxPoints} {t('points')}
             </div>
-            {/* Save status indicator */}
-            {saveStatus === 'saving' && (
+            {/* Save status indicator - only show when not in review mode */}
+            {!isReviewMode && saveStatus === 'saving' && (
               <div className="mt-2 text-xs text-blue-600 flex items-center">
                 <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -389,7 +565,7 @@ const InteractiveHomework = () => {
                 {t('saving')}
               </div>
             )}
-            {saveStatus === 'saved' && (
+            {!isReviewMode && saveStatus === 'saved' && (
               <div className="mt-2 text-xs text-green-600 flex items-center">
                 <svg className="w-3 h-3 mr-1 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -397,7 +573,7 @@ const InteractiveHomework = () => {
                 {t('saved')}
               </div>
             )}
-            {saveStatus === 'error' && (
+            {!isReviewMode && saveStatus === 'error' && (
               <div className="mt-2 text-xs text-red-600">
                 {t('save_error')}
               </div>
@@ -475,7 +651,7 @@ const InteractiveHomework = () => {
                           answers[index] === option 
                             ? 'border-blue-500 bg-blue-50 shadow-sm' 
                             : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                        }`}
+                        } ${isReviewMode ? 'cursor-default' : ''}`}
                       >
                         <input
                           type="radio"
@@ -484,6 +660,7 @@ const InteractiveHomework = () => {
                           checked={answers[index] === option}
                           onChange={() => handleAnswerChange(index, option)}
                           className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                          disabled={isReviewMode}
                         />
                         <span className="ml-3 sm:ml-4 text-gray-800 text-base sm:text-lg">{option}</span>
                       </label>
@@ -497,8 +674,9 @@ const InteractiveHomework = () => {
                       value={answers[index] || ''}
                       onChange={(e) => handleAnswerChange(index, e.target.value)}
                       placeholder={t('enter_your_answer')}
-                      className="w-full px-4 sm:px-5 py-3 sm:py-4 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base sm:text-lg"
+                      className="w-full px-4 sm:px-5 py-3 sm:py-4 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-50 transition-colors text-base sm:text-lg"
                       rows="4"
+                      disabled={isReviewMode}
                     />
                   </div>
                 )}
@@ -608,7 +786,8 @@ const InteractiveHomework = () => {
                                     }
                                   });
                                 }}
-                                className="flex-grow px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base sm:text-lg w-full"
+                                className="flex-grow px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-50 text-base sm:text-lg w-full"
+                                disabled={isReviewMode}
                               >
                                 <option value="">{t('select_match')}</option>
                                 {element.rightItems?.map((rightItem, rightIndex) => (
@@ -634,7 +813,8 @@ const InteractiveHomework = () => {
                         answers[index] === 'true'
                           ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
                           : 'border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-800'
-                      }`}
+                      } ${isReviewMode ? 'cursor-default' : 'cursor-pointer'}`}
+                      disabled={isReviewMode}
                     >
                       <div className="flex items-center justify-center">
                         <span className="mr-2 sm:mr-3 text-xl sm:text-2xl">✓</span>
@@ -648,7 +828,8 @@ const InteractiveHomework = () => {
                         answers[index] === 'false'
                           ? 'border-red-500 bg-red-50 text-red-700 shadow-md'
                           : 'border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-800'
-                      }`}
+                      } ${isReviewMode ? 'cursor-default' : 'cursor-pointer'}`}
+                      disabled={isReviewMode}
                     >
                       <div className="flex items-center justify-center">
                         <span className="mr-2 sm:mr-3 text-xl sm:text-2xl">✗</span>
@@ -666,7 +847,8 @@ const InteractiveHomework = () => {
                         value={answers[index] || ''}
                         onChange={(e) => handleAnswerChange(index, e.target.value)}
                         placeholder={t('enter_your_answer')}
-                        className="w-full px-4 sm:px-5 py-3 sm:py-4 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base sm:text-lg"
+                        className="w-full px-4 sm:px-5 py-3 sm:py-4 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-50 transition-colors text-base sm:text-lg"
+                        disabled={isReviewMode}
                       />
                       {element.caseSensitive && (
                         <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-500 flex items-center">
@@ -697,49 +879,51 @@ const InteractiveHomework = () => {
                               {itemIndex + 1}
                             </div>
                             <p className="text-gray-800 text-base sm:text-lg flex-grow text-center sm:text-left">{item}</p>
-                            <div className="flex space-x-1 sm:space-x-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (itemIndex > 0) {
-                                    const currentOrder = answers[index] || [...Array(element.options.length).keys()];
-                                    const newOrder = moveItem(currentOrder, itemIndex, itemIndex - 1);
-                                    handleAnswerChange(index, newOrder);
-                                  }
-                                }}
-                                className="p-2 sm:p-3 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
-                                disabled={itemIndex === 0}
-                                aria-label={t('move_up')}
-                              >
-                                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (itemIndex < (element.options?.length || 1) - 1) {
-                                    const currentOrder = answers[index] || [...Array(element.options.length).keys()];
-                                    const newOrder = moveItem(currentOrder, itemIndex, itemIndex + 1);
-                                    handleAnswerChange(index, newOrder);
-                                  }
-                                }}
-                                className="p-2 sm:p-3 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
-                                disabled={itemIndex === (element.options?.length || 1) - 1}
-                                aria-label={t('move_down')}
-                              >
-                                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-                            </div>
+                            {!isReviewMode && (
+                              <div className="flex space-x-1 sm:space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (itemIndex > 0) {
+                                      const currentOrder = answers[index] || [...Array(element.options.length).keys()];
+                                      const newOrder = moveItem(currentOrder, itemIndex, itemIndex - 1);
+                                      handleAnswerChange(index, newOrder);
+                                    }
+                                  }}
+                                  className="p-2 sm:p-3 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+                                  disabled={itemIndex === 0}
+                                  aria-label={t('move_up')}
+                                >
+                                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (itemIndex < (element.options?.length || 1) - 1) {
+                                      const currentOrder = answers[index] || [...Array(element.options.length).keys()];
+                                      const newOrder = moveItem(currentOrder, itemIndex, itemIndex + 1);
+                                      handleAnswerChange(index, newOrder);
+                                    }
+                                  }}
+                                  className="p-2 sm:p-3 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+                                  disabled={itemIndex === (element.options?.length || 1) - 1}
+                                  aria-label={t('move_down')}
+                                >
+                                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
                     <div className="mt-3 sm:mt-4 text-sm text-gray-500 flex items-center">
                       <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0v3m0 0V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0v3m0 0V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
                       </svg>
                       {t('drag_and_drop_instruction')}
                     </div>
@@ -751,7 +935,49 @@ const InteractiveHomework = () => {
         )}
       </div>
 
-      {!submitted ? (
+      {/* Show submission success view or review mode view */}
+      {isReviewMode || submitted ? (
+        <div className="bg-gradient-to-r from-green-100 to-emerald-100 border border-green-400 text-green-800 px-4 py-4 sm:px-6 sm:py-5 rounded-2xl shadow-lg mt-6">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-3 sm:ml-4 flex-1">
+              <h3 className="text-base sm:text-lg font-bold">
+                {isReviewMode ? t('homework_review_mode') : t('homework_submitted_successfully')}
+              </h3>
+              {displayScore() && (
+                <p className="mt-1 text-green-700 text-sm sm:text-base">
+                  {displayScore().message}
+                </p>
+              )}
+              {!isReviewMode && (
+                <p className="mt-1 text-green-700 text-sm sm:text-base">
+                  {t('redirecting_to_leaderboard')}
+                </p>
+              )}
+              <div className="mt-3 sm:mt-4 flex flex-wrap gap-2">
+                {!isReviewMode && (
+                  <button
+                    onClick={() => navigate('/leaderboard')}
+                    className="px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    {t('view_leaderboard_now')}
+                  </button>
+                )}
+                <button
+                  onClick={() => navigate('/homework')}
+                  className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  {t('back_to_homework')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
         <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 mt-6">
           <button
             onClick={() => navigate('/homework')}
@@ -775,30 +1001,103 @@ const InteractiveHomework = () => {
             ) : t('submit_homework')}
           </button>
         </div>
-      ) : (
-        <div className="bg-gradient-to-r from-green-100 to-emerald-100 border border-green-400 text-green-800 px-4 py-4 sm:px-6 sm:py-5 rounded-2xl shadow-lg mt-6">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="ml-3 sm:ml-4">
-              <h3 className="text-base sm:text-lg font-bold">{t('homework_submitted_successfully')}</h3>
-              {displayScore() && (
-                <p className="mt-1 text-green-700 text-sm sm:text-base">
-                  {displayScore().message}
-                </p>
-              )}
-              <div className="mt-3 sm:mt-4">
-                <button
-                  onClick={() => navigate('/homework')}
-                  className="px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                >
-                  {t('back_to_homework')}
-                </button>
-              </div>
-            </div>
+      )}
+
+      {/* Detailed Feedback Section - always show in review mode or after submission */}
+      {(isReviewMode || submitted) && submissionData && homework?.extractedQuestions && (
+        <div className="mt-6 bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Question-by-Question Review</h3>
+          <div className="space-y-6">
+            {homework.extractedQuestions.map((question, index) => {
+              const feedback = getQuestionFeedback(index);
+              // Don't render feedback section if we don't have proper feedback data
+              if (!feedback) return null;
+              
+              return (
+                <div key={index} className="border border-gray-200 rounded-xl p-4">
+                  <div className="flex items-start mb-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold mr-3">
+                      {index + 1}
+                    </div>
+                    <div className="flex-grow">
+                      <h4 className="text-base sm:text-lg font-semibold text-gray-800">
+                        {question.question}
+                      </h4>
+                      <div className="mt-1 text-xs sm:text-sm text-gray-500 flex flex-wrap items-center gap-2">
+                        <span className="inline-block bg-gray-100 px-2 py-1 rounded-full">
+                          {question.points} {t('points')}
+                        </span>
+                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full capitalize">
+                          {question.type.replace('-', ' ')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="ml-11 space-y-3">
+                    {/* User's Answer */}
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Your Answer:</p>
+                      <div className={`p-3 rounded-lg ${feedback.isCorrect === true ? 'bg-green-50 border border-green-200' : feedback.isCorrect === false ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200'}`}>
+                        {question.type === 'matching' ? (
+                          <div className="space-y-2">
+                            {Object.entries(feedback.userAnswer || {}).map(([leftId, rightId], matchIndex) => {
+                              const leftIndex = parseInt(leftId.split('-')[1]);
+                              const rightIndex = parseInt(rightId.split('-')[1]);
+                              const leftItem = question.leftItems?.[leftIndex];
+                              const rightItem = question.rightItems?.[rightIndex];
+                              return (
+                                <div key={matchIndex} className="flex items-center text-sm">
+                                  <span className="font-medium">{leftItem}</span>
+                                  <span className="mx-2">→</span>
+                                  <span>{rightItem}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : question.type === 'ordering' ? (
+                          <p className="text-sm">{feedback.userAnswer}</p>
+                        ) : (
+                          <p className="text-sm">{feedback.userAnswer || 'No answer provided'}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Correct Answer (if incorrect) */}
+                    {feedback.isCorrect === false && feedback.correctAnswer && feedback.correctAnswer !== 'Submission data not available' && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 mb-1">Correct Answer:</p>
+                        <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                          {question.type === 'matching' ? (
+                            <div className="space-y-2">
+                              {Object.entries(feedback.correctAnswer || {}).map(([leftItem, rightItem], matchIndex) => (
+                                <div key={matchIndex} className="flex items-center text-sm">
+                                  <span className="font-medium">{leftItem}</span>
+                                  <span className="mx-2">→</span>
+                                  <span>{rightItem}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : question.type === 'ordering' ? (
+                              <p className="text-sm">{feedback.correctAnswer}</p>
+                          ) : (
+                              <p className="text-sm">{feedback.correctAnswer}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Feedback */}
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Feedback:</p>
+                      <div className={`p-3 rounded-lg ${feedback.isCorrect === true ? 'bg-green-100 text-green-800' : feedback.isCorrect === false ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                        <p className="text-sm">{feedback.feedback}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

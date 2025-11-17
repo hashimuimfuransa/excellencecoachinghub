@@ -176,5 +176,7 @@
   "back_to_dashboard": "Back to Dashboard",
   "saving": "Saving...",
   "saved": "Saved",
-  "save_error": "Save failed"
+  "save_error": "Save failed",
+  "redirecting_to_leaderboard": "Redirecting to leaderboard...",
+  "view_leaderboard_now": "View Leaderboard Now"
 }

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { teacherApi } from '../../api/teacherApi'; // Use teacherApi instead
+import { homeworkApi } from '../../api/homeworkApi'; // Add homeworkApi for help requests
 import BottomNavbar from '../ui/BottomNavbar';
 
 const TeacherDashboard = () => {
-  const [submissions, setSubmissions] = useState([]);
   const [helpRequests, setHelpRequests] = useState([]);
   const [stats, setStats] = useState({
     totalStudents: 0,
@@ -19,36 +19,35 @@ const TeacherDashboard = () => {
     const loadData = async () => {
       try {
         // Fetch real data from backend
-        const [submissionsResponse, statsResponse] = await Promise.all([
-          teacherApi.getSubmissions(), // Get teacher's homework submissions
+        const [helpRequestsResponse, statsResponse] = await Promise.all([
+          homeworkApi.getHomeworkHelp(), // Get teacher's help requests
           teacherApi.getStats() // Use the correct teacher stats endpoint
         ]);
         
-        // Transform submissions data
-        let transformedSubmissions = [];
-        if (submissionsResponse.data && submissionsResponse.data.data && submissionsResponse.data.data.submissions) {
-          transformedSubmissions = submissionsResponse.data.data.submissions.slice(0, 3).map(sub => ({
-            id: sub._id,
-            studentName: `${sub.student.firstName} ${sub.student.lastName}`,
-            studentGrade: 'Grade 5', // This would come from student data in a real implementation
-            homeworkTitle: sub.assignment.title,
-            subject: 'Homework',
-            submittedAt: sub.submittedAt,
-            status: sub.status,
-            reviewed: sub.status === 'graded',
-            grade: sub.grade
-          }));
+        // Transform help requests data
+        let transformedHelpRequests = [];
+        if (helpRequestsResponse.data && helpRequestsResponse.data.data) {
+          transformedHelpRequests = Array.isArray(helpRequestsResponse.data.data) 
+            ? helpRequestsResponse.data.data.slice(0, 3).map(req => ({
+                id: req._id,
+                studentName: req.studentName || 'Unknown Student',
+                homeworkTitle: req.homeworkTitle || 'Help Request',
+                subject: req.subject || 'General',
+                message: req.description || 'No description provided',
+                createdAt: req.createdAt,
+                fileUrl: req.file?.fileUrl || null
+              }))
+            : [];
         }
         
-        // Set submissions data
-        setSubmissions(transformedSubmissions);
-        setHelpRequests([]); // Mock empty help requests for now
+        // Set help requests data
+        setHelpRequests(transformedHelpRequests);
         
         // Calculate stats from real data
         const teacherStats = statsResponse.data.data.overview;
         setStats({
           totalStudents: teacherStats?.totalStudents || 0,
-          pendingReviews: transformedSubmissions.filter(s => !s.reviewed).length,
+          pendingReviews: teacherStats?.pendingReviews || 0,
           homeworkCreated: teacherStats?.totalHomework || 0,
           totalSubmissions: teacherStats?.totalSubmissions || 0,
           averageGrade: teacherStats?.averageGrade || 0,
@@ -56,7 +55,6 @@ const TeacherDashboard = () => {
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         // Set empty data if API calls fail
-        setSubmissions([]);
         setHelpRequests([]);
         setStats({
           totalStudents: 0,
@@ -148,9 +146,9 @@ const TeacherDashboard = () => {
                 <div className="text-2xl mb-1">✨</div>
                 <div className="text-sm">Create Homework</div>
               </Link>
-              <Link to="/homework/reviews" className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl p-4 text-center font-medium transition-all duration-200 transform hover:scale-105 shadow-md">
+              <Link to="/homework/help" className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl p-4 text-center font-medium transition-all duration-200 transform hover:scale-105 shadow-md">
                 <div className="text-2xl mb-1">📝</div>
-                <div className="text-sm">Review Submissions</div>
+                <div className="text-sm">View Help Requests</div>
               </Link>
               <Link to="/homework/manage" className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl p-4 text-center font-medium transition-all duration-200 transform hover:scale-105 shadow-md">
                 <div className="text-2xl mb-1">📋</div>
@@ -198,81 +196,12 @@ const TeacherDashboard = () => {
           </div>
         </div>
 
-        {/* Recent Submissions */}
+        {/* Help Requests - Replaced Submissions section */}
         <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-6 mb-6 border border-gray-100">
           <div className="flex justify-between items-center mb-5">
             <h2 className="text-xl font-bold text-gray-900 flex items-center">
-              <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-sm">📥</span>
-              Recent Submissions
-            </h2>
-            <Link to="/homework/reviews" className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center">
-              View all →
-            </Link>
-          </div>
-          
-          {submissions.length > 0 ? (
-            <div className="space-y-3">
-              {submissions.slice(0, 3).map((submission) => (
-                <div key={submission.id} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">{submission.homeworkTitle}</h3>
-                      <p className="text-gray-600 text-xs mt-1">{submission.studentName} • {submission.subject}</p>
-                    </div>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      submission.reviewed 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-amber-100 text-amber-800'
-                    }`}>
-                      {submission.reviewed ? 'Graded' : 'Pending'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-gray-500 text-xs">
-                      {new Date(submission.submittedAt).toLocaleDateString()}
-                    </p>
-                    <Link 
-                      to={`/homework/review/${submission.id}`} 
-                      className={`font-medium text-xs py-1.5 px-3 rounded-lg transition-colors ${
-                        submission.reviewed 
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                      }`}
-                    >
-                      {submission.reviewed ? 'View' : 'Review'}
-                    </Link>
-                  </div>
-                  {submission.reviewed && submission.grade && (
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600 text-xs">Grade</span>
-                        <span className="font-bold text-gray-900">{submission.grade}%</span>
-                      </div>
-                      <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-1.5 rounded-full" 
-                          style={{ width: `${submission.grade}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 bg-white rounded-xl border border-gray-200">
-              <div className="text-3xl mb-2 text-gray-300">📭</div>
-              <p className="text-gray-500 text-sm">No recent submissions</p>
-            </div>
-          )}
-        </div>
-
-        {/* Help Requests */}
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-6 border border-gray-100">
-          <div className="flex justify-between items-center mb-5">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center">
               <span className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mr-2 text-sm">🆘</span>
-              Help Requests
+              Recent Help Requests
             </h2>
             <Link to="/homework/help" className="text-rose-600 hover:text-rose-800 font-medium text-sm flex items-center">
               View all →
@@ -281,7 +210,7 @@ const TeacherDashboard = () => {
           
           {helpRequests.length > 0 ? (
             <div className="space-y-3">
-              {helpRequests.slice(0, 3).map((request) => (
+              {helpRequests.map((request) => (
                 <div key={request.id} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -293,7 +222,7 @@ const TeacherDashboard = () => {
                     </span>
                   </div>
                   <p className="text-gray-700 text-xs line-clamp-2 mb-3">
-                    &#34;{request.message}&#34;
+                    &quot;{request.message}&quot;
                   </p>
                   <div className="flex justify-between items-center">
                     <p className="text-gray-500 text-xs">
@@ -327,6 +256,60 @@ const TeacherDashboard = () => {
               <p className="text-gray-500 text-sm">No help requests</p>
             </div>
           )}
+        </div>
+
+        {/* Updated Help Requests section - previously was a duplicate */}
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-6 border border-gray-100">
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center">
+              <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-sm">📈</span>
+              Class Performance
+            </h2>
+            <Link to="/leaderboard" className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center">
+              View leaderboard →
+            </Link>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl p-4 border border-gray-200">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-medium text-gray-900">Overall Class Average</h3>
+                <span className="text-lg font-bold text-blue-600">{stats.averageGrade.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" 
+                  style={{ width: `${stats.averageGrade}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-2">
+                    <span className="text-sm">📋</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Homework Created</p>
+                    <p className="font-bold text-gray-900">{stats.homeworkCreated}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mr-2">
+                    <span className="text-sm">📝</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Pending Reviews</p>
+                    <p className="font-bold text-gray-900">{stats.pendingReviews}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <BottomNavbar />

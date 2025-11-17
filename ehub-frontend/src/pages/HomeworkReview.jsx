@@ -632,7 +632,7 @@ const HomeworkReview = () => {
       {/* Detailed Feedback Section */}
       {submissionData && homework?.extractedQuestions && (
         <div className="mt-6 bg-white rounded-2xl shadow-xl p-4 sm:p-6">
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Question-by-Question Review</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">{t('question_by_question_review')}</h3>
           <div className="space-y-6">
             {homework.extractedQuestions.map((question, index) => {
               const feedback = getQuestionFeedback(index);
@@ -663,7 +663,7 @@ const HomeworkReview = () => {
                   <div className="ml-11 space-y-3">
                     {/* User's Answer */}
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">Your Answer:</p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">{t('your_answer')}</p>
                       <div className={`p-3 rounded-lg ${feedback.isCorrect === true ? 'bg-green-50 border border-green-200' : feedback.isCorrect === false ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200'}`}>
                         {question.type === 'matching' ? (
                           <div className="space-y-2">
@@ -684,7 +684,7 @@ const HomeworkReview = () => {
                         ) : question.type === 'ordering' ? (
                           <p className="text-sm">{feedback.userAnswer}</p>
                         ) : (
-                          <p className="text-sm">{feedback.userAnswer || 'No answer provided'}</p>
+                          <p className="text-sm">{feedback.userAnswer || t('no_answer_provided')}</p>
                         )}
                       </div>
                     </div>
@@ -692,7 +692,7 @@ const HomeworkReview = () => {
                     {/* Correct Answer (if incorrect) */}
                     {feedback.isCorrect === false && feedback.correctAnswer && feedback.correctAnswer !== 'Submission data not available' && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">Correct Answer:</p>
+                        <p className="text-sm font-medium text-gray-700 mb-1">{t('correct_answer')}</p>
                         <div className="p-3 rounded-lg bg-green-50 border border-green-200">
                           {question.type === 'matching' ? (
                             <div className="space-y-2">
@@ -715,7 +715,7 @@ const HomeworkReview = () => {
                     
                     {/* Feedback */}
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">Feedback:</p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">{t('feedback')}</p>
                       <div className={`p-3 rounded-lg ${feedback.isCorrect === true ? 'bg-green-100 text-green-800' : feedback.isCorrect === false ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
                         <p className="text-sm">{feedback.feedback}</p>
                       </div>
@@ -727,7 +727,7 @@ const HomeworkReview = () => {
           </div>
         </div>
       )}
-      
+
       <BottomNavbar />
     </div>
   );

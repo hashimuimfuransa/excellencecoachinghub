@@ -11,30 +11,35 @@ const HomeworkHelp = () => {
     const loadHelpRequests = async () => {
       try {
         const response = await homeworkApi.getHomeworkHelp();
-        setHelpRequests(response.data || []);
+        // Extract the data array from the response
+        setHelpRequests(Array.isArray(response.data.data) ? response.data.data : []);
       } catch (error) {
         console.error('Error loading help requests:', error);
         // Fallback to mock data if backend is not available
         const mockRequests = [
           {
-            id: 1,
+            _id: 1,
             studentName: 'John Doe',
             homeworkTitle: 'Algebra Homework',
             subject: 'Mathematics',
-            message: 'I{`}m having trouble with question 3 about quadratic equations. Can someone help me understand the steps?',
-            fileUrl: '/sample-file.pdf',
-            fileName: 'john-algebra-hw.pdf',
+            description: 'I&#39;m having trouble with question 3 about quadratic equations. Can someone help me understand the steps?',
+            file: {
+              fileUrl: '/sample-file.pdf',
+              fileName: 'john-algebra-hw.pdf'
+            },
             createdAt: '2023-05-15T10:30:00Z',
             comments: 2
           },
           {
-            id: 2,
+            _id: 2,
             studentName: 'Sarah Johnson',
             homeworkTitle: 'History Essay',
             subject: 'History',
-            message: 'Could someone review my essay draft and provide feedback on the structure?',
-            fileUrl: '/sample-file2.pdf',
-            fileName: 'sarah-history-essay.docx',
+            description: 'Could someone review my essay draft and provide feedback on the structure?',
+            file: {
+              fileUrl: '/sample-file2.pdf',
+              fileName: 'sarah-history-essay.docx'
+            },
             createdAt: '2023-05-14T14:45:00Z',
             comments: 5
           }
@@ -48,16 +53,22 @@ const HomeworkHelp = () => {
     loadHelpRequests();
   }, []);
 
-  const handleDownload = async (helpId, fileName) => {
+  const handleDownload = async (fileUrl, fileName) => {
     try {
+      // For mock data, open in new tab
+      if (fileUrl.startsWith('/sample')) {
+        alert('In a real implementation, this would download the file: ' + fileName);
+        return;
+      }
+      
       // Download file from backend
-      const response = await homeworkApi.downloadHomeworkHelp(helpId);
+      const response = await homeworkApi.downloadHomeworkHelp(fileUrl);
       
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', fileName);
+      link.setAttribute('download', fileName || 'homework_help_file');
       document.body.appendChild(link);
       link.click();
       
@@ -110,7 +121,6 @@ const HomeworkHelp = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Student Information</h3>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="font-medium">{selectedRequest.studentName}</p>
-                  <p className="text-gray-600">Grade: {selectedRequest.studentGrade || 'N/A'}</p>
                   <p className="text-gray-600">Submitted: {new Date(selectedRequest.createdAt).toLocaleString()}</p>
                 </div>
 
@@ -122,30 +132,30 @@ const HomeworkHelp = () => {
 
                 <h3 className="text-lg font-semibold text-gray-900 mt-6 mb-3">Student Message</h3>
                 <div className="bg-yellow-50 rounded-lg p-4">
-                  <p className="text-gray-800">{selectedRequest.message || 'No message provided'}</p>
+                  <p className="text-gray-800">{selectedRequest.description || 'No message provided'}</p>
                 </div>
               </div>
 
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Attached Files</h3>
-                {selectedRequest.fileUrl ? (
+                {selectedRequest.file?.fileUrl ? (
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{selectedRequest.fileName || 'homework_help.jpg'}</p>
+                        <p className="font-medium">{selectedRequest.file.fileName || 'homework_help.jpg'}</p>
                         <p className="text-sm text-gray-600">Click to view or download</p>
                       </div>
                       <button
-                        onClick={() => handleDownload(selectedRequest.fileUrl, selectedRequest.fileName)}
+                        onClick={() => handleDownload(selectedRequest.file.fileUrl, selectedRequest.file.fileName)}
                         className="btn-primary px-4 py-2"
                       >
                         Download
                       </button>
                     </div>
-                    {selectedRequest.fileUrl.match(/\.(jpg|jpeg|png|gif)$/i) && (
+                    {selectedRequest.file.fileUrl.match(/\.(jpg|jpeg|png|gif)$/i) && (
                       <div className="mt-4">
                         <img 
-                          src={selectedRequest.fileUrl} 
+                          src={selectedRequest.file.fileUrl} 
                           alt="Student homework help" 
                           className="max-w-full h-auto rounded-lg"
                         />
@@ -188,7 +198,7 @@ const HomeworkHelp = () => {
               <div className="divide-y divide-gray-200">
                 {helpRequests.map((request) => (
                   <div 
-                    key={request.id} 
+                    key={request._id} 
                     className="px-6 py-4 hover:bg-gray-50 cursor-pointer"
                     onClick={() => setSelectedRequest(request)}
                   >
@@ -214,14 +224,14 @@ const HomeworkHelp = () => {
                         </p>
                       </div>
                     </div>
-                    {request.message && (
+                    {request.description && (
                       <div className="mt-3 ml-16">
                         <p className="text-gray-700 text-sm line-clamp-2">
-                          &#34;{request.message}&#34;
+                          &#34;{request.description}&#34;
                         </p>
                       </div>
                     )}
-                    {request.fileUrl && (
+                    {request.file?.fileUrl && (
                       <div className="mt-2 ml-16">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           File attached

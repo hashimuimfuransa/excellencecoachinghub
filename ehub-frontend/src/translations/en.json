@@ -178,5 +178,21 @@
   "saved": "Saved",
   "save_error": "Save failed",
   "redirecting_to_leaderboard": "Redirecting to leaderboard...",
-  "view_leaderboard_now": "View Leaderboard Now"
+  "view_leaderboard_now": "View Leaderboard Now",
+  "question_by_question_review": "Question-by-Question Review",
+  "your_answer": "Your Answer:",
+  "no_answer_provided": "No answer provided",
+  "correct_answer": "Correct Answer:",
+  "feedback": "Feedback:",
+  "homework_review_mode": "Homework Review Mode",
+  "back_to_homework": "Back to Homework",
+  "case_sensitive": "Case sensitive",
+  "no_match_selected": "No match selected",
+  "your_matches": "Your Matches",
+  "multiple_choice_question": "Multiple Choice Question",
+  "short_answer_question": "Short Answer Question",
+  "matching_question": "Matching Question",
+  "true_false_question": "True/False Question",
+  "fill_in_blank_question": "Fill in Blank Question",
+  "ordering_question": "Ordering Question"
 }

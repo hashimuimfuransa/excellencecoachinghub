@@ -39,7 +39,7 @@ const Leaderboard = () => {
 
   const viewStudentDetails = (student) => {
     // Add rank to the student object for display
-    let studentWithRank = { ...student };
+    const studentWithRank = { ...student };
     
     // If student is not already in leaderboard, rank will be 0
     const rankIndex = students.findIndex(s => s.studentId === student.studentId);

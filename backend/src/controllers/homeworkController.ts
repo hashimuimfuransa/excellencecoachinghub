@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { Assignment, AssignmentSubmission } from '../models/Assignment';
 
 // Define types for homework questions
 interface BaseQuestion {
@@ -120,6 +121,67 @@ export const getInteractiveHomework = asyncHandler(async (req: Request, res: Res
     success: true,
     data: homework
   });
+});
+
+// Save interactive homework progress
+export const saveInteractiveHomeworkProgress = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { answers } = req.body;
+  
+  try {
+    // Find the assignment
+    const assignment = await Assignment.findById(id);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Homework not found'
+      });
+    }
+    
+    // Check if there's already a submission for this student and assignment
+    let submission = await AssignmentSubmission.findOne({
+      assignment: id,
+      student: (req as any).user._id
+    });
+    
+    // Prepare submission data
+    const submissionData: any = {
+      assignment: id,
+      student: (req as any).user._id,
+      extractedAnswers: Object.keys(answers).map(key => ({
+        questionIndex: parseInt(key),
+        answer: answers[key],
+        questionType: assignment.extractedQuestions?.[parseInt(key)]?.type || 'unknown'
+      })),
+      status: 'draft',
+      autoSavedAt: new Date()
+    };
+    
+    if (submission) {
+      // Update existing submission
+      submission = await AssignmentSubmission.findByIdAndUpdate(
+        submission._id,
+        submissionData,
+        { new: true }
+      );
+    } else {
+      // Create new submission
+      submission = new AssignmentSubmission(submissionData);
+      await submission.save();
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Progress saved successfully',
+      data: submission
+    });
+  } catch (error) {
+    console.error('Error saving homework progress:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save progress'
+    });
+  }
 });
 
 // Submit interactive homework

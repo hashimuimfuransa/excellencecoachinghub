@@ -1,6 +1,53 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { Assignment, AssignmentSubmission } from '../models';
+
+// Initialize Google Generative AI with API key from environment variables
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const geminiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+// Simple AI grading function for text questions using Gemini
+const simpleAIGrading = async (userAnswer: string, correctAnswer: string, points: number) => {
+  // If exact match, give full points
+  if (userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()) {
+    return points;
+  }
+  
+  try {
+    // Use Gemini AI to evaluate the similarity of answers
+    const prompt = `
+    Compare these two answers and determine if they are semantically equivalent:
+    
+    Teacher's correct answer: "${correctAnswer}"
+    Student's answer: "${userAnswer}"
+    
+    Consider variations in wording, grammar, and structure, but focus on whether the meaning is the same.
+    
+    Respond with only one word: "MATCH" if they are equivalent, or "NO_MATCH" if they are not.
+    `;
+    
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim().toUpperCase();
+    
+    // If Gemini determines they match, give full points
+    if (text === 'MATCH') {
+      return points;
+    }
+    
+    // If no match, give 0 points
+    return 0;
+  } catch (error) {
+    console.error('Error using Gemini AI for grading:', error);
+    // Fallback to simple word matching
+    const userWords = userAnswer.toLowerCase().split(/\s+/);
+    const correctWords = correctAnswer.toLowerCase().split(/\s+/);
+    const matchingWords = userWords.filter(word => correctWords.includes(word)).length;
+    const similarity = matchingWords / Math.max(userWords.length, correctWords.length);
+    return Math.max(0, Math.round(points * similarity));
+  }
+};
 
 // Auto-grade submission
 const autoGradeSubmission = async (homework: any, submission: any) => {
@@ -9,6 +56,8 @@ const autoGradeSubmission = async (homework: any, submission: any) => {
 
   const answers = submission.extractedAnswers || [];
   const questions = homework.extractedQuestions || homework.interactiveElements || [];
+
+  console.log(`Auto-grading submission: ${answers.length} answers, ${questions.length} questions`);
 
   for (let i = 0; i < questions.length; i++) {
     const question = questions[i];
@@ -24,32 +73,62 @@ const autoGradeSubmission = async (homework: any, submission: any) => {
       if (answer.answer === question.correctAnswer) {
         earnedPoints += question.points || 0;
       }
+      console.log(`Question ${i} (multiple-choice): ${answer.answer === question.correctAnswer ? 'Correct' : 'Incorrect'}`);
     }
     // Grade matching questions
     else if (question.type === 'matching') {
       let correctMatches = 0;
       const totalMatches = Object.keys(question.correctMatches || {}).length;
       
-      // Handle matching question answers
+      console.log(`Matching question ${i}: correctMatches=${JSON.stringify(question.correctMatches)}, studentAnswer=${JSON.stringify(answer.answer)}`);
+      
+      // Handle matching question answers - improved logic to handle indexed IDs
       if (answer.answer && typeof answer.answer === 'object' && answer.answer.matches) {
-        Object.entries(answer.answer.matches).forEach(([leftItem, rightItem]) => {
-          if (question.correctMatches?.[leftItem] === rightItem) {
+        // Map indexed IDs to actual text values
+        const leftItems = question.leftItems || [];
+        const rightItems = question.rightItems || [];
+        
+        // Compare each student match with the correct matches
+        Object.entries(answer.answer.matches).forEach(([leftId, rightId]) => {
+          // Extract indices from IDs (e.g., "left-0" -> 0)
+          const leftIndex = leftId.startsWith('left-') ? parseInt(leftId.split('-')[1]) : -1;
+          const rightIndex = rightId.startsWith('right-') ? parseInt(rightId.split('-')[1]) : -1;
+          
+          // Get actual text values
+          const leftItemText = leftIndex >= 0 && leftIndex < leftItems.length ? leftItems[leftIndex] : leftId;
+          const rightItemText = rightIndex >= 0 && rightIndex < rightItems.length ? rightItems[rightIndex] : rightId;
+          
+          // Check if this match exists in the correct matches
+          if (question.correctMatches && question.correctMatches[leftItemText] === rightItemText) {
             correctMatches++;
+            console.log(`  Match correct: ${leftItemText} -> ${rightItemText}`);
+          } else {
+            console.log(`  Match incorrect: ${leftItemText} -> ${rightItemText}, expected: ${question.correctMatches?.[leftItemText]}`);
           }
         });
         
+        // Calculate points based on correct matches
         if (totalMatches > 0) {
           const matchPercentage = correctMatches / totalMatches;
           earnedPoints += Math.round((question.points || 0) * matchPercentage);
+          console.log(`  Matching points: ${correctMatches}/${totalMatches} = ${matchPercentage}, earned: ${Math.round((question.points || 0) * matchPercentage)}`);
         }
+      } else {
+        console.log(`  Invalid matching answer format: ${JSON.stringify(answer.answer)}`);
       }
     }
-    // Grade short-answer questions (simple check)
-    else if (question.type === 'short-answer') {
-      if (answer.answer && typeof answer.answer === 'string') {
-        // Simple check - in a real app, this would use AI or more sophisticated matching
+    // Grade short-answer/text questions with AI grading
+    else if (question.type === 'short-answer' || question.type === 'text') {
+      if (answer.answer && typeof answer.answer === 'string' && question.correctAnswer) {
+        // Use AI grading for text questions
+        const pointsEarned = await simpleAIGrading(answer.answer, question.correctAnswer, question.points || 0);
+        earnedPoints += pointsEarned;
+        console.log(`Question ${i} (short-answer): Earned ${pointsEarned} points`);
+      } else if (answer.answer && typeof answer.answer === 'string') {
+        // If no correct answer provided, give full points for any response
         if (answer.answer.trim().length > 0) {
           earnedPoints += question.points || 0;
+          console.log(`Question ${i} (short-answer): Full points for response`);
         }
       }
     }
@@ -57,6 +136,7 @@ const autoGradeSubmission = async (homework: any, submission: any) => {
     else if (question.type === 'true-false') {
       if (answer.answer === question.correctAnswer) {
         earnedPoints += question.points || 0;
+        console.log(`Question ${i} (true-false): ${answer.answer === question.correctAnswer ? 'Correct' : 'Incorrect'}`);
       }
     }
     // Grade fill-in-blank questions
@@ -68,6 +148,9 @@ const autoGradeSubmission = async (homework: any, submission: any) => {
         question.caseSensitive ? correct === userAnswer : correct.toLowerCase() === userAnswer
       )) {
         earnedPoints += question.points || 0;
+        console.log(`Question ${i} (fill-in-blank): Correct`);
+      } else {
+        console.log(`Question ${i} (fill-in-blank): Incorrect`);
       }
     }
     // Grade ordering questions
@@ -85,11 +168,14 @@ const autoGradeSubmission = async (homework: any, submission: any) => {
         
         const positionPercentage = correctPositions / correctOrder.length;
         earnedPoints += Math.round((question.points || 0) * positionPercentage);
+        console.log(`Question ${i} (ordering): ${correctPositions}/${correctOrder.length} correct`);
       }
     }
   }
 
-  return totalScore > 0 ? Math.round((earnedPoints / totalScore) * 100) : 0;
+  const finalGrade = totalScore > 0 ? Math.round((earnedPoints / totalScore) * 100) : 0;
+  console.log(`Auto-grade calculation: earnedPoints=${earnedPoints}, totalScore=${totalScore}, finalGrade=${finalGrade}`);
+  return finalGrade;
 };
 
 // Create homework
@@ -248,7 +334,7 @@ export const submitHomework = asyncHandler(async (req: Request, res: Response) =
     }
     
     // Create or update submission
-    const submissionData = {
+    const submissionData: any = {
       assignment: homeworkId,
       student: (req as any).user._id, // Assuming user is attached to request
       extractedAnswers: answers,
@@ -256,6 +342,15 @@ export const submitHomework = asyncHandler(async (req: Request, res: Response) =
       submittedAt: isDraft ? undefined : new Date(),
       status: isDraft ? 'draft' : 'submitted'
     };
+    
+    // Auto-grade submission if not a draft and auto-grading is enabled
+    if (!isDraft && assignment.autoGrading) {
+      const autoGrade = await autoGradeSubmission(assignment, { extractedAnswers: answers });
+      submissionData.autoGrade = autoGrade;
+      submissionData.gradedAt = new Date();
+      submissionData.status = 'graded';
+      console.log(`Auto-graded submission: autoGrade=${autoGrade}`);
+    }
     
     // Check if submission already exists
     let submission = await AssignmentSubmission.findOne({
@@ -275,6 +370,8 @@ export const submitHomework = asyncHandler(async (req: Request, res: Response) =
       submission = new AssignmentSubmission(submissionData);
       await submission.save();
     }
+    
+    console.log(`Saved submission: ${JSON.stringify(submission)}`);
 
     res.status(201).json({
       success: true,

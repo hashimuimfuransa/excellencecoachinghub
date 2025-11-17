@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
 import { useTranslation } from 'react-i18next';
@@ -14,22 +14,49 @@ const InteractiveHomework = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
+  const [submissionData, setSubmissionData] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(''); // For showing save status to user
+  const saveTimeoutRef = useRef(null); // For debouncing auto-saves
 
   // Fetch homework data from API
   useEffect(() => {
     const fetchHomework = async () => {
       try {
+        // Fetch homework
         const response = await homeworkApi.getHomeworkById(id);
         if (response.data.success) {
           setHomework(response.data.data);
           
-          // Initialize answers state with default values based on question types
-          const initialAnswers = {};
-          const questions = response.data.data.extractedQuestions || [];
-          questions.forEach((_, index) => {
-            initialAnswers[index] = getInitialAnswerValue(questions[index]);
-          });
-          setAnswers(initialAnswers);
+          // Try to load saved progress
+          try {
+            const submissionResponse = await homeworkApi.getStudentSubmission(id);
+            if (submissionResponse.data.success && submissionResponse.data.data) {
+              // Load saved answers
+              const savedAnswers = {};
+              submissionResponse.data.data.extractedAnswers?.forEach(answer => {
+                savedAnswers[answer.questionIndex] = answer.answer;
+              });
+              setAnswers(savedAnswers);
+              setSubmitted(submissionResponse.data.data.status === 'submitted');
+            } else {
+              // Initialize answers state with default values based on question types
+              const initialAnswers = {};
+              const questions = response.data.data.extractedQuestions || [];
+              questions.forEach((_, index) => {
+                initialAnswers[index] = getInitialAnswerValue(questions[index]);
+              });
+              setAnswers(initialAnswers);
+            }
+          } catch (submissionError) {
+            console.log('No saved progress found, using default initialization');
+            // Initialize answers state with default values based on question types
+            const initialAnswers = {};
+            const questions = response.data.data.extractedQuestions || [];
+            questions.forEach((_, index) => {
+              initialAnswers[index] = getInitialAnswerValue(questions[index]);
+            });
+            setAnswers(initialAnswers);
+          }
         } else {
           setError(response.data.message || 'Failed to fetch homework');
         }
@@ -48,6 +75,29 @@ const InteractiveHomework = () => {
     }
   }, [id]);
 
+  // Auto-save effect - save progress when answers change
+  useEffect(() => {
+    // Don't auto-save if we're submitting or if there's no homework
+    if (submitting || !homework || submitted) return;
+
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set a new timeout to save after 3 seconds of inactivity
+    saveTimeoutRef.current = setTimeout(() => {
+      handleAutoSave();
+    }, 3000);
+
+    // Cleanup function to clear timeout
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [answers, homework, submitting, submitted]);
+
   // Helper function to get initial answer value based on question type
   const getInitialAnswerValue = (question) => {
     switch (question.type) {
@@ -58,6 +108,28 @@ const InteractiveHomework = () => {
         return question.options ? [...Array(question.options.length).keys()] : [];
       default:
         return '';
+    }
+  };
+
+  // Auto-save function
+  const handleAutoSave = async () => {
+    if (!homework || submitted) return;
+
+    try {
+      setSaveStatus('saving');
+      const response = await homeworkApi.saveInteractiveHomeworkProgress(id, answers);
+      if (response.data.success) {
+        setSaveStatus('saved');
+        // Clear the saved status after 2 seconds
+        setTimeout(() => {
+          if (saveStatus === 'saved') {
+            setSaveStatus('');
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      setSaveStatus('error');
     }
   };
 
@@ -116,11 +188,10 @@ const InteractiveHomework = () => {
           }
         }
       }
-      // For other interactive elements that can be automatically graded
-      // For now, we'll give full points for completing these activities
-      else if (element.type === 'short-answer') {
+      // For short-answer/text questions, we'll give full points for any response
+      else if (element.type === 'short-answer' || element.type === 'text') {
         // Check if the student provided an answer
-        if (answers[index]) {
+        if (answers[index] && answers[index].trim().length > 0) {
           earnedPoints += element.points || 0;
         }
       }
@@ -171,6 +242,11 @@ const InteractiveHomework = () => {
     setSubmitting(true);
     setError(null);
     try {
+      // Cancel any pending auto-save
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      
       // Prepare submission data
       const submissionData = {
         answers: Object.keys(answers).map(key => ({
@@ -186,6 +262,7 @@ const InteractiveHomework = () => {
       
       if (response.data.success) {
         setSubmitted(true);
+        setSubmissionData(response.data.data);
       } else {
         throw new Error(response.data.message || 'Failed to submit homework');
       }
@@ -268,6 +345,28 @@ const InteractiveHomework = () => {
   // Get questions, default to empty array if undefined
   const questions = homework.extractedQuestions || [];
 
+  // Calculate score from auto-grade if available
+  const displayScore = () => {
+    // If we have submission data with autoGrade, use that
+    if (submissionData && submissionData.autoGrade !== undefined) {
+      return {
+        percentage: submissionData.autoGrade,
+        message: `${t('auto_graded_score')}: ${submissionData.autoGrade}%`
+      };
+    }
+    
+    // Fallback to client-side calculation
+    const score = calculateScore();
+    if (score) {
+      return {
+        percentage: score.percentage,
+        message: `${t('your_score')}: ${score.earned}/${score.total} (${score.percentage}%)`
+      };
+    }
+    
+    return null;
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-20 md:pb-6 pt-16 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
@@ -276,8 +375,33 @@ const InteractiveHomework = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{homework.title}</h1>
             <p className="text-gray-600 mb-4">{homework.description}</p>
           </div>
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 sm:px-4 sm:py-2 rounded-full text-sm font-semibold whitespace-nowrap">
-            {homework.maxPoints} {t('points')}
+          <div className="flex flex-col items-end">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 sm:px-4 sm:py-2 rounded-full text-sm font-semibold whitespace-nowrap">
+              {homework.maxPoints} {t('points')}
+            </div>
+            {/* Save status indicator */}
+            {saveStatus === 'saving' && (
+              <div className="mt-2 text-xs text-blue-600 flex items-center">
+                <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {t('saving')}
+              </div>
+            )}
+            {saveStatus === 'saved' && (
+              <div className="mt-2 text-xs text-green-600 flex items-center">
+                <svg className="w-3 h-3 mr-1 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                {t('saved')}
+              </div>
+            )}
+            {saveStatus === 'error' && (
+              <div className="mt-2 text-xs text-red-600">
+                {t('save_error')}
+              </div>
+            )}
           </div>
         </div>
         
@@ -290,7 +414,7 @@ const InteractiveHomework = () => {
           </div>
           <div className="flex items-center">
             <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C13.168 5.477 14.754 5 16.5 5s3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
             <span>{t('level')}: {getLevelLabel(homework.level)}</span>
           </div>
@@ -374,7 +498,7 @@ const InteractiveHomework = () => {
                       onChange={(e) => handleAnswerChange(index, e.target.value)}
                       placeholder={t('enter_your_answer')}
                       className="w-full px-4 sm:px-5 py-3 sm:py-4 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base sm:text-lg"
-                      rows="4 sm:rows-5"
+                      rows="4"
                     />
                   </div>
                 )}
@@ -615,7 +739,7 @@ const InteractiveHomework = () => {
                     </div>
                     <div className="mt-3 sm:mt-4 text-sm text-gray-500 flex items-center">
                       <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0v3m0 0V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0v3m0 0V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
                       </svg>
                       {t('drag_and_drop_instruction')}
                     </div>
@@ -661,10 +785,9 @@ const InteractiveHomework = () => {
             </div>
             <div className="ml-3 sm:ml-4">
               <h3 className="text-base sm:text-lg font-bold">{t('homework_submitted_successfully')}</h3>
-              {score && (
+              {displayScore() && (
                 <p className="mt-1 text-green-700 text-sm sm:text-base">
-                  {t('your_score')}: <span className="font-bold">{score.earned}/{score.total}</span> 
-                  {score.percentage > 0 && ` (${score.percentage}%)`}
+                  {displayScore().message}
                 </p>
               )}
               <div className="mt-3 sm:mt-4">

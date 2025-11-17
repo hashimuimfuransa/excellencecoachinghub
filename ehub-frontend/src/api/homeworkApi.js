@@ -39,6 +39,7 @@ export const homeworkApi = {
   // Interactive homework
   getInteractiveHomework: (id) => axiosClient.get(`/homework/interactive/${id}`),
   submitInteractiveHomework: (id, answers) => axiosClient.post(`/homework/interactive/${id}/submit`, { answers }),
+  saveInteractiveHomeworkProgress: (id, answers) => axiosClient.post(`/homework/interactive/${id}/save-progress`, { answers }),
   
   // Student-created homework
   getStudentHomework: () => axiosClient.get('/homework/student'),

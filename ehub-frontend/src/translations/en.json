@@ -80,6 +80,7 @@
   "submit_homework": "Submit Homework",
   "homework_submitted_successfully": "Homework submitted successfully!",
   "your_score": "Your score",
+  "auto_graded_score": "Auto-graded score",
   "homework_not_found": "Homework not found",
   "homework_not_found_message": "The requested homework could not be found.",
   "nursery_1": "Nursery 1",
@@ -172,5 +173,8 @@
   "your_preferences": "Your Preferences",
   "drag_drop_or_click": "Drag & drop files or click to browse",
   "call_now": "Call Now",
-  "back_to_dashboard": "Back to Dashboard"
+  "back_to_dashboard": "Back to Dashboard",
+  "saving": "Saving...",
+  "saved": "Saved",
+  "save_error": "Save failed"
 }

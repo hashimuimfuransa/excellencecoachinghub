@@ -79,14 +79,14 @@ const Leaderboard = () => {
           <div className="flex flex-col items-center">
             <div className="bg-gray-300 text-gray-800 font-bold py-4 px-6 rounded-t-lg w-24 sm:w-32 text-center transform hover:scale-105 transition-transform">
               <div className="text-2xl">🥈</div>
-              <div className="text-lg sm:text-xl">{students[1]?.points || students[1]?.score || 0}</div>
-              <div className="text-sm">{students[1]?.grade || students[1]?.letterGrade || 'N/A'}</div>
+              <div className="text-lg sm:text-xl">{students[1]?.totalPoints || students[1]?.averageScore || 0}</div>
+              <div className="text-sm">Avg: {students[1]?.averageScore || 0}%</div>
             </div>
             <div className="w-24 sm:w-32 h-32 sm:h-40 bg-gradient-to-b from-gray-400 to-gray-500 rounded-b-lg flex items-center justify-center">
-              <div className="text-white text-2xl font-bold">{students[1]?.avatar}</div>
+              <div className="text-white text-2xl font-bold">{students[1]?.studentName?.charAt(0) || 'S'}</div>
             </div>
             <div className="mt-3 text-center">
-              <h3 className="font-bold text-gray-900">{students[1]?.name}</h3>
+              <h3 className="font-bold text-gray-900">{students[1]?.studentName || 'Student'}</h3>
               <p className="text-gray-600 text-sm">2nd Place</p>
             </div>
           </div>
@@ -95,14 +95,14 @@ const Leaderboard = () => {
           <div className="flex flex-col items-center">
             <div className="bg-yellow-400 text-yellow-900 font-bold py-4 px-6 rounded-t-lg w-28 sm:w-36 text-center transform hover:scale-105 transition-transform">
               <div className="text-2xl">🥇</div>
-              <div className="text-lg sm:text-xl">{students[0]?.points || students[0]?.score || 0}</div>
-              <div className="text-sm">{students[0]?.grade || students[0]?.letterGrade || 'N/A'}</div>
+              <div className="text-lg sm:text-xl">{students[0]?.totalPoints || students[0]?.averageScore || 0}</div>
+              <div className="text-sm">Avg: {students[0]?.averageScore || 0}%</div>
             </div>
             <div className="w-28 sm:w-36 h-40 sm:h-48 bg-gradient-to-b from-yellow-500 to-yellow-600 rounded-b-lg flex items-center justify-center">
-              <div className="text-white text-2xl font-bold">{students[0]?.avatar}</div>
+              <div className="text-white text-2xl font-bold">{students[0]?.studentName?.charAt(0) || 'S'}</div>
             </div>
             <div className="mt-3 text-center">
-              <h3 className="font-bold text-gray-900">{students[0]?.name}</h3>
+              <h3 className="font-bold text-gray-900">{students[0]?.studentName || 'Student'}</h3>
               <p className="text-gray-600 text-sm">1st Place 🎉</p>
             </div>
           </div>
@@ -111,14 +111,14 @@ const Leaderboard = () => {
           <div className="flex flex-col items-center">
             <div className="bg-amber-700 text-amber-100 font-bold py-4 px-6 rounded-t-lg w-20 sm:w-28 text-center transform hover:scale-105 transition-transform">
               <div className="text-2xl">🥉</div>
-              <div className="text-lg sm:text-xl">{students[2]?.points || students[2]?.score || 0}</div>
-              <div className="text-sm">{students[2]?.grade || students[2]?.letterGrade || 'N/A'}</div>
+              <div className="text-lg sm:text-xl">{students[2]?.totalPoints || students[2]?.averageScore || 0}</div>
+              <div className="text-sm">Avg: {students[2]?.averageScore || 0}%</div>
             </div>
             <div className="w-20 sm:w-28 h-24 sm:h-32 bg-gradient-to-b from-amber-800 to-amber-900 rounded-b-lg flex items-center justify-center">
-              <div className="text-white text-2xl font-bold">{students[2]?.avatar}</div>
+              <div className="text-white text-2xl font-bold">{students[2]?.studentName?.charAt(0) || 'S'}</div>
             </div>
             <div className="mt-3 text-center">
-              <h3 className="font-bold text-gray-900">{students[2]?.name}</h3>
+              <h3 className="font-bold text-gray-900">{students[2]?.studentName || 'Student'}</h3>
               <p className="text-gray-600 text-sm">3rd Place</p>
             </div>
           </div>
@@ -132,20 +132,20 @@ const Leaderboard = () => {
           
           <div className="divide-y divide-gray-200">
             {students.slice(3).map((student, index) => (
-              <div key={student.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+              <div key={student.studentId} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold mr-4">
-                      {student.avatar}
+                      {student.studentName?.charAt(0) || 'S'}
                     </div>
                     <div>
-                      <h3 className="font-medium text-gray-900">{student.name || student.firstName + ' ' + student.lastName || 'Unknown Student'}</h3>
-                      <p className="text-sm text-gray-600">Grade: {student.grade || student.level || student.letterGrade || 'N/A'}</p>
+                      <h3 className="font-medium text-gray-900">{student.studentName || 'Unknown Student'}</h3>
+                      <p className="text-sm text-gray-600">Avg Score: {student.averageScore || 0}%</p>
                     </div>
                   </div>
                   <div className="flex items-center">
                     <div className="text-right mr-4">
-                      <p className="font-bold text-gray-900">{(student.points || student.score || 0)} pts</p>
+                      <p className="font-bold text-gray-900">{(student.totalPoints || 0)} pts</p>
                       <p className="text-sm text-gray-600">#{index + 4}</p>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">

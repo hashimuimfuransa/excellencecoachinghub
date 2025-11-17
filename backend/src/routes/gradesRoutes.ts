@@ -14,27 +14,40 @@ const router = express.Router();
 
 // Interfaces
 interface StudentGrade {
-  _id: string;
-  studentId: string;
-  studentName: string;
-  studentEmail: string;
-  courseId: string;
-  courseName: string;
+  _id?: string;
+  studentId?: string;
+  studentName?: string;
+  studentEmail?: string;
+  courseId?: string;
+  courseName?: string;
   assessmentId?: string;
   assessmentTitle?: string;
   assignmentId?: string;
   assignmentTitle?: string;
-  score: number;
-  maxScore: number;
-  percentage: number;
-  grade: string;
-  submittedAt: Date;
+  score?: number;
+  maxScore?: number;
+  percentage?: number;
+  grade?: string;
+  submittedAt?: Date;
   gradedAt?: Date;
   feedback?: string;
-  timeSpent: number;
-  attempts: number;
-  status: 'submitted' | 'graded' | 'pending' | 'late';
-  type: 'assessment' | 'assignment';
+  timeSpent?: number;
+  attempts?: number;
+  status?: 'submitted' | 'graded' | 'pending' | 'late' | 'draft' | 'returned';
+  type?: 'assessment' | 'assignment';
+  // Additional properties for detailed feedback
+  aiGraded?: boolean;
+  aiConfidence?: number;
+  correctAnswers?: number;
+  incorrectAnswers?: number;
+  totalQuestions?: number;
+  detailedFeedback?: Array<{
+    question: string;
+    userAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+    feedback?: string;
+  }>;
 }
 
 interface LeaderboardEntry {
@@ -53,6 +66,42 @@ interface LeaderboardEntry {
   improvement: number;
   courseId?: string;
   courseName?: string;
+  // Detailed performance data
+  assessmentDetails?: Array<{
+    assessmentId: string;
+    assessmentTitle: string;
+    score: number;
+    maxScore: number;
+    percentage: number;
+    grade: string;
+    submittedAt: Date;
+    // Detailed question performance
+    questionDetails?: Array<{
+      questionText: string;
+      userAnswer: string;
+      correctAnswer: string;
+      isCorrect: boolean;
+      feedback?: string;
+    }>;
+  }>;
+  assignmentDetails?: Array<{
+    assignmentId: string;
+    assignmentTitle: string;
+    score: number;
+    maxScore: number;
+    percentage: number;
+    grade: string;
+    submittedAt: Date;
+    // Detailed question performance for interactive assignments
+    questionDetails?: Array<{
+      questionText: string;
+      userAnswer: string | string[] | { matches: { [key: string]: string } };
+      correctAnswer: string | string[] | { [key: string]: string };
+      isCorrect: boolean;
+      feedback?: string;
+      questionType: string;
+    }>;
+  }>;
 }
 
 interface CourseStats {
@@ -184,12 +233,12 @@ router.get('/student', auth, async (req: Request, res: Response) => {
             maxScore: assessment.totalPoints || 100,
             percentage: Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100),
             grade: calculateGrade(Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100)),
-            submittedAt: submission.submittedAt,
-            gradedAt: submission.gradedAt,
-            feedback: submission.feedback,
+            submittedAt: submission.submittedAt || new Date(),
+            gradedAt: submission.gradedAt || new Date(),
+            feedback: submission.feedback || '',
             timeSpent: submission.timeSpent || 0,
             attempts: submission.attemptNumber || 1,
-            status: submission.status,
+            status: submission.status as 'submitted' | 'graded' | 'pending' | 'late' | 'draft' | 'returned',
             type: 'assessment',
             // Additional AI feedback data
             aiGraded: submission.aiGraded,
@@ -222,9 +271,10 @@ router.get('/student', auth, async (req: Request, res: Response) => {
               }
               
               return {
-                questionId: answer.questionId,
-                isCorrect: isCorrect,
-                pointsEarned: answer.pointsEarned,
+                question: `Question ${index + 1}`,
+                userAnswer: Array.isArray(answer.answer) ? answer.answer.join(', ') : (answer.answer || 'No answer provided'),
+                correctAnswer: 'No correct answer',
+                isCorrect: isCorrect || false,
                 feedback: feedback
               };
             })
@@ -286,20 +336,21 @@ router.get('/student', auth, async (req: Request, res: Response) => {
             maxScore: assignment.maxPoints || 100,
             percentage: Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100),
             grade: calculateGrade(Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100)),
-            submittedAt: submission.submittedAt,
-            gradedAt: submission.gradedAt,
+            submittedAt: submission.submittedAt || new Date(),
+            gradedAt: submission.gradedAt || new Date(),
             feedback: feedback,
             timeSpent: submission.timeSpent || 0,
             attempts: 1,
-            status: submission.status,
+            status: submission.status as 'submitted' | 'graded' | 'pending' | 'late' | 'draft' | 'returned',
             type: 'assignment',
             // Additional assignment-specific data
             aiGraded: !!submission.aiGrade,
             aiConfidence: submission.aiGrade?.confidence,
             detailedFeedback: detailedFeedback.map(detail => ({
-              questionIndex: detail.questionIndex,
-              earnedPoints: detail.earnedPoints,
-              maxPoints: detail.maxPoints,
+              question: `Question ${detail.questionIndex + 1}`,
+              userAnswer: 'User answer not available',
+              correctAnswer: 'Correct answer not available',
+              isCorrect: detail.earnedPoints === detail.maxPoints,
               feedback: detail.feedback
             }))
           });
@@ -308,7 +359,11 @@ router.get('/student', auth, async (req: Request, res: Response) => {
     }
 
     // Sort by submission date (newest first)
-    grades.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    grades.sort((a, b) => {
+      const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+      const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
     res.json({ success: true, grades });
   } catch (error) {
@@ -359,9 +414,9 @@ router.get('/student/course/:courseId', auth, async (req: Request, res: Response
           maxScore: assessment.totalPoints || 100,
           percentage: Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100),
           grade: calculateGrade(Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100)),
-          submittedAt: submission.submittedAt,
-          gradedAt: submission.gradedAt,
-          feedback: submission.feedback,
+          submittedAt: submission.submittedAt || new Date(),
+          gradedAt: submission.gradedAt || undefined,
+          feedback: submission.feedback || '',
           timeSpent: submission.timeSpent || 0,
           attempts: submission.attemptNumber || 1,
           status: submission.status,
@@ -506,9 +561,9 @@ router.get('/teacher', auth, authorizeRoles(['teacher']), async (req: Request, r
             maxScore: assessment.totalPoints || 100,
             percentage: Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100),
             grade: calculateGrade(Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100)),
-            submittedAt: submission.submittedAt,
-            gradedAt: submission.gradedAt,
-            feedback: submission.feedback,
+            submittedAt: submission.submittedAt || new Date(),
+            gradedAt: submission.gradedAt || new Date(),
+            feedback: submission.feedback || '',
             timeSpent: submission.timeSpent || 0,
             attempts: submission.attemptNumber || 1,
             status: submission.status,
@@ -572,9 +627,9 @@ router.get('/teacher', auth, authorizeRoles(['teacher']), async (req: Request, r
               maxScore: assignment.maxPoints || 100,
               percentage: Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100),
               grade: calculateGrade(Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100)),
-              submittedAt: submission.submittedAt,
-              gradedAt: submission.gradedAt,
-              feedback: submission.feedback,
+              submittedAt: submission.submittedAt || new Date(),
+              gradedAt: submission.gradedAt || new Date(),
+              feedback: submission.feedback || '',
               timeSpent: 0, // Assignment submissions don't track time spent
               attempts: 1,
               status: submission.status,
@@ -736,8 +791,11 @@ router.get('/leaderboard', auth, async (req: Request, res: Response) => {
       let completedAssessments = 0;
       let completedAssignments = 0;
       let totalPoints = 0;
-
-      // Get assessment scores
+      
+      // Detailed assessment performance data
+      const assessmentDetails: LeaderboardEntry['assessmentDetails'] = [];
+      
+      // Get assessment scores with detailed data
       if (!type || type === 'overall' || type === 'assessment') {
         let submissionQuery: any = {
           student: student._id,
@@ -749,7 +807,11 @@ router.get('/leaderboard', auth, async (req: Request, res: Response) => {
         const submissions = await AssessmentSubmission.find(submissionQuery)
           .populate({
             path: 'assessment',
-            select: 'title totalPoints course'
+            select: 'title totalPoints course questions'
+          })
+          .populate({
+            path: 'answers.questionId',
+            select: 'questionText options correctAnswer'
           });
         
         for (const submission of submissions) {
@@ -764,11 +826,37 @@ router.get('/leaderboard', auth, async (req: Request, res: Response) => {
             totalMaxScore += assessment.totalPoints || 100;
             completedAssessments++;
             totalPoints += submission.score || 0;
+            
+            // Add detailed assessment data
+            const questionDetails = submission.answers.map((answer: any) => {
+              const question = assessment.questions?.find((q: any) => q._id?.toString() === answer.questionId?.toString()) || {};
+              return {
+                questionText: question.questionText || 'Unknown question',
+                userAnswer: answer.answer || 'No answer provided',
+                correctAnswer: question.correctAnswer || 'No correct answer',
+                isCorrect: answer.isCorrect || false,
+                feedback: answer.feedback || ''
+              };
+            });
+            
+            assessmentDetails.push({
+              assessmentId: assessment._id,
+              assessmentTitle: assessment.title,
+              score: submission.score || 0,
+              maxScore: assessment.totalPoints || 100,
+              percentage: Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100),
+              grade: calculateGrade(Math.round(((submission.score || 0) / (assessment.totalPoints || 100)) * 100)),
+              submittedAt: submission.submittedAt,
+              questionDetails
+            });
           }
         }
       }
 
-      // Get assignment scores
+      // Detailed assignment performance data
+      const assignmentDetails: LeaderboardEntry['assignmentDetails'] = [];
+      
+      // Get assignment scores with detailed data
       if (!type || type === 'overall' || type === 'assignment') {
         let submissionQuery: any = {
           student: student._id,
@@ -780,7 +868,7 @@ router.get('/leaderboard', auth, async (req: Request, res: Response) => {
         const submissions = await AssignmentSubmission.find(submissionQuery)
           .populate({
             path: 'assignment',
-            select: 'title maxPoints course'
+            select: 'title maxPoints course extractedQuestions'
           });
         
         for (const submission of submissions) {
@@ -791,10 +879,40 @@ router.get('/leaderboard', auth, async (req: Request, res: Response) => {
               continue;
             }
             
-            totalScore += submission.grade || 0;
-            totalMaxScore += assignment.maxPoints || 100;
+            const score = submission.grade || submission.autoGrade || 0;
+            const maxScore = assignment.maxPoints || 100;
+            
+            totalScore += score;
+            totalMaxScore += maxScore;
             completedAssignments++;
-            totalPoints += submission.grade || 0;
+            totalPoints += score;
+            
+            // Add detailed assignment data for interactive assignments
+            let questionDetails: LeaderboardEntry['assignmentDetails'][0]['questionDetails'] = [];
+            
+            if (submission.extractedAnswers && assignment.extractedQuestions) {
+              questionDetails = submission.extractedAnswers.map((answer: any) => {
+                const question = assignment.extractedQuestions[answer.questionIndex] || {};
+                return {
+                  questionText: question.question || 'Unknown question',
+                  userAnswer: answer.answer,
+                  correctAnswer: question.correctAnswer || '',
+                  isCorrect: false, // This would need to be calculated based on the answer
+                  questionType: question.type || 'unknown'
+                };
+              });
+            }
+            
+            assignmentDetails.push({
+              assignmentId: assignment._id,
+              assignmentTitle: assignment.title,
+              score,
+              maxScore,
+              percentage: Math.round((score / maxScore) * 100),
+              grade: calculateGrade(Math.round((score / maxScore) * 100)),
+              submittedAt: submission.submittedAt || submission.gradedAt || new Date(),
+              questionDetails
+            });
           }
         }
       }
@@ -815,7 +933,9 @@ router.get('/leaderboard', auth, async (req: Request, res: Response) => {
           totalPoints,
           badges: [],
           streak: Math.floor(Math.random() * 10), // Mock data - implement actual streak calculation
-          improvement: Math.floor(Math.random() * 21) - 10 // Mock data - implement actual improvement calculation
+          improvement: Math.floor(Math.random() * 21) - 10, // Mock data - implement actual improvement calculation
+          assessmentDetails,
+          assignmentDetails
         };
 
         entry.badges = generateBadges(entry);
@@ -921,10 +1041,13 @@ router.get('/leaderboard/course/:courseId', auth, async (req: Request, res: Resp
           for (const submission of assignmentSubmissions) {
             const assignment = submission.assignment as any;
             if (assignment) {
-              totalScore += submission.grade || 0;
-              totalMaxScore += assignment.maxPoints || 100;
+              const score = submission.grade || submission.autoGrade || 0;
+              const maxScore = assignment.maxPoints || 100;
+              
+              totalScore += score;
+              totalMaxScore += maxScore;
               completedAssignments++;
-              totalPoints += submission.grade || 0;
+              totalPoints += score;
             }
           }
         }

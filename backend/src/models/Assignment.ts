@@ -122,6 +122,8 @@ export interface IAssignmentSubmission extends Document {
       feedback: string;
     }>;
   };
+  // Auto-grade field for interactive homework
+  autoGrade?: number;
   gradedAt?: Date;
   gradedBy?: mongoose.Types.ObjectId;
   version: number;
@@ -487,13 +489,6 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
     default: 0,
     min: [0, 'Time spent cannot be negative']
   },
-  gradedAt: {
-    type: Date
-  },
-  gradedBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  },
   aiGrade: {
     score: {
       type: Number,
@@ -535,6 +530,19 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
         maxlength: [1000, 'Question feedback cannot exceed 1000 characters']
       }
     }]
+  },
+  // Auto-grade field for interactive homework
+  autoGrade: {
+    type: Number,
+    min: [0, 'Auto grade cannot be negative'],
+    max: [100, 'Auto grade cannot exceed 100']
+  },
+  gradedAt: {
+    type: Date
+  },
+  gradedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
   },
   version: {
     type: Number,

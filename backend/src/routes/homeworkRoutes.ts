@@ -16,6 +16,7 @@ import {
 import {
   getInteractiveHomework,
   submitInteractiveHomework,
+  saveInteractiveHomeworkProgress,
   getStudentCreatedHomework
 } from '../controllers/homeworkController';
 
@@ -84,6 +85,7 @@ router.delete('/help/:id', authorizeRoles(['student']), asyncHandler(deleteHomew
 // Interactive homework routes
 router.get('/interactive/:id', getInteractiveHomework);
 router.post('/interactive/:id/submit', submitInteractiveHomework);
+router.post('/interactive/:id/save-progress', saveInteractiveHomeworkProgress);
 
 // Student-created homework
 router.get('/student', authorizeRoles(['student']), asyncHandler(getStudentCreatedHomework));

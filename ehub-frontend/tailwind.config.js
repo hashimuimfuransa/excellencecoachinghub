@@ -36,6 +36,42 @@ module.exports = {
       animation: {
         'bounce-slow': 'bounce 2s infinite',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 3s ease-in-out infinite',
+        'tilt': 'tilt 5s infinite ease-in-out',
+        'float-3d': 'float3d 4s ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite',
+        'wiggle': 'wiggle 2s ease-in-out infinite',
+        'fade-in-up': 'fadeInUp 0.6s ease-out forwards',
+      },
+      keyframes: {
+        float: {
+          '0%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+          '100%': { transform: 'translateY(0px)' },
+        },
+        tilt: {
+          '0%, 100%': { transform: 'rotateY(0deg)' },
+          '25%': { transform: 'rotateY(5deg)' },
+          '75%': { transform: 'rotateY(-5deg)' },
+        },
+        'float-3d': {
+          '0%': { transform: 'translateY(0px) translateZ(0px)' },
+          '50%': { transform: 'translateY(-15px) translateZ(10px)' },
+          '100%': { transform: 'translateY(0px) translateZ(0px)' },
+        },
+        glow: {
+          '0%': { boxShadow: '0 0 5px rgba(34, 197, 94, 0.5)' },
+          '50%': { boxShadow: '0 0 20px rgba(34, 197, 94, 0.8)' },
+          '100%': { boxShadow: '0 0 5px rgba(34, 197, 94, 0.5)' },
+        },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(-3deg)' },
+          '50%': { transform: 'rotate(3deg)' },
+        },
+        'fade-in-up': {
+          'from': { opacity: '0', transform: 'translateY(20px)' },
+          'to': { opacity: '1', transform: 'translateY(0)' },
+        }
       }
     },
   },

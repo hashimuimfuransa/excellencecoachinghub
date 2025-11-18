@@ -3,6 +3,16 @@ import { Link } from 'react-router-dom';
 import { teacherApi } from '../../api/teacherApi'; // Use teacherApi instead
 import { homeworkApi } from '../../api/homeworkApi'; // Add homeworkApi for help requests
 import BottomNavbar from '../ui/BottomNavbar';
+import { levelOptions } from '../../utils/languageOptions';
+
+// Get level label from level value
+const getLevelLabel = (levelValue) => {
+  for (const category in levelOptions) {
+    const level = levelOptions[category].find(l => l.value === levelValue);
+    if (level) return level.label;
+  }
+  return levelValue;
+};
 
 const TeacherDashboard = () => {
   const [helpRequests, setHelpRequests] = useState([]);
@@ -32,7 +42,7 @@ const TeacherDashboard = () => {
                 id: req._id,
                 studentName: req.studentName || 'Unknown Student',
                 homeworkTitle: req.homeworkTitle || 'Help Request',
-                subject: req.subject || 'General',
+                level: req.level || 'N/A',
                 message: req.description || 'No description provided',
                 createdAt: req.createdAt,
                 fileUrl: req.file?.fileUrl || null
@@ -215,7 +225,7 @@ const TeacherDashboard = () => {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="font-semibold text-gray-900 text-sm">{request.homeworkTitle}</h3>
-                      <p className="text-gray-600 text-xs mt-1">{request.studentName} • {request.subject}</p>
+                      <p className="text-gray-600 text-xs mt-1">{request.studentName} • {getLevelLabel(request.level)}</p>
                     </div>
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
                       Help

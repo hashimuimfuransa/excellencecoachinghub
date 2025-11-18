@@ -20,7 +20,7 @@ const StudentCreatedHomework = () => {
           {
             id: 1,
             title: 'My Math Challenge',
-            subject: 'Mathematics',
+            level: 'p5',
             description: 'Solve these interesting geometry problems I created',
             studentName: 'Emma Johnson',
             studentGrade: 'Grade 7',
@@ -32,7 +32,7 @@ const StudentCreatedHomework = () => {
           {
             id: 2,
             title: 'Science Experiment Idea',
-            subject: 'Science',
+            level: 'p6',
             description: 'An experiment to test the effect of different liquids on plant growth',
             studentName: 'Michael Chen',
             studentGrade: 'Grade 8',
@@ -146,7 +146,7 @@ const StudentCreatedHomework = () => {
                       <div>
                         <h3 className="font-medium text-gray-900">{hw.title}</h3>
                         <p className="text-sm text-gray-600">
-                          {hw.subject} • Created by {hw.studentName} ({hw.studentGrade})
+                          Level {hw.level} • Created by {hw.studentName} ({hw.studentGrade})
                         </p>
                       </div>
                     </div>

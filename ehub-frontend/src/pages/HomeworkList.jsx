@@ -18,11 +18,12 @@ const HomeworkList = () => {
   const [userPreferencesLoaded, setUserPreferencesLoaded] = useState(false);
   
   // Define language options
-  const languageOptions = [
+  const languageOptionsList = [
     { value: '', label: t('all_languages') },
-    { value: 'english', label: 'English' },
-    { value: 'french', label: 'French' },
-    { value: 'kinyarwanda', label: 'Kinyarwanda' }
+    ...levelOptions.language.map(lang => ({
+      value: lang.value,
+      label: lang.label
+    }))
   ];
 
   // Initialize with user's preferences
@@ -39,7 +40,8 @@ const HomeworkList = () => {
     const allLevels = [
       { value: '', label: t('all_levels') },
       { label: t('nursery'), options: levelOptions.nursery },
-      { label: t('primary'), options: levelOptions.primary }
+      { label: t('primary'), options: levelOptions.primary },
+      { label: t('secondary'), options: levelOptions.secondary }
     ];
     return allLevels;
   };
@@ -99,7 +101,13 @@ const HomeworkList = () => {
       'p3': t('p3'),
       'p4': t('p4'),
       'p5': t('p5'),
-      'p6': t('p6')
+      'p6': t('p6'),
+      's1': t('s1'),
+      's2': t('s2'),
+      's3': t('s3'),
+      's4': t('s4'),
+      's5': t('s5'),
+      's6': t('s6')
     };
     return levelMap[level] || level;
   };
@@ -181,7 +189,7 @@ const HomeworkList = () => {
               onChange={(e) => setSelectedLanguage(e.target.value)}
               className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 text-gray-700"
             >
-              {languageOptions.map(option => (
+              {languageOptionsList.map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -208,7 +216,7 @@ const HomeworkList = () => {
           <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
             <p className="text-sm text-gray-700">
               <span className="font-semibold">{t('your_preferences')}:</span> {getLevelLabel(user.level) || t('not_set')} - 
-              {user.language?.charAt(0).toUpperCase() + user.language?.slice(1) || t('not_set')}
+              {levelOptions.language.find(lang => lang.value === user.language)?.label || user.language?.charAt(0).toUpperCase() + user.language?.slice(1) || t('not_set')}
             </p>
           </div>
         ) : null}
@@ -265,7 +273,7 @@ const HomeworkList = () => {
                     {getLevelLabel(homework.level)}
                   </span>
                   <span className="px-2.5 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                    {homework.language.charAt(0).toUpperCase() + homework.language.slice(1)}
+                    {levelOptions.language.find(lang => lang.value === homework.language)?.label || homework.language.charAt(0).toUpperCase() + homework.language.slice(1)}
                   </span>
                   {homework.course && (
                     <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">

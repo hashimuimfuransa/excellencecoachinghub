@@ -6,16 +6,23 @@ import { AuthRequest } from '../middleware/auth';
 export const uploadHomeworkHelp = async (req: AuthRequest, res: Response) => {
   try {
     // Get data from request body (now JSON instead of FormData)
-    const { homeworkTitle, subject, message, fileUrl } = req.body;
+    const { homeworkTitle, level, message, fileUrl } = req.body;
 
     // Validate required fields
-    if (!homeworkTitle || !subject || !message) {
+    if (!homeworkTitle || !level || !message) {
       return res.status(400).json({
-        message: 'Homework title, subject, and message are required'
+        message: 'Homework title, level, and message are required'
       });
     }
 
     if (!req.user) {
+      return res.status(401).json({
+        message: 'Not authenticated'
+      });
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
       return res.status(401).json({
         message: 'Not authenticated'
       });
@@ -41,9 +48,9 @@ export const uploadHomeworkHelp = async (req: AuthRequest, res: Response) => {
     }
 
     const homeworkHelp = new HomeworkHelp({
-      student: new Types.ObjectId(user._id.toString()),
+      student: new Types.ObjectId(userId),
       studentName,
-      subject, // This is correct
+      level, // Use level instead of subject
       description: message, // Map 'message' to 'description'
       file: fileData,
       comments: []
@@ -144,12 +151,19 @@ export const addCommentToHomeworkHelp = async (req: AuthRequest, res: Response) 
       });
     }
 
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        message: 'Not authenticated'
+      });
+    }
+
     const user = req.user;
     const authorName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || 'Anonymous';
 
     const newComment = {
       author: authorName,
-      authorId: new Types.ObjectId(user._id.toString()),
+      authorId: new Types.ObjectId(userId),
       text: comment,
       createdAt: new Date()
     };
@@ -193,7 +207,14 @@ export const deleteHomeworkHelp = async (req: AuthRequest, res: Response) => {
     }
 
     // Check if user is the owner or a teacher/admin
-    const isOwner = homeworkHelp.student.toString() === req.user._id.toString();
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        message: 'Not authenticated'
+      });
+    }
+    
+    const isOwner = homeworkHelp.student.toString() === userId;
     const isTeacherOrAdmin = req.user.role === 'teacher' || req.user.role === 'admin';
 
     if (!isOwner && !isTeacherOrAdmin) {

@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { homeworkApi } from '../api/homeworkApi';
+import { levelOptions } from '../utils/languageOptions';
 import BottomNavbar from '../components/ui/BottomNavbar';
 
 const HomeworkHelp = () => {
   const [helpRequests, setHelpRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  
+  // Get level label from level value
+  const getLevelLabel = (levelValue) => {
+    for (const category in levelOptions) {
+      const level = levelOptions[category].find(l => l.value === levelValue);
+      if (level) return level.label;
+    }
+    return levelValue;
+  };
 
   useEffect(() => {
     const loadHelpRequests = async () => {
@@ -21,7 +31,7 @@ const HomeworkHelp = () => {
             _id: 1,
             studentName: 'John Doe',
             homeworkTitle: 'Algebra Homework',
-            subject: 'Mathematics',
+            level: 'p3',
             description: 'I&#39;m having trouble with question 3 about quadratic equations. Can someone help me understand the steps?',
             file: {
               fileUrl: '/sample-file.pdf',
@@ -34,7 +44,7 @@ const HomeworkHelp = () => {
             _id: 2,
             studentName: 'Sarah Johnson',
             homeworkTitle: 'History Essay',
-            subject: 'History',
+            level: 'p5',
             description: 'Could someone review my essay draft and provide feedback on the structure?',
             file: {
               fileUrl: '/sample-file2.pdf',
@@ -127,7 +137,7 @@ const HomeworkHelp = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mt-6 mb-3">Homework Details</h3>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="font-medium">{selectedRequest.homeworkTitle || 'N/A'}</p>
-                  <p className="text-gray-600">Subject: {selectedRequest.subject || 'N/A'}</p>
+                  <p className="text-gray-600">Level: {getLevelLabel(selectedRequest.level) || selectedRequest.level || 'N/A'}</p>
                 </div>
 
                 <h3 className="text-lg font-semibold text-gray-900 mt-6 mb-3">Student Message</h3>
@@ -211,7 +221,7 @@ const HomeworkHelp = () => {
                           <h3 className="font-medium text-gray-900">{request.studentName}</h3>
                           <p className="text-sm text-gray-600">
                             {request.homeworkTitle || 'Homework help request'} 
-                            {request.subject && ` - ${request.subject}`}
+                            {request.level && ` - ${getLevelLabel(request.level)}`}
                           </p>
                         </div>
                       </div>

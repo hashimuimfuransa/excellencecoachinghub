@@ -25,7 +25,7 @@ const ReviewStudentHomework = () => {
         const mockHomework = {
           id: id,
           title: 'My Math Challenge',
-          subject: 'Mathematics',
+          level: 'p5',
           description: 'Solve these interesting geometry problems I created',
           studentName: 'Emma Johnson',
           studentGrade: 'Grade 7',
@@ -145,8 +145,8 @@ const ReviewStudentHomework = () => {
                   <p className="font-medium">{homework?.title}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">Subject</p>
-                  <p className="font-medium">{homework?.subject}</p>
+                  <p className="text-sm text-gray-600">Level</p>
+                  <p className="font-medium">{homework?.level}</p>
                 </div>
               </div>
 

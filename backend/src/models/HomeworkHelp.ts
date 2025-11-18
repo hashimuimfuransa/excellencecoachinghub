@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IHomeworkHelp extends Document {
   student: mongoose.Types.ObjectId;
   studentName?: string;
-  subject: string;
+  level: string;
   description: string;
   file?: {
     fileUrl: string;
@@ -31,11 +31,11 @@ const HomeworkHelpSchema = new Schema<IHomeworkHelp>(
       type: String,
       trim: true
     },
-    subject: {
+    level: {
       type: String,
-      required: [true, 'Subject is required'],
+      required: [true, 'Level is required'],
       trim: true,
-      maxlength: [100, 'Subject cannot exceed 100 characters']
+      maxlength: [100, 'Level cannot exceed 100 characters']
     },
     description: {
       type: String,
@@ -83,7 +83,7 @@ const HomeworkHelpSchema = new Schema<IHomeworkHelp>(
 );
 
 HomeworkHelpSchema.index({ student: 1, createdAt: -1 });
-HomeworkHelpSchema.index({ subject: 1 });
+HomeworkHelpSchema.index({ level: 1 });
 
 export const HomeworkHelp = mongoose.model<IHomeworkHelp>(
   'HomeworkHelp',

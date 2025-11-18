@@ -3,14 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
 import { Widget } from '@uploadcare/react-widget';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../hooks/useAuth';
 import BottomNavbar from '../components/ui/BottomNavbar';
+import { levelOptions } from '../utils/languageOptions';
 
 const HomeworkHelpStudent = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  
+  // Get level label from level value
+  const getLevelLabel = (levelValue) => {
+    for (const category in levelOptions) {
+      const level = levelOptions[category].find(l => l.value === levelValue);
+      if (level) return level.label;
+    }
+    return levelValue;
+  };
+  
   const [helpData, setHelpData] = useState({
     homeworkTitle: '',
-    subject: '',
+    level: user?.level || '',
     message: '',
     fileUrl: ''
   });
@@ -41,7 +54,7 @@ const HomeworkHelpStudent = () => {
     setError('');
     
     // Validate required fields
-    if (!helpData.homeworkTitle || !helpData.subject || !helpData.message) {
+    if (!helpData.homeworkTitle || !helpData.level || !helpData.message) {
       setError(t('please_fill_required_fields'));
       setLoading(false);
       return;
@@ -51,7 +64,7 @@ const HomeworkHelpStudent = () => {
       // Create form data with text fields and file URL
       const formData = {
         homeworkTitle: helpData.homeworkTitle,
-        subject: helpData.subject,
+        level: helpData.level,
         message: helpData.message,
         fileUrl: helpData.fileUrl
       };
@@ -124,22 +137,15 @@ const HomeworkHelpStudent = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-gray-700 font-semibold text-sm mb-1">{t('subject')}</label>
-              <select
-                name="subject"
-                value={helpData.subject}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 text-gray-700"
-                required
-              >
-                <option value="">{t('select_subject')}</option>
-                <option value="Mathematics">📊 {t('math')}</option>
-                <option value="Science">🔬 {t('science')}</option>
-                <option value="English">📖 {t('english')}</option>
-                <option value="History">🏛️ {t('history')}</option>
-                <option value="Art">🎨 {t('art')}</option>
-                <option value="Other">📝 {t('other')}</option>
-              </select>
+              <label className="block text-gray-700 font-semibold text-sm mb-1">{t('level')}</label>
+              <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-700">
+                {user?.level ? (
+                  <span>{getLevelLabel(user.level)}</span>
+                ) : (
+                  <span>{t('no_level_selected')}</span>
+                )}
+              </div>
+              <input type="hidden" name="level" value={helpData.level} />
             </div>
           </div>
 

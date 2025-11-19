@@ -938,13 +938,17 @@ const MainLayout: React.FC = () => {
             duration: muiTheme.transitions.duration.standard,
           }),
           zIndex: (theme) => theme.zIndex.drawer + 1,
+          // Mobile optimizations
+          px: { xs: 0, sm: 0.5 },
         }}
       >
         <Toolbar sx={{ 
           minHeight: { xs: '64px !important', sm: '68px !important', md: '72px !important', lg: '75px !important', xl: '78px !important' },
           px: { xs: 1, sm: 1.5, md: 2.5, lg: 3, xl: 3.5 },
           justifyContent: 'space-between',
-          position: 'relative'
+          position: 'relative',
+          // Mobile toolbar optimizations
+          py: { xs: 0.5, sm: 1 }
         }}>
           {/* Left Section - Logo & Mobile Menu */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 } }}>
@@ -956,7 +960,9 @@ const MainLayout: React.FC = () => {
               onClick={handleDrawerToggle}
               sx={{ 
                 display: { sm: 'none' },
-                p: { xs: 1.5, sm: 1.8 },
+                p: { xs: 1.3, sm: 1.5 },
+                minWidth: { xs: '44px', sm: '48px' },
+                minHeight: { xs: '44px', sm: '48px' },
                 borderRadius: '16px',
                 bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
                 border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.12)}`,
@@ -979,7 +985,9 @@ const MainLayout: React.FC = () => {
                   onClick={handleBackNavigation}
                   sx={{ 
                     mr: 1,
-                    p: 1.5,
+                    p: { xs: 1.3, sm: 1.5 },
+                    minWidth: { xs: '44px', sm: '48px' },
+                    minHeight: { xs: '44px', sm: '48px' },
                     borderRadius: '16px',
                     bgcolor: alpha(muiTheme.palette.secondary.main, 0.08),
                     border: `1px solid ${alpha(muiTheme.palette.secondary.main, 0.12)}`,
@@ -1002,11 +1010,13 @@ const MainLayout: React.FC = () => {
               <IconButton
                 onClick={handleDesktopDrawerToggle}
                 sx={{
-                  p: 1.5,
+                  p: { sm: 1.3, md: 1.5 },
                   borderRadius: '16px',
                   bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
                   border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.12)}`,
                   color: 'primary.main',
+                  minWidth: { sm: '44px', md: '48px' },
+                  minHeight: { sm: '44px', md: '48px' },
                   '&:hover': {
                     bgcolor: alpha(muiTheme.palette.primary.main, 0.15),
                     transform: 'scale(1.05)',
@@ -1029,8 +1039,8 @@ const MainLayout: React.FC = () => {
                 display: { xs: 'none', sm: 'flex' },
                 alignItems: 'center', 
                 textDecoration: 'none',
-                gap: { sm: 1.2, md: 1.5, lg: 1.8, xl: 2 },
-                p: { sm: 0.8, md: 1, lg: 1.2, xl: 1.5 },
+                gap: { sm: 1, md: 1.5, lg: 1.8, xl: 2 },
+                p: { sm: 0.6, md: 1, lg: 1.2, xl: 1.5 },
                 borderRadius: '20px',
                 '&:hover': {
                   bgcolor: alpha(muiTheme.palette.primary.main, 0.04),
@@ -1045,8 +1055,8 @@ const MainLayout: React.FC = () => {
                 src="/exjobnetlogo.png"
                 alt="ExJobNet Logo"
                 sx={{
-                  width: { sm: 40, md: 45, lg: 48, xl: 50 },
-                  height: { sm: 40, md: 45, lg: 48, xl: 50 },
+                  width: { sm: 36, md: 45, lg: 48, xl: 50 },
+                  height: { sm: 36, md: 45, lg: 48, xl: 50 },
                   borderRadius: '14px',
                   boxShadow: `0 4px 20px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
                   border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
@@ -1068,7 +1078,7 @@ const MainLayout: React.FC = () => {
                     backgroundSize: '200% 100%',
                     letterSpacing: '-0.8px',
                     lineHeight: 1.1,
-                    fontSize: { sm: '1rem', md: '1.1rem', lg: '1.2rem', xl: '1.25rem' },
+                    fontSize: { sm: '0.95rem', md: '1.1rem', lg: '1.2rem', xl: '1.25rem' },
                     fontFamily: '"Inter", "Roboto", sans-serif',
                     '&:hover': {
                       backgroundPosition: '100% 0',
@@ -1082,7 +1092,7 @@ const MainLayout: React.FC = () => {
                   variant="caption" 
                   sx={{ 
                     color: 'text.secondary',
-                    fontSize: '0.7rem',
+                    fontSize: { sm: '0.6rem', md: '0.7rem' },
                     fontWeight: '600',
                     lineHeight: 1,
                     letterSpacing: '0.5px',
@@ -1101,7 +1111,7 @@ const MainLayout: React.FC = () => {
             display: { xs: 'none', sm: 'flex' },
             flexGrow: 1,
             maxWidth: { sm: '280px', md: '350px', lg: '400px', xl: '450px' },
-            mx: { sm: 1.5, md: 2, lg: 2.5, xl: 3 }
+            mx: { sm: 1, md: 2, lg: 2.5, xl: 3 }
           }}>
             <Paper
               component="form"
@@ -1138,9 +1148,9 @@ const MainLayout: React.FC = () => {
                 placeholder="Search jobs, companies, skills..."
                 sx={{
                   width: '100%',
-                  px: { sm: 2.2, md: 2.5, lg: 2.8, xl: 3 },
-                  py: { sm: 1.3, md: 1.5, lg: 1.7, xl: 1.8 },
-                  fontSize: { sm: '0.85rem', md: '0.9rem', lg: '0.95rem', xl: '1rem' },
+                  px: { sm: 2, md: 2.5, lg: 2.8, xl: 3 },
+                  py: { sm: 1.1, md: 1.5, lg: 1.7, xl: 1.8 },
+                  fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem', lg: '0.95rem', xl: '1rem' },
                   fontWeight: '400',
                   color: 'text.primary',
                   '& .MuiInputBase-input': {
@@ -1154,9 +1164,9 @@ const MainLayout: React.FC = () => {
                 startAdornment={
                   <Search 
                     sx={{ 
-                      mr: 1.5, 
+                      mr: { sm: 1.2, md: 1.5 }, 
                       color: searchFocused ? 'primary.main' : 'text.secondary',
-                      fontSize: '1.2rem',
+                      fontSize: { sm: '1.1rem', md: '1.2rem' },
                       transition: 'color 0.2s ease'
                     }} 
                   />
@@ -1174,7 +1184,9 @@ const MainLayout: React.FC = () => {
                       '&:hover': {
                         color: 'text.primary',
                         bgcolor: alpha(muiTheme.palette.action.hover, 0.5),
-                      }
+                      },
+                      minWidth: '32px',
+                      minHeight: '32px'
                     }}
                   >
                     <Box component="span" sx={{ fontSize: '1rem' }}>×</Box>
@@ -1217,6 +1229,9 @@ const MainLayout: React.FC = () => {
                   size="small"
                   sx={{
                     color: 'text.secondary',
+                    p: { xs: 1.2, sm: 1.5 },
+                    minWidth: { xs: '44px', sm: '48px' },
+                    minHeight: { xs: '44px', sm: '48px' },
                     '&:hover': {
                       color: 'primary.main',
                       bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
@@ -1230,7 +1245,7 @@ const MainLayout: React.FC = () => {
 
             {/* Employer Quick Actions */}
             {hasRole(UserRole.EMPLOYER) && (
-              <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: { md: 0.8, lg: 1, xl: 1.2 }, mr: { md: 0.8, lg: 1, xl: 1.2 } }}>
+              <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: { md: 0.6, lg: 1, xl: 1.2 }, mr: { md: 0.6, lg: 1, xl: 1.2 } }}>
                 <Tooltip title="Post New Job">
                   <IconButton
                     onClick={() => navigate('/app/jobs/create')}
@@ -1240,6 +1255,9 @@ const MainLayout: React.FC = () => {
                       bgcolor: alpha(muiTheme.palette.success.main, 0.1),
                       borderRadius: '10px',
                       border: `1px solid ${alpha(muiTheme.palette.success.main, 0.2)}`,
+                      p: { md: 0.8, lg: 1 },
+                      minWidth: { md: '40px', lg: '44px' },
+                      minHeight: { md: '40px', lg: '44px' },
                       '&:hover': {
                         bgcolor: alpha(muiTheme.palette.success.main, 0.2),
                         transform: 'scale(1.05)',
@@ -1260,6 +1278,9 @@ const MainLayout: React.FC = () => {
                       bgcolor: alpha(muiTheme.palette.warning.main, 0.1),
                       borderRadius: '10px',
                       border: `1px solid ${alpha(muiTheme.palette.warning.main, 0.2)}`,
+                      p: { md: 0.8, lg: 1 },
+                      minWidth: { md: '40px', lg: '44px' },
+                      minHeight: { md: '40px', lg: '44px' },
                       '&:hover': {
                         bgcolor: alpha(muiTheme.palette.warning.main, 0.2),
                         transform: 'scale(1.05)',
@@ -1283,6 +1304,9 @@ const MainLayout: React.FC = () => {
                   color: 'text.secondary',
                   position: 'relative',
                   borderRadius: '12px',
+                  p: { xs: 1.1, sm: 1.3 },
+                  minWidth: { xs: '44px', sm: '48px' },
+                  minHeight: { xs: '44px', sm: '48px' },
                   '&:hover': {
                     color: 'primary.main',
                     bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
@@ -1296,9 +1320,9 @@ const MainLayout: React.FC = () => {
                   color="error"
                   sx={{
                     '& .MuiBadge-badge': {
-                      fontSize: '0.65rem',
-                      height: '16px',
-                      minWidth: '16px',
+                      fontSize: { xs: '0.55rem', sm: '0.65rem' },
+                      height: { xs: '14px', sm: '16px' },
+                      minWidth: { xs: '14px', sm: '16px' },
                       borderRadius: '8px',
                       fontWeight: '600',
                       border: `2px solid ${muiTheme.palette.background.paper}`,
@@ -1320,6 +1344,9 @@ const MainLayout: React.FC = () => {
                   color: 'text.secondary',
                   position: 'relative',
                   borderRadius: '12px',
+                  p: { xs: 1.1, sm: 1.3 },
+                  minWidth: { xs: '44px', sm: '48px' },
+                  minHeight: { xs: '44px', sm: '48px' },
                   '&:hover': {
                     color: 'primary.main',
                     bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
@@ -1333,9 +1360,9 @@ const MainLayout: React.FC = () => {
                   color="error"
                   sx={{
                     '& .MuiBadge-badge': {
-                      fontSize: '0.65rem',
-                      height: '16px',
-                      minWidth: '16px',
+                      fontSize: { xs: '0.55rem', sm: '0.65rem' },
+                      height: { xs: '14px', sm: '16px' },
+                      minWidth: { xs: '14px', sm: '16px' },
                       borderRadius: '8px',
                       fontWeight: '600',
                       border: `2px solid ${muiTheme.palette.background.paper}`,
@@ -1357,6 +1384,9 @@ const MainLayout: React.FC = () => {
                   color: 'text.secondary',
                   position: 'relative',
                   borderRadius: '12px',
+                  p: { xs: 1.1, sm: 1.3 },
+                  minWidth: { xs: '44px', sm: '48px' },
+                  minHeight: { xs: '44px', sm: '48px' },
                   '&:hover': {
                     color: 'success.main',
                     bgcolor: alpha(muiTheme.palette.success.main, 0.08),
@@ -1382,6 +1412,9 @@ const MainLayout: React.FC = () => {
                     bgcolor: alpha(muiTheme.palette.background.default, 0.5),
                     border: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}`,
                     backdropFilter: 'blur(8px)',
+                    p: { sm: 1.1, md: 1.3 },
+                    minWidth: { sm: '44px', md: '48px' },
+                    minHeight: { sm: '44px', md: '48px' },
                     '&:hover': {
                       color: 'primary.main',
                       bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
@@ -1434,13 +1467,13 @@ const MainLayout: React.FC = () => {
                   startIcon={<Add />}
                   onClick={() => navigate('/app/jobs/create')}
                   sx={{
-                    ml: { xs: 1, sm: 1.2, md: 1.5, lg: 1.8, xl: 2 },
-                    mr: { xs: 0.5, sm: 0.7, md: 0.8, lg: 1, xl: 1.2 },
-                    px: { xs: 2, sm: 2.2, md: 2.5, lg: 2.8, xl: 3 },
-                    py: { xs: 1, sm: 1.1, md: 1.2, lg: 1.3, xl: 1.4 },
+                    ml: { xs: 0.8, sm: 1.2, md: 1.5, lg: 1.8, xl: 2 },
+                    mr: { xs: 0.3, sm: 0.7, md: 0.8, lg: 1, xl: 1.2 },
+                    px: { xs: 1.5, sm: 2.2, md: 2.5, lg: 2.8, xl: 3 },
+                    py: { xs: 0.8, sm: 1.1, md: 1.2, lg: 1.3, xl: 1.4 },
                     borderRadius: '16px',
                     fontWeight: '700',
-                    fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem', lg: '0.95rem', xl: '1rem' },
+                    fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.9rem', lg: '0.95rem', xl: '1rem' },
                     textTransform: 'none',
                     background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
                     boxShadow: '0 6px 20px rgba(76, 175, 80, 0.25)',
@@ -1457,8 +1490,10 @@ const MainLayout: React.FC = () => {
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     whiteSpace: 'nowrap',
                     minWidth: 'auto',
+                    minHeight: { xs: '36px', sm: '40px' },
                     '& .MuiButton-startIcon': {
                       transition: 'transform 0.3s ease',
+                      fontSize: { xs: '1rem', sm: '1.25rem' },
                     },
                     '&:hover .MuiButton-startIcon': {
                       transform: 'rotate(180deg)',
@@ -1489,10 +1524,12 @@ const MainLayout: React.FC = () => {
                 onClick={handleProfileMenuOpen}
                 size="small"
                 sx={{ 
-                  p: { xs: 0.5, sm: 0.6, md: 0.7, lg: 0.8, xl: 0.9 },
-                  ml: { xs: 0.5, sm: 0.8, md: 1.2, lg: 1.5, xl: 1.8 },
+                  p: { xs: 0.4, sm: 0.6, md: 0.7, lg: 0.8, xl: 0.9 },
+                  ml: { xs: 0.3, sm: 0.8, md: 1.2, lg: 1.5, xl: 1.8 },
                   position: 'relative',
                   borderRadius: '50%',
+                  minWidth: { xs: '40px', sm: '44px' },
+                  minHeight: { xs: '40px', sm: '44px' },
                   '&:hover': {
                     transform: 'scale(1.08) translateY(-1px)',
                     '& .MuiAvatar-root': {
@@ -1518,14 +1555,14 @@ const MainLayout: React.FC = () => {
                   alt={user?.firstName}
                   src={user?.avatar}
                   sx={{ 
-                    width: { xs: 32, sm: 34, md: 36, lg: 38, xl: 40 }, 
-                    height: { xs: 32, sm: 34, md: 36, lg: 38, xl: 40 },
+                    width: { xs: 30, sm: 34, md: 36, lg: 38, xl: 40 }, 
+                    height: { xs: 30, sm: 34, md: 36, lg: 38, xl: 40 },
                     border: `3px solid ${muiTheme.palette.background.paper}`,
                     boxShadow: `0 4px 15px ${alpha(muiTheme.palette.common.black, 0.1)}`,
                     background: user?.avatar ? 'transparent' : `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
                     color: 'white',
                     fontWeight: '700',
-                    fontSize: '1rem',
+                    fontSize: { xs: '0.9rem', sm: '1rem' },
                     position: 'relative',
                     zIndex: 1,
                     transition: 'all 0.3s ease',
@@ -1534,8 +1571,8 @@ const MainLayout: React.FC = () => {
                       position: 'absolute',
                       bottom: 2,
                       right: 2,
-                      width: 8,
-                      height: 8,
+                      width: { xs: 6, sm: 8 },
+                      height: { xs: 6, sm: 8 },
                       borderRadius: '50%',
                       bgcolor: 'success.main',
                       border: `2px solid ${muiTheme.palette.background.paper}`,
@@ -1637,7 +1674,8 @@ const MainLayout: React.FC = () => {
             filter: 'drop-shadow(0px 8px 32px rgba(0,0,0,0.12))',
             mt: 1.5,
             borderRadius: 4,
-            minWidth: 240,
+            minWidth: { xs: 200, sm: 240 },
+            maxWidth: { xs: '90vw', sm: 'none' },
             bgcolor: 'background.paper',
             border: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
             '&:before': {
@@ -1767,6 +1805,7 @@ const MainLayout: React.FC = () => {
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
+          anchor="left"
           ModalProps={{
             keepMounted: true,
           }}
@@ -1774,16 +1813,22 @@ const MainLayout: React.FC = () => {
             display: { xs: 'block', sm: 'none' },
             '& .MuiDrawer-paper': { 
               boxSizing: 'border-box', 
-              width: { xs: '100vw', sm: 320 },
+              width: '85vw',
+              maxWidth: '300px',
               borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.05)}`,
               background: mode === 'dark' 
-                ? alpha(muiTheme.palette.background.paper, 0.95)
-                : alpha(muiTheme.palette.background.paper, 0.98),
+                ? alpha(muiTheme.palette.background.paper, 0.85)
+                : alpha(muiTheme.palette.background.paper, 0.9),
               boxShadow: mode === 'dark'
                 ? '0 10px 30px rgba(0, 0, 0, 0.3)'
                 : '0 10px 30px rgba(0, 0, 0, 0.1)',
+              backdropFilter: 'blur(10px)',
               position: 'relative',
               overflow: 'hidden',
+              transition: 'transform 0.3s ease-in-out',
+              transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+              borderTopRightRadius: '20px',
+              borderBottomRightRadius: '20px',
             },
           }}
           slotProps={{
@@ -1791,8 +1836,11 @@ const MainLayout: React.FC = () => {
               timeout: 300,
               sx: {
                 backgroundColor: mode === 'dark' 
-                  ? 'rgba(0, 0, 0, 0.6)' 
-                  : 'rgba(0, 0, 0, 0.4)',
+                  ? 'rgba(0, 0, 0, 0.2)' 
+                  : 'rgba(0, 0, 0, 0.1)',
+                backdropFilter: 'blur(1px)',
+                opacity: mobileOpen ? 1 : 0,
+                transition: 'opacity 0.3s ease-in-out',
               }
             },
           }}
@@ -1842,6 +1890,8 @@ const MainLayout: React.FC = () => {
           position: 'relative',
           overflow: { xs: 'hidden', sm: 'auto' }, // Better mobile overflow handling
           ml: { xs: 0, sm: `${currentDrawerWidth}px` },
+          // Enhanced mobile responsiveness
+          px: { xs: 0, sm: 0.5 },
         }}
       >
         {/* Spacer for fixed AppBar */}
@@ -1862,7 +1912,9 @@ const MainLayout: React.FC = () => {
             '& > *': {
               maxWidth: '100%',
               overflowX: 'hidden'
-            }
+            },
+            // Additional mobile optimizations
+            boxSizing: 'border-box',
           }}
         >
           {/* Page Content - Enhanced Mobile Optimization */}
@@ -1883,19 +1935,24 @@ const MainLayout: React.FC = () => {
               '& .MuiGrid-container': {
                 mx: { xs: 0, sm: 'auto' },
                 width: '100%',
-                maxWidth: '100%'
+                maxWidth: '100%',
+                px: { xs: 0.5, sm: 1 }
               },
               '& .MuiCard-root': {
                 mx: { xs: 0, sm: 'auto' },
                 borderRadius: { xs: 1, sm: 2, md: 3 },
                 width: '100%',
-                maxWidth: '100%'
+                maxWidth: '100%',
+                // Mobile card optimizations
+                px: { xs: 1, sm: 2 },
+                py: { xs: 1.5, sm: 2 }
               },
               '& .MuiPaper-root': {
                 mx: { xs: 0, sm: 'auto' },
                 borderRadius: { xs: 1, sm: 2, md: 3 },
                 width: { xs: '100%', sm: 'auto' },
-                maxWidth: '100%'
+                maxWidth: '100%',
+                px: { xs: 1, sm: 1.5 }
               },
               // Tab optimization
               '& .MuiTabs-root': {
@@ -1909,6 +1966,10 @@ const MainLayout: React.FC = () => {
               // Better mobile spacing
               '& .MuiBox-root': {
                 maxWidth: { xs: '100%', sm: 'none' }
+              },
+              // Enhanced mobile typography
+              '& .MuiTypography-root': {
+                fontSize: { xs: '0.875rem', sm: '1rem' }
               },
               '@keyframes slideInUp': {
                 '0%': { 
@@ -1959,9 +2020,11 @@ const MainLayout: React.FC = () => {
           backdropFilter: 'blur(10px)',
           borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.05)}`,
           borderRadius: 0,
-          py: 0.5,
-          px: 0.5,
+          py: { xs: 0.4, sm: 0.5 },
+          px: { xs: 0.3, sm: 0.5 },
           boxShadow: `0 -2px 15px ${alpha(muiTheme.palette.common.black, 0.05)}`,
+          // Enhanced mobile touch targets
+          minHeight: { xs: '60px', sm: '64px' },
         }}
       >
         <Box
@@ -1971,6 +2034,7 @@ const MainLayout: React.FC = () => {
             alignItems: 'center',
             width: '100%',
             maxWidth: '100%',
+            flexWrap: 'nowrap',
           }}
         >
           {/* Home/Network */}
@@ -1979,8 +2043,9 @@ const MainLayout: React.FC = () => {
             sx={{
               flexDirection: 'column',
               borderRadius: '8px',
-              py: 0.8,
-              px: 1,
+              py: { xs: 0.6, sm: 0.8 },
+              px: { xs: 0.8, sm: 1 },
+              minWidth: { xs: 50, sm: 60 },
               color: location.pathname === '/app/network' ? 'primary.main' : 'text.secondary',
               backgroundColor: location.pathname === '/app/network' 
                 ? alpha(muiTheme.palette.primary.main, 0.1) 
@@ -1994,7 +2059,7 @@ const MainLayout: React.FC = () => {
           >
             <Dashboard 
               sx={{ 
-                fontSize: '1.3rem',
+                fontSize: { xs: '1.1rem', sm: '1.3rem' },
                 mb: 0.5,
                 color: location.pathname === '/app/network' ? 'primary.main' : 'text.secondary',
               }} 
@@ -2002,7 +2067,7 @@ const MainLayout: React.FC = () => {
             <Typography 
               variant="caption" 
               sx={{ 
-                fontSize: '0.65rem',
+                fontSize: { xs: '0.55rem', sm: '0.65rem' },
                 fontWeight: location.pathname === '/app/network' ? 600 : 400,
                 color: location.pathname === '/app/network' ? 'primary.main' : 'text.secondary',
               }}
@@ -2017,8 +2082,9 @@ const MainLayout: React.FC = () => {
             sx={{
               flexDirection: 'column',
               borderRadius: '8px',
-              py: 0.8,
-              px: 1,
+              py: { xs: 0.6, sm: 0.8 },
+              px: { xs: 0.8, sm: 1 },
+              minWidth: { xs: 50, sm: 60 },
               color: (hasRole(UserRole.EMPLOYER) 
                 ? (location.pathname.includes('/app/employer/jobs') || location.pathname === '/app/jobs')
                 : location.pathname === '/app/jobs') ? 'primary.main' : 'text.secondary',
@@ -2037,7 +2103,7 @@ const MainLayout: React.FC = () => {
             {hasRole(UserRole.EMPLOYER) ? (
               <Business 
                 sx={{ 
-                  fontSize: '1.3rem',
+                  fontSize: { xs: '1.1rem', sm: '1.3rem' },
                   mb: 0.5,
                   color: (location.pathname.includes('/app/employer/jobs') || location.pathname === '/app/jobs') ? 'primary.main' : 'text.secondary',
                 }} 
@@ -2045,7 +2111,7 @@ const MainLayout: React.FC = () => {
             ) : (
               <Work 
                 sx={{ 
-                  fontSize: '1.3rem',
+                  fontSize: { xs: '1.1rem', sm: '1.3rem' },
                   mb: 0.5,
                   color: location.pathname === '/app/jobs' ? 'primary.main' : 'text.secondary',
                 }} 
@@ -2054,7 +2120,7 @@ const MainLayout: React.FC = () => {
             <Typography 
               variant="caption" 
               sx={{ 
-                fontSize: '0.65rem',
+                fontSize: { xs: '0.55rem', sm: '0.65rem' },
                 fontWeight: (hasRole(UserRole.EMPLOYER) 
                   ? (location.pathname.includes('/app/employer/jobs') || location.pathname === '/app/jobs')
                   : location.pathname === '/app/jobs') ? 600 : 400,
@@ -2073,14 +2139,14 @@ const MainLayout: React.FC = () => {
             sx={{
               flexDirection: 'column',
               borderRadius: '18px',
-              py: 1,
-              px: 1.5,
+              py: { xs: 0.8, sm: 1 },
+              px: { xs: 1.2, sm: 1.5 },
               position: 'relative',
               background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
               color: 'white',
-              minHeight: '56px',
-              minWidth: '56px',
-              boxShadow: `0 4px 20px ${alpha(muiTheme.palette.primary.main, 0.4)}`,
+              minHeight: { xs: '48px', sm: '56px' },
+              minWidth: { xs: '48px', sm: '56px' },
+              boxShadow: { xs: `0 3px 15px ${alpha(muiTheme.palette.primary.main, 0.3)}`, sm: `0 4px 20px ${alpha(muiTheme.palette.primary.main, 0.4)}` },
               border: `3px solid ${muiTheme.palette.background.paper}`,
               '&:hover': {
                 background: `linear-gradient(135deg, ${muiTheme.palette.primary.dark}, ${muiTheme.palette.secondary.dark})`,
@@ -2105,7 +2171,7 @@ const MainLayout: React.FC = () => {
           >
             <Add 
               sx={{ 
-                fontSize: '1.8rem',
+                fontSize: { xs: '1.5rem', sm: '1.8rem' },
                 fontWeight: 'bold',
                 filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
               }} 
@@ -2119,8 +2185,9 @@ const MainLayout: React.FC = () => {
               sx={{
                 flexDirection: 'column',
                 borderRadius: '8px',
-                py: 0.8,
-                px: 1,
+                py: { xs: 0.6, sm: 0.8 },
+                px: { xs: 0.8, sm: 1 },
+                minWidth: { xs: 50, sm: 60 },
                 position: 'relative',
                 color: location.pathname === '/app/applications' ? 'primary.main' : 'text.secondary',
                 backgroundColor: location.pathname === '/app/applications' 
@@ -2138,9 +2205,9 @@ const MainLayout: React.FC = () => {
                 color="error"
                 sx={{
                   '& .MuiBadge-badge': {
-                    fontSize: '0.6rem',
-                    height: '14px',
-                    minWidth: '14px',
+                    fontSize: { xs: '0.5rem', sm: '0.6rem' },
+                    height: { xs: '12px', sm: '14px' },
+                    minWidth: { xs: '12px', sm: '14px' },
                     borderRadius: '7px',
                     fontWeight: '600',
                     top: -2,
@@ -2150,7 +2217,7 @@ const MainLayout: React.FC = () => {
               >
                 <Person 
                   sx={{ 
-                    fontSize: '1.3rem',
+                    fontSize: { xs: '1.1rem', sm: '1.3rem' },
                     mb: 0.5,
                     color: location.pathname === '/app/applications' ? 'primary.main' : 'text.secondary',
                   }} 
@@ -2159,7 +2226,7 @@ const MainLayout: React.FC = () => {
               <Typography 
                 variant="caption" 
                 sx={{ 
-                  fontSize: '0.65rem',
+                  fontSize: { xs: '0.55rem', sm: '0.65rem' },
                   fontWeight: location.pathname === '/app/applications' ? 600 : 400,
                   color: location.pathname === '/app/applications' ? 'primary.main' : 'text.secondary',
                 }}
@@ -2175,8 +2242,9 @@ const MainLayout: React.FC = () => {
             sx={{
               flexDirection: 'column',
               borderRadius: '8px',
-              py: 0.8,
-              px: 1,
+              py: { xs: 0.6, sm: 0.8 },
+              px: { xs: 0.8, sm: 1 },
+              minWidth: { xs: 50, sm: 60 },
               position: 'relative',
               color: location.pathname === '/app/messages' ? 'primary.main' : 'text.secondary',
               backgroundColor: location.pathname === '/app/messages' 
@@ -2194,9 +2262,9 @@ const MainLayout: React.FC = () => {
               color="error"
               sx={{
                 '& .MuiBadge-badge': {
-                  fontSize: '0.6rem',
-                  height: '14px',
-                  minWidth: '14px',
+                  fontSize: { xs: '0.5rem', sm: '0.6rem' },
+                  height: { xs: '12px', sm: '14px' },
+                  minWidth: { xs: '12px', sm: '14px' },
                   borderRadius: '7px',
                   fontWeight: '600',
                   top: -2,
@@ -2206,7 +2274,7 @@ const MainLayout: React.FC = () => {
             >
               <Mail 
                 sx={{ 
-                  fontSize: '1.3rem',
+                  fontSize: { xs: '1.1rem', sm: '1.3rem' },
                   mb: 0.5,
                   color: location.pathname === '/app/messages' ? 'primary.main' : 'text.secondary',
                 }} 
@@ -2215,7 +2283,7 @@ const MainLayout: React.FC = () => {
             <Typography 
               variant="caption" 
               sx={{ 
-                fontSize: '0.65rem',
+                fontSize: { xs: '0.55rem', sm: '0.65rem' },
                 fontWeight: location.pathname === '/app/messages' ? 600 : 400,
                 color: location.pathname === '/app/messages' ? 'primary.main' : 'text.secondary',
               }}
@@ -2230,8 +2298,9 @@ const MainLayout: React.FC = () => {
             sx={{
               flexDirection: 'column',
               borderRadius: '8px',
-              py: 0.8,
-              px: 1,
+              py: { xs: 0.6, sm: 0.8 },
+              px: { xs: 0.8, sm: 1 },
+              minWidth: { xs: 50, sm: 60 },
               color: location.pathname.includes('/app/profile') ? 'primary.main' : 'text.secondary',
               backgroundColor: location.pathname.includes('/app/profile') 
                 ? alpha(muiTheme.palette.primary.main, 0.1) 
@@ -2247,10 +2316,10 @@ const MainLayout: React.FC = () => {
               alt={user?.firstName}
               src={user?.avatar}
               sx={{ 
-                width: 22, 
-                height: 22,
+                width: { xs: 20, sm: 22 },
+                height: { xs: 20, sm: 22 },
                 mb: 0.5,
-                fontSize: '0.75rem',
+                fontSize: { xs: '0.65rem', sm: '0.75rem' },
                 border: location.pathname.includes('/app/profile') 
                   ? `2px solid ${muiTheme.palette.primary.main}`
                   : `1px solid ${alpha(muiTheme.palette.divider, 0.3)}`,
@@ -2261,7 +2330,7 @@ const MainLayout: React.FC = () => {
             <Typography 
               variant="caption" 
               sx={{ 
-                fontSize: '0.65rem',
+                fontSize: { xs: '0.55rem', sm: '0.65rem' },
                 fontWeight: location.pathname.includes('/app/profile') ? 600 : 400,
                 color: location.pathname.includes('/app/profile') ? 'primary.main' : 'text.secondary',
               }}
@@ -2298,6 +2367,9 @@ const MainLayout: React.FC = () => {
             boxShadow: mode === 'dark'
               ? '0 20px 60px rgba(0, 0, 0, 0.5)'
               : '0 20px 60px rgba(0, 0, 0, 0.15)',
+            // Mobile optimizations
+            margin: { xs: 1, sm: 2 },
+            width: { xs: 'calc(100% - 16px)', sm: 'auto' },
           },
         }}
         TransitionComponent={SafeSlideUp}

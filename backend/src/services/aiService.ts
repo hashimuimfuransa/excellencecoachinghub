@@ -396,8 +396,18 @@ Generate all ${questionCount} questions now:`;
         console.log('⚠️ Using fallback questions due to AI parsing error');
         return this.generateFallbackQuestions(params);
       }
-    } catch (error) {
-      console.error('Error generating psychometric test:', error);
+    } catch (error: any) {
+      console.error('Error generating psychometric test:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      
+      // Preserve the original error code if it exists
+      if (error.code) {
+        throw error;
+      }
+      
       throw new Error('Failed to generate psychometric test');
     }
   }

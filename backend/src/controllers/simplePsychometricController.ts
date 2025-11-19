@@ -147,7 +147,7 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
     const generationPayload = {
       jobTitle: job.title,
       jobDescription: job.description,
-      industry: job.industry,
+      industry: job.category || 'general', // Use category instead of industry
       experienceLevel: job.experienceLevel,
       skills: job.skills && Array.isArray(job.skills) ? job.skills : [],
       testLevel: levelId,
@@ -220,7 +220,7 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
           explanation: q.explanation
         })),
         timeLimit: timeLimit,
-        industry: job.industry,
+        industry: job.category || 'general', // Use category instead of industry
         jobRole: job.title,
         difficulty: levelId === 'intermediate' ? 'moderate' : (levelId === 'advanced' ? 'hard' : 'easy'),
         categories: selectedCategories,
@@ -236,8 +236,22 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
       
       console.log('✅ Generated test saved to database with ID:', generatedTestId);
       console.log('🎯 Selected categories persisted:', selectedCategories);
-    } catch (saveError) {
-      console.warn('⚠️ Warning: Could not save generated test to database:', saveError);
+    } catch (saveError: any) {
+      console.warn('⚠️ Warning: Could not save generated test to database:', {
+        message: saveError.message,
+        stack: saveError.stack,
+        name: saveError.name
+      });
+      
+      // Log the data that failed to save for debugging
+      console.warn('Failed to save test data:', {
+        testId: `gen_test_${userId}_${jobId}_${Date.now()}`,
+        jobId: jobId,
+        userId: userId,
+        questionCount: finalQuestions.length,
+        timeLimit: timeLimit,
+        categories: selectedCategories
+      });
     }
 
     let testSession;
@@ -293,10 +307,36 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
     });
 
   } catch (error: any) {
-    console.error('Error generating psychometric test:', error);
+    console.error('Error generating psychometric test:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // Log request body for debugging
+    console.error('Request body:', req.body);
+    
+    // Log more specific error information
+    if (error.code === 'QUOTA_EXCEEDED') {
+      console.error('AI service quota exceeded');
+      return res.status(500).json({
+        success: false,
+        error: 'AI service quota exceeded. Please try again later.'
+      });
+    }
+    
+    if (error.code === 'BAD_REQUEST') {
+      console.error('Invalid request to AI service');
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request parameters'
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      error: 'Failed to generate psychometric test'
+      error: 'Failed to generate psychometric test',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -312,7 +352,7 @@ export const startPsychometricTest = async (req: AuthRequest, res: Response) => 
     const userId = req.user?.id;
 
     // Validate sessionId
-    if (!validateObjectIdParam(sessionId, res, 'session ID')) {
+    if (!sessionId || !validateObjectIdParam(sessionId, res, 'session ID')) {
       return;
     }
 
@@ -387,7 +427,7 @@ export const getPsychometricTestSession = async (req: AuthRequest, res: Response
     const userId = req.user?.id;
 
     // Validate sessionId
-    if (!validateObjectIdParam(sessionId, res, 'session ID')) {
+    if (!sessionId || !validateObjectIdParam(sessionId, res, 'session ID')) {
       return;
     }
 
@@ -577,8 +617,8 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
       timeSpent: Math.max(1, timeSpentMinutes), // Ensure minimum 1 minute
       attempt: 1, // Default attempt number
       testMetadata: {
-        testId: testSession._id.toString(),
-        title: `Psychometric Assessment for ${(testSession.job as any).title}`,
+        testId: testSession._id?.toString() || '',
+        title: `Psychometric Assessment for ${(testSession.job as any)?.title || 'Unknown Position'}`,
         type: 'job-specific',
         categories: Object.keys(categoryScores),
         difficulty: testSession.testLevel,
@@ -590,25 +630,32 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
         detailedResults: detailedResults,
         categoryBreakdown: categoryScores,
         testLevel: testSession.testLevel,
-        totalQuestions: testSession.questions.length,
+        totalQuestions: testSession.questions?.length || 0,
         correctAnswers: correctAnswers,
         // Store the complete questions with answers for later retrieval
-        questionAnalysis: detailedResults.map((result, index) => ({
-          question: result.question,
-          userAnswer: result.userAnswer,
-          correctAnswer: result.correctAnswer,
-          isCorrect: result.isCorrect,
-          category: result.category,
-          explanation: result.explanation,
-          options: testSession.questions[index].options
-        })),
+        questionAnalysis: detailedResults.map((result, index) => {
+          // Add safety check for testSession.questions
+          const question = testSession.questions?.[index];
+          return {
+            question: result.question,
+            userAnswer: result.userAnswer,
+            correctAnswer: result.correctAnswer,
+            isCorrect: result.isCorrect,
+            category: result.category,
+            explanation: result.explanation,
+            options: question?.options || []
+          };
+        }),
         // Store failed and correct questions for easy access
         failedQuestions: detailedResults.filter(r => !r.isCorrect).map(r => {
           const questionIndex = detailedResults.indexOf(r);
+          // Add safety check for testSession.questions
+          const question = testSession.questions?.[questionIndex];
           return {
             question: r.question,
-            yourAnswer: r.userAnswer !== null && r.userAnswer !== undefined ? testSession.questions[questionIndex].options[r.userAnswer] : 'Not answered',
-            correctAnswer: testSession.questions[questionIndex].options[r.correctAnswer],
+            yourAnswer: r.userAnswer !== null && r.userAnswer !== undefined && question?.options ? 
+              question.options[r.userAnswer] : 'Not answered',
+            correctAnswer: question?.options?.[r.correctAnswer] || '',
             correctAnswerIndex: r.correctAnswer,
             explanation: r.explanation,
             category: r.category
@@ -616,9 +663,11 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
         }),
         correctQuestions: detailedResults.filter(r => r.isCorrect).map(r => {
           const questionIndex = detailedResults.indexOf(r);
+          // Add safety check for testSession.questions
+          const question = testSession.questions?.[questionIndex];
           return {
             question: r.question,
-            options: testSession.questions[questionIndex].options,
+            options: question?.options || [],
             correctAnswer: r.correctAnswer,
             explanation: r.explanation,
             category: r.category,
@@ -631,7 +680,7 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
     // Check if a result already exists for this test session
     let testResult = await PsychometricTestResult.findOne({
       user: userId,
-      'testMetadata.testId': testSession._id.toString(),
+      'testMetadata.testId': testSession._id?.toString() || '',
       job: jobId
     });
 
@@ -782,7 +831,7 @@ export const getUserTestResults = async (req: AuthRequest, res: Response) => {
 
     // Transform results to include question analysis from detailedAnalysis
     const transformedResults = results.map(result => {
-      const resultObj = result.toObject();
+      const resultObj: any = result.toObject();
       
       // Extract question analysis data from detailedAnalysis if it exists
       if (result.detailedAnalysis) {
@@ -844,7 +893,7 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
     const userId = req.user?.id;
 
     // Validate resultId
-    if (!validateObjectIdParam(resultId, res, 'result ID')) {
+    if (!resultId || !validateObjectIdParam(resultId, res, 'result ID')) {
       return;
     }
 
@@ -869,7 +918,7 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
 
     // Get the original test session to reconstruct detailed analysis
     const testSession = await TestSession.findOne({
-      _id: result.testMetadata.testId,
+      _id: result.testMetadata?.testId || '',
       user: userId
     });
 
@@ -895,9 +944,40 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
         };
       });
 
-      enhancedResult.questionByQuestionAnalysis = detailedAnalysis;
-      enhancedResult.correctQuestions = detailedAnalysis.filter(q => q.isCorrect);
-      enhancedResult.failedQuestions = detailedAnalysis.filter(q => !q.isCorrect);
+      // Transform the detailed analysis to match the model structure
+      enhancedResult.questionByQuestionAnalysis = detailedAnalysis.map(q => ({
+        questionNumber: q.questionNumber,
+        question: q.question,
+        candidateAnswer: q.userAnswer,
+        correctAnswer: q.correctAnswer,
+        isCorrect: q.isCorrect,
+        pointsEarned: q.isCorrect ? 1 : 0,
+        maxPoints: 1,
+        analysis: q.explanation || 'No analysis provided',
+        traitImpact: `This question measures ${q.category || 'general'} traits`,
+        category: q.category
+      }));
+
+      enhancedResult.correctQuestions = detailedAnalysis.filter(q => q.isCorrect).map(q => ({
+        questionNumber: q.questionNumber,
+        question: q.question,
+        candidateAnswer: q.userAnswer,
+        correctAnswer: q.correctAnswer,
+        isCorrect: q.isCorrect,
+        category: q.category,
+        explanation: q.explanation,
+        options: q.options
+      }));
+
+      enhancedResult.failedQuestions = detailedAnalysis.filter(q => !q.isCorrect).map(q => ({
+        questionNumber: q.questionNumber,
+        question: q.question,
+        yourAnswer: q.userAnswer,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+        category: q.category
+      }));
+
       enhancedResult.grade = result.overallScore >= 90 ? 'Excellent' : 
                              result.overallScore >= 75 ? 'Good' : 
                              result.overallScore >= 60 ? 'Average' : 'Needs Improvement';

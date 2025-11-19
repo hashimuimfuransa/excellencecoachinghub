@@ -182,11 +182,14 @@ export class CentralAIManager extends EventEmitter {
       }
     });
 
+    // Add a placeholder for user to add their own key
+    console.log('ℹ️ To add your own API key, set GEMINI_API_KEY in your environment variables');
+    
     if (this.apiKeys.length === 0) {
-      throw new Error('No valid Gemini API keys found. Please check your configuration.');
+      console.warn('⚠️ No valid Gemini API keys found. AI features will use fallback questions only.');
+    } else {
+      console.log(`✅ Initialized ${this.apiKeys.length} API keys for fallback support`);
     }
-
-    console.log(`✅ Initialized ${this.apiKeys.length} API keys for fallback support`);
   }
 
   /**

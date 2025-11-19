@@ -184,11 +184,11 @@ const StudentHomeworkHelpView = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4 sm:p-6 pb-20 md:pb-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+        <div className="mb-10 mt-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
             {t('homework_help_requests')}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-sm sm:text-base">
             {activeTab === 'my-requests' 
               ? t('view_your_sent_requests_and_feedback') 
               : t('browse_requests_from_other_students')}
@@ -196,9 +196,9 @@ const StudentHomeworkHelpView = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 mb-6">
+        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
           <button
-            className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors ${
+            className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'my-requests'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -208,7 +208,7 @@ const StudentHomeworkHelpView = () => {
             {t('my_requests')}
           </button>
           <button
-            className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors ${
+            className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'all-requests'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -293,7 +293,7 @@ const StudentHomeworkHelpView = () => {
             {filteredMyRequests.length > 0 ? (
               <div className="space-y-6">
                 {filteredMyRequests.map((request) => (
-                  <div key={request._id} className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+                  <div key={request._id} className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 border border-gray-200">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">{request.homeworkTitle || t('untitled_request')}</h3>
@@ -306,7 +306,7 @@ const StudentHomeworkHelpView = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="mt-2 sm:mt-0">
+                      <div className="mt-3 sm:mt-0">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                           request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           request.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
@@ -318,10 +318,10 @@ const StudentHomeworkHelpView = () => {
                       </div>
                     </div>
                     
-                    <p className="text-gray-700 mb-4">&quot;{request.description}&quot;</p>
+                    <p className="text-gray-700 mb-4 text-sm sm:text-base">&quot;{request.description}&quot;</p>
                     
                     {request.file?.fileUrl && (
-                      <div className="mb-4 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                      <div className="mb-4 p-3 bg-gray-50 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex items-center">
                           <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -330,7 +330,7 @@ const StudentHomeworkHelpView = () => {
                         </div>
                         <button
                           onClick={() => handleDownload(request.file.fileUrl, request.fileName)}
-                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium w-full sm:w-auto text-center"
                         >
                           {t('download')}
                         </button>
@@ -345,7 +345,7 @@ const StudentHomeworkHelpView = () => {
                         <div className="space-y-4">
                           {request.comments.map((comment) => (
                             <div key={comment._id} className="bg-gray-50 rounded-lg p-4">
-                              <div className="flex justify-between mb-1">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-1">
                                 <span className="font-medium text-gray-900">
                                   {comment.author || t('unknown_user')}
                                 </span>
@@ -387,7 +387,7 @@ const StudentHomeworkHelpView = () => {
             {filteredAllRequests.length > 0 ? (
               <div className="space-y-6">
                 {filteredAllRequests.map((request) => (
-                  <div key={request._id} className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+                  <div key={request._id} className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 border border-gray-200">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
@@ -395,7 +395,7 @@ const StudentHomeworkHelpView = () => {
                             ? `${request.student.firstName} ${request.student.lastName || ''}` 
                             : request.student?.email || t('unknown_student')}
                         </h3>
-                        <p className="text-gray-600">{request.homeworkTitle || t('untitled_request')}</p>
+                        <p className="text-gray-600 text-sm">{request.homeworkTitle || t('untitled_request')}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-2">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                             {getLevelLabel(request.level)}
@@ -405,7 +405,7 @@ const StudentHomeworkHelpView = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="mt-2 sm:mt-0">
+                      <div className="mt-3 sm:mt-0">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                           request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           request.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
@@ -417,10 +417,10 @@ const StudentHomeworkHelpView = () => {
                       </div>
                     </div>
                     
-                    <p className="text-gray-700 mb-4">&quot;{request.description}&quot;</p>
+                    <p className="text-gray-700 mb-4 text-sm sm:text-base">&quot;{request.description}&quot;</p>
                     
                     {request.file?.fileUrl && (
-                      <div className="mb-4 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                      <div className="mb-4 p-3 bg-gray-50 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex items-center">
                           <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -429,7 +429,7 @@ const StudentHomeworkHelpView = () => {
                         </div>
                         <button
                           onClick={() => handleDownload(request.file.fileUrl, request.fileName)}
-                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium w-full sm:w-auto text-center"
                         >
                           {t('download')}
                         </button>
@@ -445,7 +445,7 @@ const StudentHomeworkHelpView = () => {
                         <div className="space-y-4 mb-4">
                           {request.comments.map((comment) => (
                             <div key={comment._id} className="bg-gray-50 rounded-lg p-4">
-                              <div className="flex justify-between mb-1">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-1">
                                 <span className="font-medium text-gray-900">
                                   {comment.author || t('unknown_user')}
                                 </span>
@@ -462,18 +462,18 @@ const StudentHomeworkHelpView = () => {
                       )}
                       
                       {/* Add Comment Form */}
-                      <div className="flex">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <input
                           type="text"
                           value={newComment}
                           onChange={(e) => setNewComment(e.target.value)}
                           placeholder={t('write_your_feedback_here')}
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                         />
                         <button
                           onClick={() => handleAddComment(request._id)}
                           disabled={commentLoading || !newComment.trim()}
-                          className={`px-4 py-2 rounded-r-lg font-medium ${
+                          className={`px-4 py-2 rounded-lg font-medium w-full sm:w-auto ${
                             commentLoading || !newComment.trim()
                               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                               : 'bg-indigo-600 text-white hover:bg-indigo-700'

@@ -11,6 +11,13 @@ const HomeworkHelp = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const { user } = useAuth();
   
+  // Filter states
+  const [filters, setFilters] = useState({
+    level: '',
+    search: '',
+    dateRange: ''
+  });
+  
   // Get level label from level value
   const getLevelLabel = (levelValue) => {
     for (const category in levelOptions) {
@@ -76,6 +83,74 @@ const HomeworkHelp = () => {
 
     loadHelpRequests();
   }, [user]);
+  
+  // Apply filters whenever helpRequests or filters change
+  useEffect(() => {
+    let result = [...helpRequests];
+    
+    // Apply level filter
+    if (filters.level) {
+      result = result.filter(request => request.level === filters.level);
+    }
+    
+    // Apply search filter
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      result = result.filter(request => 
+        (request.student?.firstName && request.student?.firstName.toLowerCase().includes(searchTerm)) ||
+        (request.student?.lastName && request.student?.lastName.toLowerCase().includes(searchTerm)) ||
+        (request.student?.email && request.student?.email.toLowerCase().includes(searchTerm)) ||
+        (request.homeworkTitle && request.homeworkTitle.toLowerCase().includes(searchTerm)) ||
+        (request.description && request.description.toLowerCase().includes(searchTerm))
+      );
+    }
+    
+    // Apply date filter
+    if (filters.dateRange) {
+      const now = new Date();
+      const filterDate = new Date();
+      
+      switch (filters.dateRange) {
+        case 'today':
+          filterDate.setDate(now.getDate() - 1);
+          break;
+        case 'week':
+          filterDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          filterDate.setMonth(now.getMonth() - 1);
+          break;
+        default:
+          break;
+      }
+      
+      result = result.filter(request => new Date(request.createdAt) >= filterDate);
+    }
+    
+    // Apply teacher level filter if user is a teacher
+    if (user?.role === 'teacher' && user?.level) {
+      result = result.filter(request => request.level === user.level);
+    }
+    
+    setFilteredRequests(result);
+  }, [helpRequests, filters, user]);
+
+  // Handle filter changes
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: value
+    }));
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilters({
+      level: '',
+      search: '',
+      dateRange: ''
+    });
+  };
 
   const handleDownload = async (fileUrl, fileName) => {
     try {
@@ -151,7 +226,11 @@ const HomeworkHelp = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Student Information</h3>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="font-medium">{selectedRequest.studentName}</p>
+                  <p className="font-medium">
+                    {selectedRequest.student?.firstName 
+                      ? `${selectedRequest.student.firstName} ${selectedRequest.student.lastName || ''}` 
+                      : selectedRequest.student?.email || selectedRequest.studentName || 'Unknown Student'}
+                  </p>
                   <p className="text-gray-600">Submitted: {new Date(selectedRequest.createdAt).toLocaleString()}</p>
                 </div>
 
@@ -215,8 +294,65 @@ const HomeworkHelp = () => {
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Pending Help Requests ({filteredRequests.length})</h2>
+            <div className="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 mb-3 md:mb-0">Pending Help Requests ({filteredRequests.length})</h2>
+              
+              {/* Filters for Help Requests */}
+              <div className="bg-gray-50 rounded-lg p-3 w-full md:w-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Level</label>
+                    <select
+                      value={filters.level}
+                      onChange={(e) => handleFilterChange('level', e.target.value)}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">All Levels</option>
+                      {Object.keys(levelOptions).map(category => 
+                        levelOptions[category].map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                    <input
+                      type="text"
+                      placeholder="Student or homework..."
+                      value={filters.search}
+                      onChange={(e) => handleFilterChange('search', e.target.value)}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                    <select
+                      value={filters.dateRange}
+                      onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">Any Time</option>
+                      <option value="today">Today</option>
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-end">
+                    <button
+                      onClick={clearFilters}
+                      className="w-full px-2 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
             
             {filteredRequests.length === 0 ? (
@@ -224,9 +360,11 @@ const HomeworkHelp = () => {
                 <div className="text-6xl mb-4">🎉</div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">No Help Requests</h3>
                 <p className="text-gray-600">
-                  {user?.role === 'teacher' && user?.level 
-                    ? `No help requests found for your teaching level (${getLevelLabel(user.level)}).` 
-                    : "Students haven't submitted any help requests yet."}
+                  {helpRequests.length > 0 
+                    ? "No help requests match your filters." 
+                    : (user?.role === 'teacher' && user?.level 
+                        ? `No help requests found for your teaching level (${getLevelLabel(user.level)}).` 
+                        : "Students haven't submitted any help requests yet.")}
                 </p>
               </div>
             ) : (
@@ -243,7 +381,11 @@ const HomeworkHelp = () => {
                           <span className="text-xl">❓</span>
                         </div>
                         <div>
-                          <h3 className="font-medium text-gray-900">{request.studentName}</h3>
+                          <h3 className="font-medium text-gray-900">
+                            {request.student?.firstName 
+                              ? `${request.student.firstName} ${request.student.lastName || ''}` 
+                              : request.student?.email || request.studentName || 'Unknown Student'}
+                          </h3>
                           <p className="text-sm text-gray-600">
                             {request.homeworkTitle || 'Homework help request'} 
                             {request.level && ` - ${getLevelLabel(request.level)}`}

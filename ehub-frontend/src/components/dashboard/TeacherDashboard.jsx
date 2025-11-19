@@ -16,6 +16,7 @@ const getLevelLabel = (levelValue) => {
 
 const TeacherDashboard = () => {
   const [helpRequests, setHelpRequests] = useState([]);
+  const [filteredHelpRequests, setFilteredHelpRequests] = useState([]);
   const [stats, setStats] = useState({
     totalStudents: 0,
     pendingReviews: 0,
@@ -24,6 +25,13 @@ const TeacherDashboard = () => {
     averageGrade: 0,
   });
   const [loading, setLoading] = useState(true);
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    level: '',
+    search: '',
+    dateRange: ''
+  });
 
   useEffect(() => {
     const loadData = async () => {
@@ -52,6 +60,7 @@ const TeacherDashboard = () => {
         
         // Set help requests data
         setHelpRequests(transformedHelpRequests);
+        setFilteredHelpRequests(transformedHelpRequests);
         
         // Calculate stats from real data
         const teacherStats = statsResponse.data.data.overview;
@@ -66,6 +75,7 @@ const TeacherDashboard = () => {
         console.error('Error loading dashboard data:', error);
         // Set empty data if API calls fail
         setHelpRequests([]);
+        setFilteredHelpRequests([]);
         setStats({
           totalStudents: 0,
           pendingReviews: 0,
@@ -80,6 +90,67 @@ const TeacherDashboard = () => {
 
     loadData();
   }, []);
+  
+  // Apply filters whenever helpRequests or filters change
+  useEffect(() => {
+    let result = [...helpRequests];
+    
+    // Apply level filter
+    if (filters.level) {
+      result = result.filter(request => request.level === filters.level);
+    }
+    
+    // Apply search filter
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      result = result.filter(request => 
+        request.studentName.toLowerCase().includes(searchTerm) ||
+        request.homeworkTitle.toLowerCase().includes(searchTerm) ||
+        request.message.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    // Apply date filter
+    if (filters.dateRange) {
+      const now = new Date();
+      const filterDate = new Date();
+      
+      switch (filters.dateRange) {
+        case 'today':
+          filterDate.setDate(now.getDate() - 1);
+          break;
+        case 'week':
+          filterDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          filterDate.setMonth(now.getMonth() - 1);
+          break;
+        default:
+          break;
+      }
+      
+      result = result.filter(request => new Date(request.createdAt) >= filterDate);
+    }
+    
+    setFilteredHelpRequests(result);
+  }, [helpRequests, filters]);
+
+  // Handle filter changes
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: value
+    }));
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilters({
+      level: '',
+      search: '',
+      dateRange: ''
+    });
+  };
 
   if (loading) {
     return (
@@ -218,9 +289,66 @@ const TeacherDashboard = () => {
             </Link>
           </div>
           
-          {helpRequests.length > 0 ? (
+          {/* Filters for Help Requests */}
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Level</label>
+                <select
+                  value={filters.level}
+                  onChange={(e) => handleFilterChange('level', e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-rose-500"
+                >
+                  <option value="">All Levels</option>
+                  {Object.keys(levelOptions).map(category => 
+                    levelOptions[category].map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                <input
+                  type="text"
+                  placeholder="Student or homework..."
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                <select
+                  value={filters.dateRange}
+                  onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-rose-500"
+                >
+                  <option value="">Any Time</option>
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                </select>
+              </div>
+              
+              <div className="flex items-end">
+                <button
+                  onClick={clearFilters}
+                  className="w-full px-2 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {filteredHelpRequests.length > 0 ? (
             <div className="space-y-3">
-              {helpRequests.map((request) => (
+              {filteredHelpRequests.map((request) => (
                 <div key={request.id} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -263,7 +391,11 @@ const TeacherDashboard = () => {
           ) : (
             <div className="text-center py-6 bg-white rounded-xl border border-gray-200">
               <div className="text-3xl mb-2 text-gray-300">✅</div>
-              <p className="text-gray-500 text-sm">No help requests</p>
+              <p className="text-gray-500 text-sm">
+                {helpRequests.length > 0 
+                  ? "No help requests match your filters" 
+                  : "No help requests"}
+              </p>
             </div>
           )}
         </div>

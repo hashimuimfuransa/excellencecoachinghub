@@ -99,8 +99,8 @@ import { chatService } from '../services/chatService';
 import MobileCreatePost from '../components/social/MobileCreatePost';
 
 
-const drawerWidth = 260;
-const drawerWidthClosed = 72;
+const drawerWidth = 240;
+const drawerWidthClosed = 64;
 
 interface NavItem {
   label: string;
@@ -568,7 +568,7 @@ const MainLayout: React.FC = () => {
               disablePadding 
               sx={{ 
                 display: 'block',
-                pl: level > 0 ? 2 : 0
+                pl: level > 0 ? 1.5 : 0
               }}
             >
               <ListItemButton
@@ -585,51 +585,35 @@ const MainLayout: React.FC = () => {
                   }
                 }}
                 sx={{
-                  minHeight: 48,
-                  px: isCollapsed ? 1.5 : 2.5,
-                  borderRadius: '12px',
-                  mx: 1,
-                  my: 0.5,
+                  minHeight: 42,
+                  px: isCollapsed ? 1 : 1.5,
+                  borderRadius: '8px',
+                  mx: 0.5,
+                  my: 0.25,
                   justifyContent: isCollapsed ? 'center' : 'flex-start',
                   background: (isSelected || isChildSelected) 
-                    ? `linear-gradient(135deg, ${alpha(muiTheme.palette.primary.main, 0.15)} 0%, ${alpha(muiTheme.palette.primary.main, 0.05)} 100%)`
+                    ? alpha(muiTheme.palette.primary.main, 0.1)
                     : 'transparent',
                   border: (isSelected || isChildSelected) 
                     ? `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`
                     : '1px solid transparent',
-                  boxShadow: (isSelected || isChildSelected)
-                    ? `0 2px 8px ${alpha(muiTheme.palette.primary.main, 0.15)}`
-                    : 'none',
                   '&:hover': {
-                    bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                    bgcolor: alpha(muiTheme.palette.action.hover, 0.05),
                     transform: 'translateY(-1px)',
-                    boxShadow: `0 4px 12px ${alpha(muiTheme.palette.primary.main, 0.12)}`,
                   },
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transition: 'all 0.2s ease',
                 }}
               >
                 <ListItemIcon sx={{ 
-                  minWidth: isCollapsed ? 0 : 40,
-                  mr: isCollapsed ? 0 : 2,
+                  minWidth: isCollapsed ? 0 : 36,
+                  mr: isCollapsed ? 0 : 1.5,
                   justifyContent: 'center',
                   color: isSelected || isChildSelected 
                     ? 'primary.main' 
-                    : 'text.secondary'
+                    : 'text.secondary',
+                  fontSize: '1.1rem'
                 }}>
-                  <Box
-                    sx={{
-                      p: 1,
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: (isSelected || isChildSelected) 
-                        ? alpha(muiTheme.palette.primary.main, 0.15)
-                        : 'transparent'
-                    }}
-                  >
-                    {item.icon}
-                  </Box>
+                  {item.icon}
                 </ListItemIcon>
                 {(!isCollapsed) && (
                   <>
@@ -638,17 +622,25 @@ const MainLayout: React.FC = () => {
                       primaryTypographyProps={{
                         fontWeight: isSelected || isChildSelected ? 600 : 500,
                         color: isSelected || isChildSelected ? 'primary.main' : 'text.primary',
-                        fontSize: '0.875rem'
+                        fontSize: '0.85rem'
                       }}
                     />
                     {item.badge && (
                       <Badge 
                         badgeContent={item.badge} 
                         color="primary" 
-                        sx={{ mr: 1 }}
+                        sx={{ 
+                          mr: 1,
+                          '& .MuiBadge-badge': {
+                            fontSize: '0.6rem',
+                            height: '14px',
+                            minWidth: '14px',
+                            borderRadius: '7px',
+                          }
+                        }}
                       />
                     )}
-                    {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
+                    {hasChildren && (isOpen ? <ExpandLess sx={{ fontSize: '1rem' }} /> : <ExpandMore sx={{ fontSize: '1rem' }} />)}
                   </>
                 )}
               </ListItemButton>
@@ -658,7 +650,7 @@ const MainLayout: React.FC = () => {
           {/* Render children if any */}
           {hasChildren && !isCollapsed && (
             <Collapse in={isOpen} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
+              <List component="div" disablePadding sx={{ py: 0.5 }}>
                 {renderNavItems(item.children!, level + 1)}
               </List>
             </Collapse>
@@ -675,39 +667,27 @@ const MainLayout: React.FC = () => {
         flexDirection: 'column', 
         height: '100%',
         background: mode === 'dark' 
-          ? `linear-gradient(135deg, ${muiTheme.palette.background.paper} 0%, ${alpha(muiTheme.palette.background.paper, 0.95)} 100%)`
-          : `linear-gradient(135deg, ${muiTheme.palette.background.paper} 0%, ${alpha(muiTheme.palette.primary.main, 0.02)} 100%)`,
+          ? alpha(muiTheme.palette.background.paper, 0.95)
+          : alpha(muiTheme.palette.background.paper, 0.98),
         position: 'relative',
         overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: mode === 'dark'
-            ? 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.03) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.02) 0%, transparent 50%)'
-            : 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.01) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.005) 0%, transparent 50%)',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }
+        borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.05)}`,
+        boxShadow: mode === 'dark' 
+          ? '0 0 20px rgba(0, 0, 0, 0.2)'
+          : '0 0 15px rgba(0, 0, 0, 0.03)',
       }}
       onMouseEnter={() => !isMobile && setHovered(true)}
       onMouseLeave={() => !isMobile && setHovered(false)}
     >
-      {/* Enhanced Header */}
+      {/* Modern Header */}
       <Toolbar sx={{ 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: (isMobile || desktopOpen || hovered) ? 'space-between' : 'center',
-        borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
-        px: (isMobile || desktopOpen || hovered) ? { xs: 2, sm: 2.5 } : 1.5,
-        py: { xs: 1.5, sm: 2 },
-        background: `linear-gradient(135deg, ${alpha(muiTheme.palette.primary.main, 0.08)} 0%, ${alpha(muiTheme.palette.secondary.main, 0.04)} 100%)`,
-        position: 'relative',
-        zIndex: 1,
-        minHeight: { xs: 70, sm: 75 },
+        px: (isMobile || desktopOpen || hovered) ? 2 : 1,
+        py: 1.5,
+        minHeight: 60,
+        borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.05)}`,
       }}>
         {(isMobile || desktopOpen || hovered) && (
           <Box 
@@ -718,69 +698,46 @@ const MainLayout: React.FC = () => {
               alignItems: 'center', 
               textDecoration: 'none', 
               color: 'text.primary',
-              gap: { xs: 1.5, sm: 2 },
-              p: { xs: 1, sm: 1.5 },
-              borderRadius: '16px',
-              background: mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.05)'
-                : 'rgba(255, 255, 255, 0.7)',
-              backdropFilter: 'blur(10px)',
-              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 6px 25px rgba(0, 0, 0, 0.1)',
-                background: mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.08)'
-                  : 'rgba(255, 255, 255, 0.9)',
-              }
+              gap: 1.5,
             }}
           >
             <Box
               sx={{
-                width: { xs: 36, sm: 40 },
-                height: { xs: 36, sm: 40 },
+                width: 36,
+                height: 36,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '12px',
-                background: '#fff',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                border: `2px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #4CAF50, #2E7D32)',
+                boxShadow: '0 4px 10px rgba(76, 175, 80, 0.2)',
               }}
             >
               <img 
                 src="/exjobnetlogo.png" 
                 alt="ExJobNet Logo"
-                style={{ width: '75%', height: '75%', objectFit: 'contain' }}
+                style={{ width: '65%', height: '65%', objectFit: 'contain' }}
               />
             </Box>
-            <Box>
+            <Box sx={{ ml: 1 }}>
               <Typography 
                 variant="h6" 
-                fontWeight="bold" 
+                fontWeight="700" 
                 noWrap 
                 component="div"
                 sx={{
-                  fontSize: { xs: '1.1rem', sm: '1.2rem' },
+                  fontSize: '1.1rem',
                   color: 'text.primary',
-                  lineHeight: 1.2
+                  lineHeight: 1.2,
+                  background: mode === 'dark' 
+                    ? 'linear-gradient(45deg, #4CAF50, #81C784)'
+                    : 'linear-gradient(45deg, #2E7D32, #4CAF50)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 ExJobNet
-              </Typography>
-              <Typography 
-                variant="caption"
-                sx={{
-                  color: 'text.secondary',
-                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                  fontWeight: 500,
-                  display: 'block',
-                  mt: 0.25
-                }}
-              >
-                Career Hub
               </Typography>
             </Box>
           </Box>
@@ -796,16 +753,15 @@ const MainLayout: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '12px',
-                background: '#fff',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                border: `2px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #4CAF50, #2E7D32)',
+                boxShadow: '0 2px 8px rgba(76, 175, 80, 0.2)',
               }}
             >
               <img 
                 src="/exjobnetlogo.png" 
                 alt="ExJobNet Logo"
-                style={{ width: '75%', height: '75%', objectFit: 'contain' }}
+                style={{ width: '60%', height: '60%', objectFit: 'contain' }}
               />
             </Box>
           </Box>
@@ -816,44 +772,39 @@ const MainLayout: React.FC = () => {
           <IconButton 
             onClick={handleDesktopDrawerToggle}
             sx={{
-              color: 'primary.main',
-              p: { xs: 1.5, sm: 2 },
-              borderRadius: '12px',
-              background: alpha(muiTheme.palette.primary.main, 0.1),
-              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+              color: 'text.secondary',
+              p: 1,
+              borderRadius: '8px',
               '&:hover': {
-                bgcolor: alpha(muiTheme.palette.primary.main, 0.15),
+                bgcolor: alpha(muiTheme.palette.action.hover, 0.1),
                 transform: 'scale(1.05)',
-                boxShadow: `0 4px 15px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
               },
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              transition: 'all 0.2s ease',
             }}
           >
-            {desktopOpen ? <ChevronLeft sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem' } }} /> : <ChevronRight sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem' } }} />}
+            {desktopOpen ? <ChevronLeft sx={{ fontSize: '1.2rem' }} /> : <ChevronRight sx={{ fontSize: '1.2rem' }} />}
           </IconButton>
         )}
       </Toolbar>
       
-      {/* Enhanced Navigation Content */}
+      {/* Modern Navigation Content */}
       <Box sx={{ 
         overflow: 'auto', 
         flexGrow: 1, 
-        px: { xs: 1, sm: 1.5 }, 
-        py: { xs: 1.5, sm: 2 },
-        position: 'relative',
-        zIndex: 1,
+        px: 1, 
+        py: 1.5,
         '&::-webkit-scrollbar': {
-          width: '4px',
+          width: '3px',
         },
         '&::-webkit-scrollbar-track': {
           background: 'transparent',
         },
         '&::-webkit-scrollbar-thumb': {
-          background: alpha(muiTheme.palette.primary.main, 0.3),
-          borderRadius: '2px',
+          background: alpha(muiTheme.palette.text.primary, 0.2),
+          borderRadius: '3px',
         },
         '&::-webkit-scrollbar-thumb:hover': {
-          background: alpha(muiTheme.palette.primary.main, 0.5),
+          background: alpha(muiTheme.palette.text.primary, 0.3),
         },
       }}>
         <List sx={{ py: 0 }}>
@@ -861,29 +812,26 @@ const MainLayout: React.FC = () => {
         </List>
       </Box>
       
-      {/* Enhanced User profile section */}
+      {/* Modern User profile section */}
       {(isMobile || desktopOpen || hovered) && (
         <Box sx={{ 
-          p: { xs: 1.5, sm: 2 }, 
-          borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
-          background: `linear-gradient(135deg, ${alpha(muiTheme.palette.primary.main, 0.05)} 0%, ${alpha(muiTheme.palette.secondary.main, 0.02)} 100%)`,
-          position: 'relative',
-          zIndex: 1,
+          p: 1.5, 
+          borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.05)}`,
         }}>
           <Box 
             sx={{ 
               display: 'flex', 
               alignItems: 'center',
-              p: { xs: 1.5, sm: 2 },
-              borderRadius: '16px',
-              bgcolor: alpha(muiTheme.palette.primary.main, 0.1),
-              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.15)}`,
+              p: 1.5,
+              borderRadius: '12px',
+              bgcolor: alpha(muiTheme.palette.primary.main, 0.05),
+              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
               cursor: 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'all 0.2s ease',
               '&:hover': {
-                bgcolor: alpha(muiTheme.palette.primary.main, 0.15),
-                transform: 'translateY(-2px)',
-                boxShadow: `0 6px 20px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+                bgcolor: alpha(muiTheme.palette.primary.main, 0.1),
+                transform: 'translateY(-1px)',
+                boxShadow: `0 3px 10px ${alpha(muiTheme.palette.primary.main, 0.1)}`,
               }
             }}
             onClick={handleProfileMenuOpen}
@@ -892,13 +840,12 @@ const MainLayout: React.FC = () => {
               alt={user?.firstName}
               src={user?.avatar}
               sx={{ 
-                width: { xs: 40, sm: 44 }, 
-                height: { xs: 40, sm: 44 }, 
-                mr: { xs: 1.5, sm: 2 },
+                width: 36, 
+                height: 36, 
+                mr: 1.5,
                 border: `2px solid ${muiTheme.palette.primary.main}`,
-                boxShadow: `0 4px 12px ${alpha(muiTheme.palette.primary.main, 0.3)}`,
-                fontSize: { xs: '1rem', sm: '1.1rem' },
-                fontWeight: 'bold'
+                fontSize: '0.9rem',
+                fontWeight: '600',
               }}
             >
               {user?.firstName?.charAt(0)}
@@ -909,9 +856,9 @@ const MainLayout: React.FC = () => {
                 fontWeight="600" 
                 noWrap
                 sx={{
-                  fontSize: { xs: '0.95rem', sm: '1rem' },
+                  fontSize: '0.9rem',
                   color: 'text.primary',
-                  lineHeight: 1.2
+                  lineHeight: 1.3
                 }}
               >
                 {user?.firstName} {user?.lastName}
@@ -921,9 +868,8 @@ const MainLayout: React.FC = () => {
                 color="primary.main" 
                 fontWeight="500"
                 sx={{
-                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                  fontSize: '0.7rem',
                   display: 'block',
-                  mt: 0.25
                 }}
               >
                 {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
@@ -935,31 +881,29 @@ const MainLayout: React.FC = () => {
       
       {/* Collapsed user avatar */}
       {!isMobile && !desktopOpen && !hovered && (
-        <Box sx={{ p: { xs: 1, sm: 1.5 }, display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ p: 1, display: 'flex', justifyContent: 'center' }}>
           <IconButton 
             onClick={handleProfileMenuOpen}
             sx={{
-              p: 1.5,
-              borderRadius: '16px',
-              background: alpha(muiTheme.palette.primary.main, 0.1),
-              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+              p: 1,
+              borderRadius: '12px',
+              background: alpha(muiTheme.palette.primary.main, 0.05),
+              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
               '&:hover': {
-                background: alpha(muiTheme.palette.primary.main, 0.15),
+                background: alpha(muiTheme.palette.primary.main, 0.1),
                 transform: 'scale(1.05)',
-                boxShadow: `0 4px 15px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
               },
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              transition: 'all 0.2s ease',
             }}
           >
             <Avatar
               alt={user?.firstName}
               src={user?.avatar}
               sx={{ 
-                width: { xs: 32, sm: 36 }, 
-                height: { xs: 32, sm: 36 },
-                border: `2px solid ${muiTheme.palette.primary.main}`,
-                fontSize: { xs: '0.9rem', sm: '1rem' },
-                fontWeight: 'bold'
+                width: 32, 
+                height: 32,
+                fontSize: '0.85rem',
+                fontWeight: '600',
               }}
             >
               {user?.firstName?.charAt(0)}
@@ -985,9 +929,10 @@ const MainLayout: React.FC = () => {
             xs: 0,
             sm: `${currentDrawerWidth}px` 
           },
-          bgcolor: alpha(muiTheme.palette.background.paper, 0.98),
-          backdropFilter: 'blur(20px)',
-          borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
+          bgcolor: alpha(muiTheme.palette.background.paper, 0.95),
+          backdropFilter: 'blur(10px)',
+          borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.05)}`,
+          boxShadow: `0 2px 20px ${alpha(muiTheme.palette.common.black, 0.05)}`,
           transition: muiTheme.transitions.create(['width', 'margin'], {
             easing: muiTheme.transitions.easing.sharp,
             duration: muiTheme.transitions.duration.standard,
@@ -1830,39 +1775,24 @@ const MainLayout: React.FC = () => {
             '& .MuiDrawer-paper': { 
               boxSizing: 'border-box', 
               width: { xs: '100vw', sm: 320 },
-              borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
+              borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.05)}`,
               background: mode === 'dark' 
-                ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)'
-                : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
+                ? alpha(muiTheme.palette.background.paper, 0.95)
+                : alpha(muiTheme.palette.background.paper, 0.98),
               boxShadow: mode === 'dark'
-                ? '0 20px 60px rgba(0, 0, 0, 0.5)'
-                : '0 20px 60px rgba(0, 0, 0, 0.15)',
-              backdropFilter: 'blur(20px)',
+                ? '0 10px 30px rgba(0, 0, 0, 0.3)'
+                : '0 10px 30px rgba(0, 0, 0, 0.1)',
               position: 'relative',
               overflow: 'hidden',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: mode === 'dark'
-                  ? 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.03) 0%, transparent 50%)'
-                  : 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.02) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.01) 0%, transparent 50%)',
-                pointerEvents: 'none',
-                zIndex: 0,
-              }
             },
           }}
           slotProps={{
             backdrop: {
-              timeout: 500,
+              timeout: 300,
               sx: {
                 backgroundColor: mode === 'dark' 
-                  ? 'rgba(0, 0, 0, 0.7)' 
-                  : 'rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(8px)',
+                  ? 'rgba(0, 0, 0, 0.6)' 
+                  : 'rgba(0, 0, 0, 0.4)',
               }
             },
           }}
@@ -1878,8 +1808,8 @@ const MainLayout: React.FC = () => {
             '& .MuiDrawer-paper': { 
               boxSizing: 'border-box', 
               width: currentDrawerWidth,
-              borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
-              boxShadow: `0 0 24px ${alpha(muiTheme.palette.common.black, 0.06)}`,
+              borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.05)}`,
+              boxShadow: 'none',
               bgcolor: 'background.paper',
               transition: muiTheme.transitions.create('width', {
                 easing: muiTheme.transitions.easing.sharp,
@@ -2015,9 +1945,9 @@ const MainLayout: React.FC = () => {
         />
       </Box>
 
-      {/* Sticky Mobile Bottom Navigation - Instagram Style */}
+      {/* Sticky Mobile Bottom Navigation - Modern Minimalist Style */}
       <Paper
-        elevation={8}
+        elevation={3}
         sx={{
           display: { xs: 'flex', sm: 'none' }, // Only show on mobile
           position: 'fixed',
@@ -2025,13 +1955,13 @@ const MainLayout: React.FC = () => {
           left: 0,
           right: 0,
           zIndex: (theme) => theme.zIndex.drawer + 2,
-          backgroundColor: alpha(muiTheme.palette.background.paper, 0.98),
-          backdropFilter: 'blur(20px)',
-          borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.12)}`,
+          backgroundColor: alpha(muiTheme.palette.background.paper, 0.95),
+          backdropFilter: 'blur(10px)',
+          borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.05)}`,
           borderRadius: 0,
-          py: 1,
-          px: 1,
-          boxShadow: `0 -2px 20px ${alpha(muiTheme.palette.common.black, 0.1)}`,
+          py: 0.5,
+          px: 0.5,
+          boxShadow: `0 -2px 15px ${alpha(muiTheme.palette.common.black, 0.05)}`,
         }}
       >
         <Box
@@ -2048,16 +1978,16 @@ const MainLayout: React.FC = () => {
             onClick={() => handleNavigation('/app/network')}
             sx={{
               flexDirection: 'column',
-              borderRadius: '12px',
-              py: 1,
-              px: 1.5,
+              borderRadius: '8px',
+              py: 0.8,
+              px: 1,
               color: location.pathname === '/app/network' ? 'primary.main' : 'text.secondary',
               backgroundColor: location.pathname === '/app/network' 
                 ? alpha(muiTheme.palette.primary.main, 0.1) 
                 : 'transparent',
               '&:hover': {
                 backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
-                transform: 'translateY(-2px)',
+                transform: 'translateY(-1px)',
               },
               transition: 'all 0.2s ease',
             }}
@@ -2086,9 +2016,9 @@ const MainLayout: React.FC = () => {
             onClick={() => hasRole(UserRole.EMPLOYER) ? handleNavigation('/app/employer/jobs') : handleNavigation('/app/jobs')}
             sx={{
               flexDirection: 'column',
-              borderRadius: '12px',
-              py: 1,
-              px: 1.5,
+              borderRadius: '8px',
+              py: 0.8,
+              px: 1,
               color: (hasRole(UserRole.EMPLOYER) 
                 ? (location.pathname.includes('/app/employer/jobs') || location.pathname === '/app/jobs')
                 : location.pathname === '/app/jobs') ? 'primary.main' : 'text.secondary',
@@ -2099,7 +2029,7 @@ const MainLayout: React.FC = () => {
                 : 'transparent',
               '&:hover': {
                 backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
-                transform: 'translateY(-2px)',
+                transform: 'translateY(-1px)',
               },
               transition: 'all 0.2s ease',
             }}
@@ -2188,9 +2118,9 @@ const MainLayout: React.FC = () => {
               onClick={() => handleNavigation('/app/applications')}
               sx={{
                 flexDirection: 'column',
-                borderRadius: '12px',
-                py: 1,
-                px: 1.5,
+                borderRadius: '8px',
+                py: 0.8,
+                px: 1,
                 position: 'relative',
                 color: location.pathname === '/app/applications' ? 'primary.main' : 'text.secondary',
                 backgroundColor: location.pathname === '/app/applications' 
@@ -2198,7 +2128,7 @@ const MainLayout: React.FC = () => {
                   : 'transparent',
                 '&:hover': {
                   backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
-                  transform: 'translateY(-2px)',
+                  transform: 'translateY(-1px)',
                 },
                 transition: 'all 0.2s ease',
               }}
@@ -2244,9 +2174,9 @@ const MainLayout: React.FC = () => {
             onClick={() => handleNavigation('/app/messages')}
             sx={{
               flexDirection: 'column',
-              borderRadius: '12px',
-              py: 1,
-              px: 1.5,
+              borderRadius: '8px',
+              py: 0.8,
+              px: 1,
               position: 'relative',
               color: location.pathname === '/app/messages' ? 'primary.main' : 'text.secondary',
               backgroundColor: location.pathname === '/app/messages' 
@@ -2254,7 +2184,7 @@ const MainLayout: React.FC = () => {
                 : 'transparent',
               '&:hover': {
                 backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
-                transform: 'translateY(-2px)',
+                transform: 'translateY(-1px)',
               },
               transition: 'all 0.2s ease',
             }}
@@ -2299,16 +2229,16 @@ const MainLayout: React.FC = () => {
             onClick={handleProfileMenuOpen}
             sx={{
               flexDirection: 'column',
-              borderRadius: '12px',
-              py: 1,
-              px: 1.5,
+              borderRadius: '8px',
+              py: 0.8,
+              px: 1,
               color: location.pathname.includes('/app/profile') ? 'primary.main' : 'text.secondary',
               backgroundColor: location.pathname.includes('/app/profile') 
                 ? alpha(muiTheme.palette.primary.main, 0.1) 
                 : 'transparent',
               '&:hover': {
                 backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
-                transform: 'translateY(-2px)',
+                transform: 'translateY(-1px)',
               },
               transition: 'all 0.2s ease',
             }}

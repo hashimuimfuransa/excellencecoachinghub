@@ -107,7 +107,7 @@ const SelectLevel = () => {
                         : 'border-gray-200 hover:border-primary-300 text-gray-700'
                     }`}
                   >
-                    <div className="font-medium">{level.label}</div>
+                    <div className="font-medium">{t(level.label)}</div>
                   </button>
                 ))}
               </div>

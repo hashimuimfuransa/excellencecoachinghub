@@ -88,7 +88,7 @@ const StudentDashboard = () => {
   const getLevelLabel = (levelValue) => {
     for (const category in levelOptions) {
       const level = levelOptions[category].find(l => l.value === levelValue);
-      if (level) return level.label;
+      if (level) return t(level.label);
     }
     return levelValue;
   };
@@ -169,7 +169,7 @@ const StudentDashboard = () => {
                     {Object.keys(levelOptions).map(category => 
                       levelOptions[category].map(option => (
                         <option key={option.value} value={option.value}>
-                          {option.label}
+                          {t(option.label)}
                         </option>
                       ))
                     )}

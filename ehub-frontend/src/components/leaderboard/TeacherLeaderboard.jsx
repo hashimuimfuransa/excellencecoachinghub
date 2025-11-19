@@ -106,25 +106,25 @@ const TeacherLeaderboard = () => {
                 onChange={(e) => setSelectedLevel(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">All Levels</option>
-                <optgroup label="Nursery">
+                <option value="">{t('all_levels')}</option>
+                <optgroup label={t('nursery')}>
                   {levelOptions.nursery.map((level) => (
                     <option key={level.value} value={level.value}>
-                      {level.label}
+                      {t(level.label)}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="Primary">
+                <optgroup label={t('primary')}>
                   {levelOptions.primary.map((level) => (
                     <option key={level.value} value={level.value}>
-                      {level.label}
+                      {t(level.label)}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="Secondary">
+                <optgroup label={t('secondary')}>
                   {levelOptions.secondary.map((level) => (
                     <option key={level.value} value={level.value}>
-                      {level.label}
+                      {t(level.label)}
                     </option>
                   ))}
                 </optgroup>

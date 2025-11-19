@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
 import { levelOptions } from '../utils/languageOptions';
+import { useTranslation } from 'react-i18next';
 
 const CreateHomework = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -289,14 +291,14 @@ const CreateHomework = () => {
               <optgroup label="Nursery">
                 {levelOptions.nursery.map(option => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {t(option.label)}
                   </option>
                 ))}
               </optgroup>
               <optgroup label="Primary">
                 {levelOptions.primary.map(option => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {t(option.label)}
                   </option>
                 ))}
               </optgroup>

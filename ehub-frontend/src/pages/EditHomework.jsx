@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
 import { levelOptions } from '../utils/languageOptions';
+import { useTranslation } from 'react-i18next';
 
 const EditHomework = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -222,14 +224,14 @@ const EditHomework = () => {
               <optgroup label="Nursery">
                 {levelOptions.nursery.map(option => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {t(option.label)}
                   </option>
                 ))}
               </optgroup>
               <optgroup label="Primary">
                 {levelOptions.primary.map(option => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {t(option.label)}
                   </option>
                 ))}
               </optgroup>

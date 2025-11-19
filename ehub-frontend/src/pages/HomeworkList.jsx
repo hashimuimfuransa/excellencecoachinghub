@@ -39,9 +39,27 @@ const HomeworkList = () => {
   const getAllLevelOptions = () => {
     const allLevels = [
       { value: '', label: t('all_levels') },
-      { label: t('nursery'), options: levelOptions.nursery },
-      { label: t('primary'), options: levelOptions.primary },
-      { label: t('secondary'), options: levelOptions.secondary }
+      { 
+        label: t('nursery'), 
+        options: levelOptions.nursery.map(option => ({
+          ...option,
+          label: t(option.label)
+        }))
+      },
+      { 
+        label: t('primary'), 
+        options: levelOptions.primary.map(option => ({
+          ...option,
+          label: t(option.label)
+        }))
+      },
+      { 
+        label: t('secondary'), 
+        options: levelOptions.secondary.map(option => ({
+          ...option,
+          label: t(option.label)
+        }))
+      }
     ];
     return allLevels;
   };

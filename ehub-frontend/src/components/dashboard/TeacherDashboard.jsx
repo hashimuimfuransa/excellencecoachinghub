@@ -18,8 +18,6 @@ const TeacherDashboard = () => {
   const [helpRequests, setHelpRequests] = useState([]);
   const [filteredHelpRequests, setFilteredHelpRequests] = useState([]);
   const [stats, setStats] = useState({
-    totalStudents: 0,
-    pendingReviews: 0,
     homeworkCreated: 0,
     totalSubmissions: 0,
     averageGrade: 0,
@@ -63,13 +61,12 @@ const TeacherDashboard = () => {
         setFilteredHelpRequests(transformedHelpRequests);
         
         // Calculate stats from real data
-        const teacherStats = statsResponse.data.data.overview;
+        const teacherStats = statsResponse.data.data?.overview || {};
+          
         setStats({
-          totalStudents: teacherStats?.totalStudents || 0,
-          pendingReviews: teacherStats?.totalSubmissions - (teacherStats?.gradedSubmissions || 0) || 0,
-          homeworkCreated: teacherStats?.totalHomework || 0,
-          totalSubmissions: teacherStats?.totalSubmissions || 0,
-          averageGrade: teacherStats?.averageGrade || 0,
+          homeworkCreated: teacherStats.totalHomework || 0,
+          totalSubmissions: teacherStats.totalSubmissions || 0,
+          averageGrade: teacherStats.averageGrade || 0,
         });
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -77,8 +74,6 @@ const TeacherDashboard = () => {
         setHelpRequests([]);
         setFilteredHelpRequests([]);
         setStats({
-          totalStudents: 0,
-          pendingReviews: 0,
           homeworkCreated: 0,
           totalSubmissions: 0,
           averageGrade: 0,
@@ -176,16 +171,16 @@ const TeacherDashboard = () => {
           <p className="text-lg text-gray-600">Welcome back! Here&#39;s what&#39;s happening with your students today.</p>
         </div>
 
-        {/* Simplified Stats Cards - Reduced from 5 to 3 */}
+        {/* Simplified Stats Cards - Removed Total Students and Pending Reviews */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white transform transition-transform hover:scale-105">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-white bg-opacity-20 mr-4">
-                <span className="text-2xl">👥</span>
+                <span className="text-2xl">📚</span>
               </div>
               <div>
-                <p className="text-blue-100 text-sm">Total Students</p>
-                <p className="text-3xl font-bold">{stats.totalStudents}</p>
+                <p className="text-blue-100 text-sm">Homework Created</p>
+                <p className="text-3xl font-bold">{stats.homeworkCreated}</p>
               </div>
             </div>
           </div>
@@ -196,8 +191,8 @@ const TeacherDashboard = () => {
                 <span className="text-2xl">📝</span>
               </div>
               <div>
-                <p className="text-amber-100 text-sm">Pending Reviews</p>
-                <p className="text-3xl font-bold">{stats.pendingReviews}</p>
+                <p className="text-amber-100 text-sm">Total Submissions</p>
+                <p className="text-3xl font-bold">{stats.totalSubmissions}</p>
               </div>
             </div>
           </div>

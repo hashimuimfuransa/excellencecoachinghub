@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { homeworkApi } from '../api/homeworkApi';
 import { levelOptions } from '../utils/languageOptions';
+import { useAuth } from '../hooks/useAuth';
 import BottomNavbar from '../components/ui/BottomNavbar';
 
 const HomeworkHelp = () => {
   const [helpRequests, setHelpRequests] = useState([]);
+  const [filteredRequests, setFilteredRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const { user } = useAuth();
   
   // Get level label from level value
   const getLevelLabel = (levelValue) => {
@@ -22,7 +25,17 @@ const HomeworkHelp = () => {
       try {
         const response = await homeworkApi.getHomeworkHelp();
         // Extract the data array from the response
-        setHelpRequests(Array.isArray(response.data.data) ? response.data.data : []);
+        const requests = Array.isArray(response.data.data) ? response.data.data : [];
+        setHelpRequests(requests);
+        
+        // Filter requests based on teacher's level if they are a teacher
+        if (user?.role === 'teacher' && user?.level) {
+          const filtered = requests.filter(request => request.level === user.level);
+          setFilteredRequests(filtered);
+        } else {
+          // For students or teachers without a level set, show all requests
+          setFilteredRequests(requests);
+        }
       } catch (error) {
         console.error('Error loading help requests:', error);
         // Fallback to mock data if backend is not available
@@ -55,13 +68,14 @@ const HomeworkHelp = () => {
           }
         ];
         setHelpRequests(mockRequests);
+        setFilteredRequests(mockRequests);
       } finally {
         setLoading(false);
       }
     };
 
     loadHelpRequests();
-  }, []);
+  }, [user]);
 
   const handleDownload = async (fileUrl, fileName) => {
     try {
@@ -112,6 +126,13 @@ const HomeworkHelp = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Student Help Requests</h1>
           <p className="text-gray-600">View and respond to student homework help requests</p>
+          {user?.role === 'teacher' && user?.level && (
+            <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-800">
+                Showing requests for your teaching level: <span className="font-semibold">{getLevelLabel(user.level)}</span>
+              </p>
+            </div>
+          )}
         </div>
 
         {selectedRequest ? (
@@ -195,18 +216,22 @@ const HomeworkHelp = () => {
         ) : (
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Pending Help Requests ({helpRequests.length})</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Pending Help Requests ({filteredRequests.length})</h2>
             </div>
             
-            {helpRequests.length === 0 ? (
+            {filteredRequests.length === 0 ? (
               <div className="text-center py-16">
                 <div className="text-6xl mb-4">🎉</div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">No Help Requests</h3>
-                <p className="text-gray-600">Students haven&#39;t submitted any help requests yet.</p>
+                <p className="text-gray-600">
+                  {user?.role === 'teacher' && user?.level 
+                    ? `No help requests found for your teaching level (${getLevelLabel(user.level)}).` 
+                    : "Students haven't submitted any help requests yet."}
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {helpRequests.map((request) => (
+                {filteredRequests.map((request) => (
                   <div 
                     key={request._id} 
                     className="px-6 py-4 hover:bg-gray-50 cursor-pointer"

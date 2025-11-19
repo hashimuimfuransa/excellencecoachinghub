@@ -1,35 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { homeworkApi } from '../api/homeworkApi';
-import { useAuth } from '../context/AuthContext';
-import BottomNavbar from '../components/ui/BottomNavbar';
-import TeacherLeaderboard from '../components/leaderboard/TeacherLeaderboard';
+import { useNavigate } from 'react-router-dom';
+import { homeworkApi } from '../../api/homeworkApi';
+import { levelOptions } from '../../utils/languageOptions';
+import { useTranslation } from 'react-i18next';
 
-const Leaderboard = () => {
-  const { user: currentUser } = useAuth();
+const TeacherLeaderboard = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-  const navigate = useNavigate();
+  const [selectedLevel, setSelectedLevel] = useState('');
+  const [error, setError] = useState('');
 
-  // Load leaderboard data for students
   useEffect(() => {
-    // If user is a teacher, don't load student leaderboard data
-    if (currentUser && currentUser.role === 'teacher') {
-      setLoading(false);
-      return;
-    }
-    
     const loadLeaderboard = async () => {
       try {
-        // Fetch real leaderboard data from backend
-        const response = await homeworkApi.getLeaderboard();
+        setLoading(true);
+        setError('');
+        // Fetch leaderboard data with level filter
+        const response = await homeworkApi.getLeaderboard(selectedLevel);
         // Ensure we're setting an array for students
         const leaderboardData = response.data?.leaderboard || response.data || [];
         setStudents(Array.isArray(leaderboardData) ? leaderboardData : []);
       } catch (error) {
         console.error('Error loading leaderboard:', error);
+        setError('Failed to load leaderboard data');
         // Set empty array if API call fails
         setStudents([]);
       } finally {
@@ -38,7 +35,7 @@ const Leaderboard = () => {
     };
 
     loadLeaderboard();
-  }, [currentUser]);
+  }, [selectedLevel]);
 
   const closeDetails = () => {
     setShowDetails(false);
@@ -61,10 +58,15 @@ const Leaderboard = () => {
     setShowDetails(true);
   };
 
-  // If user is a teacher, render the teacher leaderboard component
-  if (currentUser && currentUser.role === 'teacher') {
-    return <TeacherLeaderboard />;
-  }
+  const getLevelLabel = (levelValue) => {
+    for (const category in levelOptions) {
+      if (category !== 'language') { // Skip language category
+        const level = levelOptions[category].find(l => l.value === levelValue);
+        if (level) return level.label;
+      }
+    }
+    return levelValue;
+  };
 
   if (loading) {
     return (
@@ -86,53 +88,50 @@ const Leaderboard = () => {
       <div className="max-w-4xl mx-auto">
         <div className="mb-6 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-yellow-500 via-red-500 to-pink-500 bg-clip-text text-transparent mb-2">
-            🏆 Leaderboard
+            🏆 Teacher Leaderboard
           </h1>
-          <p className="text-gray-700 text-lg">Top performers this month</p>
+          <p className="text-gray-700 text-lg">View student performance by level</p>
         </div>
         
-        {/* Current User Section */}
-        {currentUser && (
-          <div className="mb-6 bg-white rounded-2xl shadow-lg p-4">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="flex items-center">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg mr-4">
-                  {currentUser.firstName?.charAt(0)}{currentUser.lastName?.charAt(0)}
-                </div>
-                <div>
-                  <h2 className="font-bold text-gray-900 text-lg">{currentUser.firstName} {currentUser.lastName}</h2>
-                  <p className="text-gray-600 text-sm">Your profile</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => {
-                  // Find current user in leaderboard data
-                  const userInLeaderboard = students.find(s => s.studentId === currentUser._id);
-                  if (userInLeaderboard) {
-                    viewStudentDetails(userInLeaderboard);
-                  } else {
-                    // Create a minimal user object if not found in leaderboard
-                    const minimalUser = {
-                      studentId: currentUser._id,
-                      studentName: `${currentUser.firstName} ${currentUser.lastName}`,
-                      studentEmail: currentUser.email,
-                      totalPoints: 0,
-                      averageScore: 0,
-                      completedAssignments: 0,
-                      completedAssessments: 0,
-                      submissions: [],
-                      badges: []
-                    };
-                    viewStudentDetails(minimalUser);
-                  }
-                }}
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 text-sm"
+        {/* Level Selection */}
+        <div className="mb-6 bg-white rounded-2xl shadow-lg p-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+              <h2 className="font-bold text-gray-900 text-lg">Filter by Level</h2>
+              <p className="text-gray-600 text-sm">Select a level to view student performance</p>
+            </div>
+            <div className="w-full sm:w-auto">
+              <select
+                value={selectedLevel}
+                onChange={(e) => setSelectedLevel(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                View My Details
-              </button>
+                <option value="">All Levels</option>
+                <optgroup label="Nursery">
+                  {levelOptions.nursery.map((level) => (
+                    <option key={level.value} value={level.value}>
+                      {level.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Primary">
+                  {levelOptions.primary.map((level) => (
+                    <option key={level.value} value={level.value}>
+                      {level.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Secondary">
+                  {levelOptions.secondary.map((level) => (
+                    <option key={level.value} value={level.value}>
+                      {level.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
             </div>
           </div>
-        )}
+        </div>
         
         {/* Summary Stats */}
         {students.length > 0 && (
@@ -155,24 +154,12 @@ const Leaderboard = () => {
             </div>
           </div>
         )}
-
-        <div className="mb-6 p-4 bg-white rounded-2xl shadow-lg">
-          <h2 className="text-lg font-bold text-gray-900 mb-2">How Scoring Works</h2>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-blue-50 p-2 rounded-lg text-center">
-              <div className="text-lg mb-1">📝</div>
-              <p className="text-xs">Auto-graded assignments</p>
-            </div>
-            <div className="bg-green-50 p-2 rounded-lg text-center">
-              <div className="text-lg mb-1">⚡</div>
-              <p className="text-xs">Instant feedback</p>
-            </div>
-            <div className="bg-purple-50 p-2 rounded-lg text-center">
-              <div className="text-lg mb-1">🏆</div>
-              <p className="text-xs">Automatic rankings</p>
-            </div>
+        
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 rounded-xl shadow text-center">
+            <p className="text-red-600 font-medium">{error}</p>
           </div>
-        </div>
+        )}
 
         {/* Podium Visualization */}
         <div className="flex justify-center items-end mb-8 space-x-2">
@@ -188,6 +175,14 @@ const Leaderboard = () => {
             <div className="mt-2 text-center">
               <h3 className="font-bold text-gray-900 text-xs">{students[1]?.studentName || 'Student'}</h3>
               <p className="text-gray-600 text-xs">2nd</p>
+              {students[1] && (
+                <button 
+                  onClick={() => viewStudentDetails(students[1])}
+                  className="text-blue-600 hover:text-blue-800 text-xs font-medium mt-1"
+                >
+                  Details
+                </button>
+              )}
             </div>
           </div>
 
@@ -203,6 +198,14 @@ const Leaderboard = () => {
             <div className="mt-2 text-center">
               <h3 className="font-bold text-gray-900 text-xs">{students[0]?.studentName || 'Student'}</h3>
               <p className="text-gray-600 text-xs">1st 🎉</p>
+              {students[0] && (
+                <button 
+                  onClick={() => viewStudentDetails(students[0])}
+                  className="text-blue-600 hover:text-blue-800 text-xs font-medium mt-1"
+                >
+                  Details
+                </button>
+              )}
             </div>
           </div>
 
@@ -218,6 +221,14 @@ const Leaderboard = () => {
             <div className="mt-2 text-center">
               <h3 className="font-bold text-gray-900 text-xs">{students[2]?.studentName || 'Student'}</h3>
               <p className="text-gray-600 text-xs">3rd</p>
+              {students[2] && (
+                <button 
+                  onClick={() => viewStudentDetails(students[2])}
+                  className="text-blue-600 hover:text-blue-800 text-xs font-medium mt-1"
+                >
+                  Details
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -261,15 +272,6 @@ const Leaderboard = () => {
             ))}
           </div>
         </div>
-
-        <div className="mt-8 text-center">
-          <Link 
-            to="/homework" 
-            className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-xl"
-          >
-            Start Homework to Earn Points
-          </Link>
-        </div>
       </div>
 
       {/* Student Details Modal */}
@@ -300,6 +302,11 @@ const Leaderboard = () => {
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                   {selectedStudent.rank > 0 ? `#${selectedStudent.rank} rank` : 'Not ranked yet'}
                 </span>
+                {selectedLevel && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                    {getLevelLabel(selectedLevel)}
+                  </span>
+                )}
               </div>
             </div>
             
@@ -321,6 +328,13 @@ const Leaderboard = () => {
                               {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : 'N/A'}
                             </span>
                           </div>
+                          {submission.level && (
+                            <div className="mt-1">
+                              <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                                {getLevelLabel(submission.level)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <div className="text-right ml-2">
                           <p className="font-bold text-gray-900 text-sm">{submission.score}/{submission.maxScore}</p>
@@ -345,25 +359,23 @@ const Leaderboard = () => {
                         </div>
                         <button 
                           onClick={() => {
-                            // Navigate to homework review page using homework ID instead of submission ID
+                            // Navigate to homework review page using homework ID
                             if (submission.type === 'assignment') {
-                              // Use homeworkId if available, otherwise fall back to id
-                              // Make sure we're getting the string representation of the ID
-                              const homeworkId = (submission.homeworkId && submission.homeworkId.toString()) || submission.id;
-                              navigate(`/homework/${homeworkId}/review`);
+                              // Use homeworkId if available
+                              const homeworkId = submission.homeworkId || submission.id;
+                              if (homeworkId) {
+                                // Navigate to the homework review page
+                                navigate(`/homework/review/${homeworkId}`);
+                              }
                             } else {
                               // For assessments, we might want to show a different view
                               alert('Assessment details view coming soon!');
                             }
                           }}
-                          // Only show review button for current user's submissions
-                          className={`${currentUser && selectedStudent && selectedStudent.studentId === currentUser._id ? 'text-blue-600 hover:text-blue-800' : 'text-gray-400 cursor-not-allowed'} text-xs font-medium`}
-                          // Disable button if not current user's submission
-                          disabled={!(currentUser && selectedStudent && selectedStudent.studentId === currentUser._id)}
+                          className="text-blue-600 hover:text-blue-800 text-xs font-medium"
                         >
-                          {currentUser && selectedStudent && selectedStudent.studentId === currentUser._id ? 'Review' : 'Not Available'}
+                          Review
                         </button>
-
                       </div>
                       
                       {/* Progress bar for visual representation */}
@@ -419,6 +431,54 @@ const Leaderboard = () => {
                   </div>
                 </div>
               )}
+              
+              {/* Challenges section */}
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <h4 className="font-medium text-gray-900 text-sm mb-2">Challenges Identified</h4>
+                {selectedStudent.submissions && selectedStudent.submissions.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedStudent.submissions
+                      .filter(submission => submission.percentage < 70) // Only show submissions with scores below 70%
+                      .slice(0, 3) // Show only top 3 challenges
+                      .map((submission, index) => (
+                        <div key={index} className="bg-red-50 p-3 rounded-lg border border-red-100">
+                          <div className="flex justify-between items-start">
+                            <h5 className="font-medium text-red-800 text-sm">{submission.title}</h5>
+                            <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                              {submission.percentage}%
+                            </span>
+                          </div>
+                          <p className="text-red-700 text-xs mt-1">
+                            {submission.type === 'assignment' 
+                              ? 'Student struggled with this assignment. Consider providing additional resources or one-on-one support.' 
+                              : 'Student needs improvement in this assessment area.'}
+                          </p>
+                          <div className="mt-2 flex items-center text-xs text-red-600">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Low performance detected
+                          </div>
+                        </div>
+                      ))
+                    }
+                    {selectedStudent.submissions.filter(submission => submission.percentage < 70).length === 0 && (
+                      <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                        <div className="flex items-center">
+                          <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-green-800 text-sm">No significant challenges identified. Student is performing well!</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                    <p className="text-yellow-800 text-sm">Not enough data to identify specific challenges. Student needs to complete more assignments.</p>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="p-6 border-t border-gray-200">
@@ -432,10 +492,8 @@ const Leaderboard = () => {
           </div>
         </div>
       )}
-      
-      <BottomNavbar />
     </div>
   );
 };
 
-export default Leaderboard;
+export default TeacherLeaderboard;

@@ -57,7 +57,7 @@ const TeacherDashboard = () => {
         const teacherStats = statsResponse.data.data.overview;
         setStats({
           totalStudents: teacherStats?.totalStudents || 0,
-          pendingReviews: teacherStats?.pendingReviews || 0,
+          pendingReviews: teacherStats?.totalSubmissions - (teacherStats?.gradedSubmissions || 0) || 0,
           homeworkCreated: teacherStats?.totalHomework || 0,
           totalSubmissions: teacherStats?.totalSubmissions || 0,
           averageGrade: teacherStats?.averageGrade || 0,

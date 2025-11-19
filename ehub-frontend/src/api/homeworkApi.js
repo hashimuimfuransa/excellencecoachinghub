@@ -28,14 +28,16 @@ export const homeworkApi = {
   submitHomework: (homeworkId, submissionData) => axiosClient.post(`/homework-new/${homeworkId}/submit`, submissionData),
   getStudentSubmission: (homeworkId) => axiosClient.get(`/homework-new/${homeworkId}/submission`),
   getHomeworkSubmissions: (homeworkId) => axiosClient.get(`/homework-new/${homeworkId}/submissions`),
-  gradeHomeworkSubmission: (submissionId, gradeData) => axiosClient.put(`/homework-new/submissions/${submissionId}/grade`, gradeData),
   getHomeworkSubmissionById: (submissionId) => axiosClient.get(`/homework-new/submissions/${submissionId}`),
-
+  gradeHomeworkSubmission: (submissionId, gradeData) => axiosClient.put(`/homework-new/submissions/${submissionId}/grade`, gradeData),
+  
   // Homework help system
   getHomeworkHelp: () => axiosClient.get('/homework/help'),
   getHomeworkHelpById: (id) => axiosClient.get(`/homework/help/${id}`),
-  uploadHomeworkHelp: (data) => axiosClient.post('/homework/help/upload', data), // Changed to send JSON data
+  getStudentHomeworkHelp: () => axiosClient.get('/homework/help/my'),
+  uploadHomeworkHelp: (data) => axiosClient.post('/homework/help/upload', data),
   downloadHomeworkHelp: (fileUrl) => axiosClient.get(fileUrl, { responseType: 'blob' }),
+  addCommentToHomeworkHelp: (id, comment) => axiosClient.post(`/homework/help/${id}/comments`, { comment }), // Fixed the endpoint
   
   // Interactive homework
   getInteractiveHomework: (id) => axiosClient.get(`/homework/interactive/${id}`),
@@ -50,5 +52,11 @@ export const homeworkApi = {
   getStudents: () => axiosClient.get('/teacher/students'),
   
   // Leaderboard
-  getLeaderboard: () => axiosClient.get('/leaderboard'),
+  getLeaderboard: (level) => {
+    let url = '/leaderboard';
+    if (level) {
+      url += `?level=${level}`;
+    }
+    return axiosClient.get(url);
+  },
 };

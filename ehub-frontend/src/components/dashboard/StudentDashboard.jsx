@@ -115,29 +115,98 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-yellow-50 p-4 sm:p-6 pb-24 md:pb-8 pt-16">
-      <div className="max-w-4xl mx-auto">
-        {/* Back Button */}
-        <div className="mb-4">
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center text-gray-600 hover:text-indigo-700 transition-colors duration-200"
-          >
-            <span className="mr-1">←</span> {t('back_to_dashboard')}
-          </button>
-        </div>
-        
-        {/* Welcome Section - Enhanced with modern design */}
-        <div className="mb-8 text-center bg-white rounded-2xl shadow-lg p-6 animate-fade-in-up">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full mb-4 shadow-lg">
-            <span className="text-3xl">👋</span>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4 sm:p-6 pb-20 md:pb-4 pt-16">
+      <div className="max-w-6xl mx-auto">
+        {/* Header with Welcome Message and Preferences */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                {t('welcome')}, {user?.firstName || user?.email || 'Student'}! 👋
+              </h1>
+              <p className="text-gray-600 mt-1">{t('lets_get_your_homework_done_today')}</p>
+            </div>
+            
+            <button
+              onClick={() => setShowPreferences(!showPreferences)}
+              className="mt-3 sm:mt-0 flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800"
+            >
+              {showPreferences ? t('hide') : t('show')} {t('preferences')}
+              <svg 
+                className={`ml-1 w-4 h-4 transform transition-transform ${showPreferences ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            {t('welcome_back')}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">{user?.firstName || user?.name || 'Student'}</span>!
-          </h1>
-          <p className="text-gray-600 text-base">
-            {t('lets_get_your_homework_done_today')}
-          </p>
+
+          {/* Preferences Panel */}
+          {showPreferences && (
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-5 border border-indigo-100 mt-4 animate-fade-in-up">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {t('your_learning_preferences')}
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 font-semibold text-sm mb-1" htmlFor="level">
+                    {t('level')}
+                  </label>
+                  <select
+                    id="level"
+                    value={selectedLevel}
+                    onChange={(e) => handleLevelChange(e.target.value)}
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 text-gray-700"
+                  >
+                    <option value="">{t('all_levels')}</option>
+                    {Object.keys(levelOptions).map(category => 
+                      levelOptions[category].map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-gray-700 font-semibold text-sm mb-1" htmlFor="language">
+                    {t('language')}
+                  </label>
+                  <select
+                    id="language"
+                    value={selectedLanguage}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 text-gray-700"
+                  >
+                    <option value="">{t('all_languages')}</option>
+                    {languageOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {/* Current Preferences Display */}
+              {(user?.level || user?.language) ? (
+                <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">{t('your_preferences')}:</span> {getLevelLabel(user.level) || t('not_set')} - 
+                    {languageOptions.find(lang => lang.value === user.language)?.label || user.language?.charAt(0).toUpperCase() + user.language?.slice(1) || t('not_set')}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
 
         {/* Main Action Buttons - Modernized with enhanced visuals */}
@@ -168,45 +237,29 @@ const StudentDashboard = () => {
             </div>
           </Link>
 
-          {/* See Marks and Ranking Button - From all students */}
+          {/* View Homework Help Requests Button - For viewing and providing feedback */}
           <Link 
-            to="/leaderboard" 
-            className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white text-center shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 flex flex-col items-center justify-center animate-fade-in-up hover:from-purple-600 hover:to-purple-700"
+            to="/homework/help/view"
+            className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 text-white text-center shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 flex flex-col items-center justify-center animate-fade-in-up hover:from-amber-600 hover:to-orange-600"
           >
-            <div className="text-4xl mb-4 animate-wiggle">🏅</div>
-            <h3 className="text-xl font-bold mb-2">{t('see_marks_ranking')}</h3>
-            <p className="text-purple-100 text-sm">{t('ranking_from_all_students')}</p>
-            <div className="mt-4 px-4 py-1 bg-purple-400 bg-opacity-30 rounded-full text-xs">
-              {t('see_top_students')}
+            <div className="text-4xl mb-4 animate-pulse">🤝</div>
+            <h3 className="text-xl font-bold mb-2">{t('view_help_requests')}</h3>
+            <p className="text-amber-100 text-sm">{t('see_and_provide_feedback')}</p>
+            <div className="mt-4 px-4 py-1 bg-amber-400 bg-opacity-30 rounded-full text-xs">
+              {t('collaborate')}
             </div>
           </Link>
         </div>
 
-        {/* Contact Information Section - Updated with new phone number */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-10 animate-fade-in-up">
-          <div className="flex items-center mb-4">
-            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
-            <h2 className="text-2xl font-bold text-gray-900">{t('need_help_contact_us')}</h2>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-100 transition-all hover:shadow-md">
-            <div className="flex items-center mb-4 sm:mb-0">
-              <div className="text-4xl mr-4 animate-float">📱</div>
-              <div>
-                <p className="font-bold text-gray-900">{t('phone')}</p>
-                <p className="text-gray-700 text-xl font-semibold">0793828834</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => window.open('tel:0793828834', '_self')}
-              className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl hover:from-green-600 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 font-medium flex items-center"
-            >
-              <span className="mr-2">📞</span>
-              {t('call_now')}
-            </button>
+        {/* Contact Us Section - Simplified to only show phone number */}
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-6 border border-gray-100 mb-8 text-center">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            {t('contact_us')}
+          </h2>
+          <div className="text-2xl font-semibold text-indigo-600">
+            0793828834
           </div>
         </div>
-
-        {/* Removed Preferences Section as requested */}
       </div>
       <BottomNavbar />
     </div>

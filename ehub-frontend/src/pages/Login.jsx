@@ -34,8 +34,12 @@ const Login = () => {
 
     if (result.success) {
       const { user } = result;
-      // Check if user needs to select level (student without level)
-      if (user?.role === 'student' && !user?.level) {
+      // Check if user needs to select level (student) or if it's their first time (no level set)
+      if (user?.role === 'student') {
+        // Always redirect students to select level page to confirm or update their preferences
+        navigate('/select-level');
+      } else if (user?.role === 'teacher' && !user?.level) {
+        // Also redirect teachers who don't have a level set
         navigate('/select-level');
       } else {
         navigate('/dashboard');

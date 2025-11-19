@@ -44,34 +44,54 @@ const SelectLevel = () => {
     setExpandedCategory(expandedCategory === category ? null : category);
   };
 
+  // Get appropriate title based on user role
+  const getPageTitle = () => {
+    if (user?.role === 'teacher') {
+      return t('select_your_teaching_level');
+    }
+    return t('choose_your_learning_path');
+  };
+
+  // Get appropriate subtitle based on user role
+  const getPageSubtitle = () => {
+    if (user?.role === 'teacher') {
+      return t('select_the_level_you_teach_and_preferred_language');
+    }
+    return t('select_your_level_and_preferred_language');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full space-y-8">
         <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('choose_your_learning_path')}</h2>
-          <p className="text-sm sm:text-base text-gray-600">{t('select_your_level_and_preferred_language')}</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{getPageTitle()}</h2>
+          <p className="text-sm sm:text-base text-gray-600">{getPageSubtitle()}</p>
         </div>
 
         <div className="card">
           <div className="space-y-6">
             {/* Level Selection */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('select_your_level')}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {user?.role === 'teacher' ? t('select_teaching_level') : t('select_your_level')}
+              </h3>
               
               {/* Category Tabs */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {Object.keys(levelOptions).map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => toggleCategory(category)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                      expandedCategory === category
-                        ? 'bg-primary-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {t(category)}
-                  </button>
+                  category !== 'language' && (
+                    <button
+                      key={category}
+                      onClick={() => toggleCategory(category)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        expandedCategory === category
+                          ? 'bg-primary-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {t(category)}
+                    </button>
+                  )
                 ))}
               </div>
               

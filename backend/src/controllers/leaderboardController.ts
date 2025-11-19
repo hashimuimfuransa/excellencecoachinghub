@@ -10,7 +10,7 @@ import Assessment from '../models/Assessment';
 export const getLeaderboard = asyncHandler(async (req: Request, res: Response) => {
   try {
     console.log('Leaderboard route called with query:', req.query);
-    const { courseId, type, timeFilter, limit } = req.query;
+    const { courseId, type, timeFilter, limit, level } = req.query;
     const limitNumber = parseInt(limit as string) || 50;
 
     // Get all students
@@ -79,13 +79,18 @@ export const getLeaderboard = asyncHandler(async (req: Request, res: Response) =
         submissionQuery = applyTimeFilter(submissionQuery, timeFilter as string);
 
         const assignmentSubmissionsData = await AssignmentSubmission.find(submissionQuery)
-          .populate('assignment', 'title maxPoints course');
+          .populate('assignment', 'title maxPoints course level language');
         
         for (const submission of assignmentSubmissionsData) {
           const assignment = submission.assignment as any;
           if (assignment) {
             // Filter by courseId if specified
             if (courseId && assignment.course?.toString() !== courseId) {
+              continue;
+            }
+            
+            // Filter by level if specified
+            if (level && assignment.level !== level) {
               continue;
             }
             
@@ -108,7 +113,9 @@ export const getLeaderboard = asyncHandler(async (req: Request, res: Response) =
               percentage: Math.round((score / maxScore) * 100),
               submittedAt: submission.submittedAt || submission.gradedAt,
               type: 'assignment',
-              courseId: assignment.course
+              courseId: assignment.course,
+              level: assignment.level,
+              language: assignment.language
             });
           }
         }

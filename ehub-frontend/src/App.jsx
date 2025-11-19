@@ -30,6 +30,7 @@ import HomeworkReviews from './pages/HomeworkReviews';
 import ReviewHomework from './pages/ReviewHomework';
 import HomeworkHelp from './pages/HomeworkHelp';
 import HomeworkHelpStudent from './pages/HomeworkHelpStudent';
+import StudentHomeworkHelpView from './pages/StudentHomeworkHelpView'; // Add this import
 import ManageStudents from './pages/ManageStudents';
 import Leaderboard from './pages/Leaderboard';
 
@@ -223,6 +224,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute allowedRoles={['student']}>
                 <HomeworkHelpStudent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/help/view"
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentHomeworkHelpView />
               </ProtectedRoute>
             }
           />

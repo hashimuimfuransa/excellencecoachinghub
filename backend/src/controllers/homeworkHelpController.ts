@@ -46,7 +46,7 @@ export const uploadHomeworkHelp = async (req: AuthRequest, res: Response) => {
         // Don't fail the request if file URL is invalid, just ignore it
       }
     }
-
+    
     const homeworkHelp = new HomeworkHelp({
       student: new Types.ObjectId(userId),
       studentName,
@@ -74,7 +74,14 @@ export const uploadHomeworkHelp = async (req: AuthRequest, res: Response) => {
 
 export const getHomeworkHelp = async (req: AuthRequest, res: Response) => {
   try {
-    const homeworkHelp = await HomeworkHelp.find()
+    // Check if user is a teacher and has a level set
+    let query = {};
+    if (req.user?.role === 'teacher' && req.user?.level) {
+      // Filter by teacher's level
+      query = { level: req.user.level };
+    }
+    
+    const homeworkHelp = await HomeworkHelp.find(query)
       .populate('student', 'firstName lastName email avatar')
       .populate('comments.authorId', 'firstName lastName avatar')
       .sort({ createdAt: -1 })
@@ -143,14 +150,6 @@ export const addCommentToHomeworkHelp = async (req: AuthRequest, res: Response) 
       });
     }
 
-    const homeworkHelp = await HomeworkHelp.findById(id);
-
-    if (!homeworkHelp) {
-      return res.status(404).json({
-        message: 'Homework help not found'
-      });
-    }
-
     const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({
@@ -168,12 +167,20 @@ export const addCommentToHomeworkHelp = async (req: AuthRequest, res: Response) 
       createdAt: new Date()
     };
 
-    homeworkHelp.comments.push(newComment);
-    await homeworkHelp.save();
-
-    const updatedHelp = await HomeworkHelp.findById(id)
+    // Use findByIdAndUpdate with $push to avoid validation issues
+    const updatedHelp = await HomeworkHelp.findByIdAndUpdate(
+      id,
+      { $push: { comments: newComment } },
+      { new: true, runValidators: false } // Disable validation to avoid the level issue
+    )
       .populate('student', 'firstName lastName email avatar')
       .populate('comments.authorId', 'firstName lastName avatar');
+
+    if (!updatedHelp) {
+      return res.status(404).json({
+        message: 'Homework help not found'
+      });
+    }
 
     res.json({
       message: 'Comment added successfully',

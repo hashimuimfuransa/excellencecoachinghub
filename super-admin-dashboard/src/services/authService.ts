@@ -39,6 +39,12 @@ class AuthService {
   // Login user
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
+      // Log the credentials being sent for debugging
+      console.log('AuthService: Sending login request with credentials:', {
+        email: credentials.email,
+        password: credentials.password ? '***' : '(empty)'
+      });
+      
       const response = await apiPost('/auth/login', credentials);
       const authData = handleApiResponse(response);
       
@@ -48,6 +54,7 @@ class AuthService {
       
       return authData;
     } catch (error: any) {
+      console.error('AuthService: Login error:', error);
       // Re-throw with better error handling for login failures
       if (error.response?.status === 401) {
         const errorData = error.response.data;

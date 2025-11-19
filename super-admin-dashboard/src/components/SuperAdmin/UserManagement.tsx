@@ -380,16 +380,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
 
   const handleCreateUser = async () => {
     try {
-      await superAdminService.createUser({
+      // Create a user object without the password field since it's not part of the User interface
+      const userData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        password: formData.password,
         role: formData.role,
         isActive: formData.isActive,
         company: formData.company || undefined,
         jobTitle: formData.jobTitle || undefined
-      });
+      };
+      
+      await superAdminService.createUser(userData);
       
       console.log('User created successfully:', formData.email);
       
@@ -729,7 +731,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
                           }
                         >
                           <Avatar sx={{ mr: 2 }}>
-                            {user.firstName[0]}{user.lastName[0]}
+                            {(user.firstName?.[0] || '') + (user.lastName?.[0] || '') || user.email?.[0] || '?'}
                           </Avatar>
                         </Badge>
                         <Box>
@@ -886,7 +888,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
             <Box sx={{ mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                 <Avatar sx={{ width: 56, height: 56 }}>
-                  {userDialog.user.firstName[0]}{userDialog.user.lastName[0]}
+                  {(userDialog.user.firstName?.[0] || '') + (userDialog.user.lastName?.[0] || '') || userDialog.user.email?.[0] || '?'}
                 </Avatar>
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="h6">

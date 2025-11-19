@@ -235,27 +235,20 @@ export const register = async (req: Request, res: Response, next: NextFunction):
 // @access  Public
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { identifier, password } = req.body;
+    // Handle both 'identifier' and 'email' fields for compatibility
+    const { identifier, email, password } = req.body;
+    const loginIdentifier = identifier || email;
 
-    // Validate identifier and password
-    if (!identifier || !password) {
-      res.status(400).json({
-        success: false,
-        error: 'Please provide email or phone number and password'
-      });
-      return;
-    }
-
-    // Check for user by email or phone
+    // Check for user by email or phone (validation is handled by middleware)
     let user;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
-    if (emailRegex.test(identifier)) {
+    if (emailRegex.test(loginIdentifier)) {
       // It's an email
-      user = await User.findOne({ email: identifier.toLowerCase() }).select('+password');
+      user = await User.findOne({ email: loginIdentifier.toLowerCase() }).select('+password');
     } else {
       // It's a phone number
-      user = await User.findOne({ phone: identifier }).select('+password');
+      user = await User.findOne({ phone: loginIdentifier }).select('+password');
     }
     
     if (!user) {
@@ -289,6 +282,20 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     const isMatch = await user.comparePassword(password);
     
     if (!isMatch) {
+      // Check if this is a Google OAuth user (no password set)
+      if (user.provider === 'google' || user.googleId) {
+        res.status(401).json({
+          success: false,
+          error: 'Google Account',
+          message: 'This account was registered with Google. Please use the "Continue with Google" option to sign in.',
+          details: {
+            type: 'GOOGLE_ACCOUNT',
+            suggestion: 'Click the "Continue with Google" button to sign in with your Google account'
+          }
+        });
+        return;
+      }
+      
       res.status(401).json({
         success: false,
         error: 'Invalid Credentials',

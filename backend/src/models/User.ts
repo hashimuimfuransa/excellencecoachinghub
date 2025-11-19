@@ -621,6 +621,10 @@ userSchema.pre<IUserDocument>('save', async function(next) {
 
 // Instance method to compare password
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  // Check if user has a password (Google OAuth users don't have passwords)
+  if (!this.password) {
+    return false;
+  }
   return bcrypt.compare(candidatePassword, this.password);
 };
 

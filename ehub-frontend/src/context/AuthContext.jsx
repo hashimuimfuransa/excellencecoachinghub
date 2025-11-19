@@ -66,12 +66,19 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
+      // Validate credentials before sending request
+      if (!credentials || !credentials.identifier || !credentials.password) {
+        return { success: false, error: 'Please provide both email/phone and password' };
+      }
+      
       let response;
 
       // Check if it's Google login
       if (credentials.googleToken) {
         response = await authApi.googleLogin(credentials.googleToken);
       } else {
+        // Log the credentials being sent for debugging
+        console.log('Sending login credentials:', credentials);
         response = await authApi.login(credentials);
       }
 
@@ -90,7 +97,23 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'Login failed - no token received' };
       }
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || error.response?.data?.error || 'Login failed' };
+      console.error('AuthContext login error:', error);
+      // Extract detailed error message from backend
+      const errorData = error.response?.data;
+      if (errorData) {
+        // Handle Google account error specifically
+        if (errorData.error === 'Google Account') {
+          return { success: false, error: errorData.message, isGoogleAccount: true };
+        }
+        
+        if (errorData.error === 'Validation failed' && errorData.details) {
+          // Handle validation errors specifically
+          const validationErrors = errorData.details.map(err => `${err.field}: ${err.message}`).join(', ');
+          return { success: false, error: `Validation error: ${validationErrors}` };
+        }
+        return { success: false, error: errorData.message || errorData.error || 'Login failed' };
+      }
+      return { success: false, error: error.message || 'Login failed' };
     }
   };
 

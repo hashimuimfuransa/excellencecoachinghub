@@ -15,6 +15,7 @@ import {
 } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
+import { validateLogin } from '../middleware/loginValidation';
 import { UserRole } from '../types';
 
 const router = Router();
@@ -83,25 +84,6 @@ const registerValidation = [
     .withMessage('Platform must be homepage, job-portal, or elearning')
 ];
 
-const loginValidation = [
-  body('identifier')
-    .notEmpty()
-    .withMessage('Email or phone number is required')
-    .custom((value: string) => {
-      // Check if it's a valid email or phone number
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
-      
-      if (!emailRegex.test(value) && !phoneRegex.test(value)) {
-        throw new Error('Please provide a valid email or phone number');
-      }
-      return true;
-    }),
-  body('password')
-    .notEmpty()
-    .withMessage('Password is required')
-];
-
 const forgotPasswordValidation = [
   body('email')
     .optional() // Make email optional
@@ -165,7 +147,7 @@ const googleRegistrationValidation = [
 
 // Routes
 router.post('/register', registerValidation, validateRequest, register);
-router.post('/login', loginValidation, validateRequest, login);
+router.post('/login', validateLogin, login);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.post('/forgot-password', forgotPasswordValidation, validateRequest, forgotPassword);

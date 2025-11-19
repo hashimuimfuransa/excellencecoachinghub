@@ -45,7 +45,12 @@ const Login = () => {
         navigate('/dashboard');
       }
     } else {
-      setError(result.error);
+      // Handle Google account error specifically
+      if (result.isGoogleAccount) {
+        setError(`${result.error} Please use the "Continue with Google" option instead.`);
+      } else {
+        setError(result.error);
+      }
     }
 
     setLoading(false);

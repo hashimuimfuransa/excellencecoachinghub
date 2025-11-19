@@ -61,6 +61,7 @@ const LoginPage: React.FC = () => {
 
     try {
       console.log('Attempting login with:', { email: formData.email, password: '***' });
+      // Ensure we're sending the correct data structure
       await login(formData.email, formData.password);
       console.log('Login successful, navigating...');
       navigate(from, { replace: true });
@@ -72,7 +73,11 @@ const LoginPage: React.FC = () => {
       let errorMessage = 'Login failed. Please try again.';
       
       if (errorData) {
-        if (errorData.message) {
+        // Handle validation errors specifically
+        if (errorData.error === 'Validation failed' && errorData.details) {
+          const validationErrors = errorData.details.map((err: any) => `${err.field}: ${err.message}`).join(', ');
+          errorMessage = `Validation error: ${validationErrors}`;
+        } else if (errorData.message) {
           errorMessage = errorData.message;
         } else if (errorData.error) {
           errorMessage = errorData.error;

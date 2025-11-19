@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 // Local User interface to avoid import issues
 interface User {
@@ -74,8 +74,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setIsLoading(true);
+      // Ensure we're sending the correct data structure
+      const credentials = { 
+        email: email, 
+        password: password 
+      };
+      console.log('AuthContext: Preparing login with credentials:', {
+        email: credentials.email,
+        password: credentials.password ? '***' : '(empty)'
+      });
       const { default: authService } = await import('../services/authService');
-      const authData = await authService.login({ email, password });
+      const authData = await authService.login(credentials);
       setUser(authData.user);
     } catch (error) {
       console.error('AuthContext login error:', error);

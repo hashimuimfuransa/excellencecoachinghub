@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { homeworkApi } from '../api/homeworkApi';
 import { levelOptions } from '../utils/languageOptions';
 import { useAuth } from '../hooks/useAuth';
 import BottomNavbar from '../components/ui/BottomNavbar';
 
 const HomeworkHelp = () => {
+  const { id } = useParams(); // Get the ID parameter from the URL
   const [helpRequests, setHelpRequests] = useState([]);
   const [filteredRequests, setFilteredRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,21 @@ const HomeworkHelp = () => {
   useEffect(() => {
     const loadHelpRequests = async () => {
       try {
+        // If we have an ID parameter, load that specific request
+        if (id) {
+          try {
+            const response = await homeworkApi.getHomeworkHelpById(id);
+            if (response.data && response.data.data) {
+              setSelectedRequest(response.data.data);
+            }
+          } catch (error) {
+            console.error('Error loading specific help request:', error);
+          }
+          setLoading(false);
+          return;
+        }
+        
+        // Otherwise load all requests
         const response = await homeworkApi.getHomeworkHelp();
         // Extract the data array from the response
         const requests = Array.isArray(response.data.data) ? response.data.data : [];
@@ -82,7 +99,7 @@ const HomeworkHelp = () => {
     };
 
     loadHelpRequests();
-  }, [user]);
+  }, [user, id]);
   
   // Apply filters whenever helpRequests or filters change
   useEffect(() => {
@@ -180,6 +197,37 @@ const HomeworkHelp = () => {
     }
   };
 
+  // Handle adding a response/comment to a help request
+  const handleAddResponse = async (requestId, responseText) => {
+    try {
+      // Call the API to add the comment
+      const response = await homeworkApi.addCommentToHomeworkHelp(requestId, responseText);
+      
+      // Update the UI with the response data
+      if (response.data && response.data.data) {
+        // If we're viewing a specific request, update it directly
+        if (selectedRequest && selectedRequest._id === requestId) {
+          setSelectedRequest(response.data.data);
+        }
+        
+        // Also update the requests lists
+        const updatedRequests = helpRequests.map(request => {
+          if (request._id === requestId) {
+            return response.data.data;
+          }
+          return request;
+        });
+        
+        setHelpRequests(updatedRequests);
+        setFilteredRequests(updatedRequests);
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error adding response:', error);
+      throw error;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-100 to-blue-100">
@@ -199,9 +247,15 @@ const HomeworkHelp = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4 sm:p-6 pb-20 md:pb-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Student Help Requests</h1>
-          <p className="text-gray-600">View and respond to student homework help requests</p>
-          {user?.role === 'teacher' && user?.level && (
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {id ? "Help Request Details" : "Student Help Requests"}
+          </h1>
+          <p className="text-gray-600">
+            {id 
+              ? "View and respond to this student's homework help request" 
+              : "View and respond to student homework help requests"}
+          </p>
+          {user?.role === 'teacher' && user?.level && !id && (
             <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-800">
                 Showing requests for your teaching level: <span className="font-semibold">{getLevelLabel(user.level)}</span>
@@ -244,6 +298,30 @@ const HomeworkHelp = () => {
                 <div className="bg-yellow-50 rounded-lg p-4">
                   <p className="text-gray-800">{selectedRequest.description || 'No message provided'}</p>
                 </div>
+                
+                {/* Comments/Responses Section */}
+                <h3 className="text-lg font-semibold text-gray-900 mt-6 mb-3">Previous Responses</h3>
+                {selectedRequest.comments && selectedRequest.comments.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedRequest.comments.map((comment) => (
+                      <div key={comment._id} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="font-medium text-gray-900">
+                            {comment.author || 'Unknown User'}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(comment.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-gray-700 text-sm">&quot;{comment.text}&quot;</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-4 text-center">
+                    <p className="text-gray-500">No responses yet</p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -283,9 +361,27 @@ const HomeworkHelp = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   rows={4}
                   placeholder="Type your response to the student..."
+                  id="teacherResponse"
                 ></textarea>
                 <div className="flex justify-end mt-3">
-                  <button className="btn-primary px-4 py-2">
+                  <button 
+                    className="btn-primary px-4 py-2"
+                    onClick={async () => {
+                      const responseText = document.getElementById('teacherResponse').value;
+                      if (!responseText.trim()) {
+                        alert('Please enter a response');
+                        return;
+                      }
+                      
+                      try {
+                        await handleAddResponse(selectedRequest._id, responseText);
+                        document.getElementById('teacherResponse').value = '';
+                        alert('Response sent successfully!');
+                      } catch (error) {
+                        alert('Failed to send response. Please try again.');
+                      }
+                    }}
+                  >
                     Send Response
                   </button>
                 </div>

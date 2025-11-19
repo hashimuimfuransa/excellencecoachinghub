@@ -214,7 +214,15 @@ const AppContent = () => {
           <Route
             path="/homework/help"
             element={
-              <ProtectedRoute allowedRoles={['teacher']}>
+              <ProtectedRoute allowedRoles={['teacher', 'student']}>
+                <HomeworkHelp />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/homework/help/:id"
+            element={
+              <ProtectedRoute allowedRoles={['teacher', 'student']}>
                 <HomeworkHelp />
               </ProtectedRoute>
             }

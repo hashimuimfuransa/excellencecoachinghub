@@ -606,16 +606,31 @@ const SimplifiedTestTaking: React.FC = () => {
       <Box sx={{ 
         minHeight: '100vh',
         bgcolor: 'background.default',
-        position: 'relative'
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: { xs: 1, sm: 2, md: 3 }
       }}>
-        {/* Header with timer and progress */}
-        <AppBar position="sticky" elevation={1} sx={{ bgcolor: 'primary.main' }}>
-          <Toolbar>
+        {/* Header with timer and progress - Fixed at top */}
+        <Box sx={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          zIndex: 1200,
+          bgcolor: 'primary.main',
+          color: 'white',
+          p: 1
+        }}>
+          <Toolbar sx={{ minHeight: '56px !important', px: { xs: 1, sm: 2 } }}>
             <IconButton
               onClick={() => navigate(-1)}
               sx={{ 
                 color: 'white', 
-                mr: 2,
+                mr: 1,
+                p: 0.5,
                 '&:hover': {
                   bgcolor: alpha(theme.palette.common.white, 0.1)
                 }
@@ -623,33 +638,51 @@ const SimplifiedTestTaking: React.FC = () => {
             >
               <ArrowBack />
             </IconButton>
-            <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-              <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="h6" fontWeight="bold">
+            <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, minWidth: 0 }}>
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Typography 
+                  variant="subtitle1" 
+                  fontWeight="bold"
+                  noWrap
+                  sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}
+                >
                   {testData.job?.title || 'Assessment'} Assessment
                 </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                <Typography 
+                  variant="caption" 
+                  sx={{ opacity: 0.9, display: { xs: 'none', sm: 'block' } }}
+                >
                   {testData.job?.company || 'Company'} • {testData.job?.industry || 'Industry'}
                 </Typography>
               </Box>
               
-              <Stack direction="row" spacing={3} alignItems="center">
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
                 <Box display="flex" alignItems="center">
-                  <AccessTime sx={{ mr: 1, fontSize: 20 }} />
-                  <Typography variant="h6" fontWeight="bold">
+                  <AccessTime sx={{ mr: 0.5, fontSize: 16 }} />
+                  <Typography 
+                    variant="subtitle2" 
+                    fontWeight="bold"
+                    sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}
+                  >
                     {formatTime(timeRemaining)}
                   </Typography>
                 </Box>
                 <Chip
-                  label={`${getAnsweredCount()}/${testData.questions.length} answered`}
+                  label={`${getAnsweredCount()}/${testData.questions.length}`}
                   size="small"
-                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                  sx={{ 
+                    bgcolor: 'rgba(255,255,255,0.2)', 
+                    color: 'white',
+                    fontSize: { xs: '0.6rem', sm: '0.75rem' },
+                    height: { xs: 20, sm: 24 },
+                    px: 0.5
+                  }}
                 />
                 <IconButton
                   onClick={toggleFullscreen}
-                  sx={{ color: 'white' }}
+                  sx={{ color: 'white', p: 0.5 }}
                 >
-                  {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                  {isFullscreen ? <FullscreenExit sx={{ fontSize: 18 }} /> : <Fullscreen sx={{ fontSize: 18 }} />}
                 </IconButton>
               </Stack>
             </Box>
@@ -660,25 +693,49 @@ const SimplifiedTestTaking: React.FC = () => {
             variant="determinate" 
             value={progress}
             sx={{ 
-              height: 4,
+              height: 3,
               bgcolor: alpha(theme.palette.common.white, 0.2),
               '& .MuiLinearProgress-bar': {
                 bgcolor: theme.palette.secondary.main
               }
             }}
           />
-        </AppBar>
+        </Box>
 
-        <Container maxWidth="md" sx={{ py: 4 }}>
+        {/* Main content - Centered and responsive */}
+        <Container 
+          maxWidth="md" 
+          sx={{ 
+            py: 8, 
+            width: '100%',
+            mt: '56px', // Account for fixed header
+            mb: '56px' // Account for fixed footer
+          }}
+        >
           <Slide direction="left" in mountOnEnter unmountOnExit key={currentQuestion}>
-            <Card elevation={4} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+            <Card 
+              elevation={8} 
+              sx={{ 
+                borderRadius: { xs: 2, sm: 3 }, 
+                overflow: 'hidden',
+                maxWidth: '100%',
+                mx: 'auto'
+              }}
+            >
               {/* Question header */}
               <CardContent sx={{ 
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
-                borderBottom: `2px solid ${theme.palette.primary.main}`
+                borderBottom: `2px solid ${theme.palette.primary.main}`,
+                py: 1.5,
+                px: 2
               }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6" color="primary" fontWeight="bold">
+                  <Typography 
+                    variant="subtitle1" 
+                    color="primary" 
+                    fontWeight="bold"
+                    sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}
+                  >
                     Question {currentQuestion + 1} of {testData.questions.length}
                   </Typography>
                   <Chip 
@@ -686,35 +743,54 @@ const SimplifiedTestTaking: React.FC = () => {
                     size="small"
                     sx={{ 
                       bgcolor: theme.palette.primary.main,
-                      color: 'white'
+                      color: 'white',
+                      fontSize: { xs: '0.6rem', sm: '0.75rem' },
+                      height: { xs: 20, sm: 24 }
                     }}
                   />
                 </Stack>
               </CardContent>
 
               {/* Question content */}
-              <CardContent sx={{ p: 4 }}>
-                <Typography variant="h5" gutterBottom sx={{ 
-                  lineHeight: 1.6,
-                  mb: 4,
-                  fontWeight: 500
-                }}>
+              <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom 
+                  sx={{ 
+                    lineHeight: 1.5,
+                    mb: 3,
+                    fontWeight: 500,
+                    fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.5rem' }
+                  }}
+                >
                   {currentQ?.question}
                 </Typography>
 
-                {/* Answer options */}
+                {/* Answer options - Responsive grid */}
                 <RadioGroup
                   value={answers[currentQuestion] !== undefined ? answers[currentQuestion] : ''}
                   onChange={(e) => handleAnswerSelect(parseInt(e.target.value))}
                 >
-                  <Stack spacing={2}>
+                  <Box sx={{ 
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: '1fr', md: '1fr' },
+                    gap: { xs: 1.5, sm: 2 },
+                    mt: 2
+                  }}>
                     {currentQ?.options?.map((option, index) => (
                       <FormControlLabel
                         key={index}
                         value={index}
-                        control={<Radio size="large" />}
+                        control={<Radio size="small" />}
                         label={
-                          <Typography variant="body1" sx={{ fontSize: '1.1rem', py: 1 }}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: { xs: '0.9rem', sm: '1rem' }, 
+                              py: 0.5,
+                              lineHeight: 1.4
+                            }}
+                          >
                             {option}
                           </Typography>
                         }
@@ -722,8 +798,8 @@ const SimplifiedTestTaking: React.FC = () => {
                           border: answers[currentQuestion] === index 
                             ? `2px solid ${theme.palette.primary.main}`
                             : `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                          borderRadius: 2,
-                          p: 2,
+                          borderRadius: 1.5,
+                          p: { xs: 1, sm: 1.5 },
                           m: 0,
                           transition: 'all 0.3s ease',
                           bgcolor: answers[currentQuestion] === index 
@@ -732,68 +808,105 @@ const SimplifiedTestTaking: React.FC = () => {
                           '&:hover': {
                             bgcolor: alpha(theme.palette.primary.main, 0.05),
                             borderColor: theme.palette.primary.main
-                          }
+                          },
+                          alignItems: 'flex-start'
                         }}
                       />
                     )) || []}
-                  </Stack>
+                  </Box>
                 </RadioGroup>
-              </CardContent>
-
-              {/* Navigation */}
-              <CardContent sx={{ 
-                bgcolor: alpha(theme.palette.grey[50], 0.5),
-                borderTop: `1px solid ${theme.palette.divider}`
-              }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Button
-                    startIcon={<KeyboardArrowLeft />}
-                    onClick={handlePrevious}
-                    disabled={currentQuestion === 0}
-                    variant="outlined"
-                    size="large"
-                  >
-                    Previous
-                  </Button>
-
-                  <Typography variant="body2" color="text.secondary">
-                    {currentQuestion + 1} / {testData.questions.length}
-                  </Typography>
-
-                  {isLastQuestion ? (
-                    <Button
-                      variant="contained"
-                      size="large"
-                      onClick={() => setShowConfirmDialog(true)}
-                      disabled={getAnsweredCount() === 0}
-                      sx={{ 
-                        bgcolor: 'success.main',
-                        '&:hover': { bgcolor: 'success.dark' }
-                      }}
-                    >
-                      Submit Test
-                    </Button>
-                  ) : (
-                    <Button
-                      endIcon={<KeyboardArrowRight />}
-                      onClick={handleNext}
-                      variant="contained"
-                      size="large"
-                      disabled={answers[currentQuestion] === -1}
-                    >
-                      Next
-                    </Button>
-                  )}
-                </Stack>
               </CardContent>
             </Card>
           </Slide>
         </Container>
 
+        {/* Navigation - Fixed at bottom */}
+        <Box sx={{ 
+          position: 'fixed', 
+          bottom: 0, 
+          left: 0, 
+          right: 0, 
+          zIndex: 1200,
+          bgcolor: alpha(theme.palette.grey[50], 0.9),
+          backdropFilter: 'blur(10px)',
+          borderTop: `1px solid ${theme.palette.divider}`,
+          p: 1
+        }}>
+          <Container maxWidth="md">
+            <Stack 
+              direction="row" 
+              justifyContent="space-between" 
+              alignItems="center"
+              spacing={1}
+            >
+              <Button
+                startIcon={<KeyboardArrowLeft />}
+                onClick={handlePrevious}
+                disabled={currentQuestion === 0}
+                variant="outlined"
+                size="small"
+                sx={{ 
+                  minWidth: { xs: '80px', sm: '100px' },
+                  fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                  py: 0.5,
+                  px: 1
+                }}
+              >
+Previous
+              </Button>
+
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
+                {currentQuestion + 1} / {testData.questions.length}
+              </Typography>
+
+              {isLastQuestion ? (
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => setShowConfirmDialog(true)}
+                  disabled={getAnsweredCount() === 0}
+                  sx={{ 
+                    bgcolor: 'success.main',
+                    '&:hover': { bgcolor: 'success.dark' },
+                    minWidth: { xs: '80px', sm: '120px' },
+                    fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                    py: 0.5,
+                    px: 1
+                  }}
+                >
+                  Submit
+                </Button>
+              ) : (
+                <Button
+                  endIcon={<KeyboardArrowRight />}
+                  onClick={handleNext}
+                  variant="contained"
+                  size="small"
+                  disabled={answers[currentQuestion] === -1}
+                  sx={{ 
+                    minWidth: { xs: '80px', sm: '100px' },
+                    fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                    py: 0.5,
+                    px: 1
+                  }}
+                >
+Next
+                </Button>
+              )}
+            </Stack>
+          </Container>
+        </Box>
+
         {/* Submit confirmation dialog */}
         <Dialog
           open={showConfirmDialog}
           onClose={() => !submitting && setShowConfirmDialog(false)}
+          maxWidth="xs"
+          fullWidth
         >
           <DialogTitle>Submit Assessment</DialogTitle>
           <DialogContent>
@@ -810,6 +923,7 @@ const SimplifiedTestTaking: React.FC = () => {
             <Button 
               onClick={() => setShowConfirmDialog(false)}
               disabled={submitting}
+              size="small"
             >
               Review Answers
             </Button>
@@ -817,12 +931,13 @@ const SimplifiedTestTaking: React.FC = () => {
               onClick={handleSubmitTest}
               variant="contained"
               disabled={submitting}
+              size="small"
               sx={{ 
                 bgcolor: 'success.main',
                 '&:hover': { bgcolor: 'success.dark' }
               }}
             >
-              {submitting ? 'Submitting...' : 'Submit Assessment'}
+              {submitting ? 'Submitting...' : 'Submit'}
             </Button>
           </DialogActions>
         </Dialog>

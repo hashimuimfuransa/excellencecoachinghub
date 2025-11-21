@@ -16,7 +16,10 @@ import {
   Psychology,
   Timer,
   CheckCircle,
-  ExitToApp
+  ExitToApp,
+  KeyboardArrowRight,
+  Fullscreen,
+  FullscreenExit
 } from '@mui/icons-material';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { simplePsychometricService, SimpleTestSession } from '../services/simplePsychometricService';
@@ -60,6 +63,7 @@ const TestTakingPage: React.FC = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+  const [isFullscreen, setIsFullscreen] = useState(true);
 
   useEffect(() => {
     console.log('🔍 Session validation in new tab:', {
@@ -205,16 +209,59 @@ const TestTakingPage: React.FC = () => {
     }
   };
 
+  // Function to toggle fullscreen mode
+  const toggleFullscreen = () => {
+    if (isFullscreen) {
+      exitFullscreen();
+      setIsFullscreen(false);
+    } else {
+      enterFullscreen();
+      setIsFullscreen(true);
+    }
+  };
+
+  // Listen for fullscreen change events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Enter fullscreen when component mounts
+  useEffect(() => {
+    // Add a small delay to ensure the DOM is fully rendered
+    const timer = setTimeout(() => {
+      enterFullscreen();
+    }, 300);
+    
+    return () => {
+      clearTimeout(timer);
+      exitFullscreen();
+    };
+  }, []);
+
   // Enter fullscreen when test session is loaded
   useEffect(() => {
     if (currentSession && fullscreenRef.current) {
-      enterFullscreen();
+      // Add a small delay to ensure the DOM is fully rendered
+      const timer = setTimeout(() => {
+        enterFullscreen();
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
-    
-    // Cleanup function to exit fullscreen when component unmounts
-    return () => {
-      exitFullscreen();
-    };
   }, [currentSession]);
 
   const loadTestSession = async (sessionIdToLoad?: string) => {
@@ -458,30 +505,39 @@ const TestTakingPage: React.FC = () => {
       backgroundColor: '#f5f5f5', 
       minHeight: '100vh',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '16px'
     }}>
       <Box sx={{ 
         width: '100%', 
-        maxWidth: '1400px',
+        maxWidth: '1200px',
         display: 'flex',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh'
       }}>
         <Paper 
           elevation={12} 
           sx={{ 
-            p: { xs: 2, md: 3 }, 
+            p: { xs: 1, md: 2 }, 
             width: '100%',
-            maxWidth: '1400px',
-            minHeight: '600px',
+            maxWidth: '1200px',
+            minHeight: '750px',
             borderRadius: 3,
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+            boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: '95vh',
+            height: '95vh'
           }}
         >
           {/* Header with Exit Button */}
           <Box sx={{ mb: 2 }}>
-            {/* Top Bar with Exit Button */}
+            {/* Top Bar with Exit Button and Fullscreen Toggle */}
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -495,21 +551,38 @@ const TestTakingPage: React.FC = () => {
               <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                 ExJobNet - Assessment Center
               </Typography>
-              <Button
-                variant="outlined"
-                color="error"
-                size="small"
-                onClick={handleExitTest}
-                startIcon={<ExitToApp />}
-                sx={{ 
-                  borderRadius: 2,
-                  px: 2,
-                  py: 0.5,
-                  fontSize: '0.75rem'
-                }}
-              >
-                Exit
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={toggleFullscreen}
+                  startIcon={isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                  sx={{ 
+                    borderRadius: 2,
+                    px: 1.5,
+                    py: 0.5,
+                    fontSize: '0.75rem',
+                    minWidth: 'auto'
+                  }}
+                >
+                  {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={handleExitTest}
+                  startIcon={<ExitToApp />}
+                  sx={{ 
+                    borderRadius: 2,
+                    px: 2,
+                    py: 0.5,
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Exit
+                </Button>
+              </Box>
             </Box>
 
             {/* Main Title Section */}
@@ -589,7 +662,7 @@ const TestTakingPage: React.FC = () => {
             </Paper>
           </Box>
 
-          {/* Question Display */}
+          {/* Question Display - Centered and Responsive */}
           <Paper 
             elevation={4} 
             sx={{ 
@@ -597,9 +670,11 @@ const TestTakingPage: React.FC = () => {
               mb: 3, 
               borderRadius: 3, 
               bgcolor: 'background.paper',
-              minHeight: '350px',
+              minHeight: '300px',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              flexGrow: 1,
+              overflow: 'auto'
             }}
           >
             {/* Question Text */}
@@ -619,14 +694,18 @@ const TestTakingPage: React.FC = () => {
               </Typography>
             </Box>
 
-            {/* Answer Options */}
+            {/* Answer Options - Responsive Grid */}
             <FormControl component="fieldset" sx={{ width: '100%' }}>
               <RadioGroup
                 value={answers[currentQuestionIndex]}
                 onChange={(e) => handleAnswerSelect(parseInt(e.target.value))}
                 sx={{ gap: 2 }}
               >
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr', md: '1fr 1fr' }, 
+                  gap: 2 
+                }}>
                   {currentQuestion.options.map((option, index) => (
                     <Paper
                       key={index}
@@ -686,14 +765,19 @@ const TestTakingPage: React.FC = () => {
             </FormControl>
           </Paper>
 
-          {/* Navigation */}
-          <Paper elevation={3} sx={{ p: 2, borderRadius: 2, bgcolor: 'grey.50' }}>
+          {/* Navigation - Centered and Responsive */}
+          <Paper elevation={3} sx={{ 
+            p: 2, 
+            borderRadius: 2, 
+            bgcolor: 'grey.50',
+            flexShrink: 0
+          }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 2
+              flexWrap: { xs: 'wrap', sm: 'nowrap' },
+              gap: { xs: 1, sm: 2 }
             }}>
               <Button
                 variant="outlined"
@@ -701,11 +785,11 @@ const TestTakingPage: React.FC = () => {
                 onClick={handlePreviousQuestion}
                 disabled={currentQuestionIndex === 0}
                 sx={{ 
-                  px: 3, 
+                  px: { xs: 2, sm: 3 }, 
                   py: 1.5, 
                   fontSize: '0.9rem',
                   borderRadius: 2,
-                  minWidth: '100px'
+                  minWidth: { xs: '80px', sm: '100px' }
                 }}
               >
                 Previous
@@ -715,7 +799,9 @@ const TestTakingPage: React.FC = () => {
                 display: 'flex', 
                 flexDirection: 'column', 
                 alignItems: 'center',
-                gap: 0.5
+                gap: 0.5,
+                flex: { xs: '1 1 100%', sm: '0 1 auto' },
+                my: { xs: 1, sm: 0 }
               }}>
                 <Typography variant="subtitle2" color="text.primary" sx={{ fontWeight: 500, fontSize: '0.9rem' }}>
                   Progress: {answers.filter(a => a !== -1).length} / {currentSession.questions.length}
@@ -740,11 +826,11 @@ const TestTakingPage: React.FC = () => {
                     disabled={submitting || answers[currentQuestionIndex] === -1}
                     startIcon={submitting ? <CircularProgress size={16} /> : <CheckCircle />}
                     sx={{ 
-                      px: 3, 
+                      px: { xs: 2, sm: 3 }, 
                       py: 1.5, 
                       fontSize: '0.9rem',
                       borderRadius: 2,
-                      minWidth: '120px'
+                      minWidth: { xs: '100px', sm: '120px' }
                     }}
                   >
                     {submitting ? 'Submitting...' : 'Submit'}
@@ -755,12 +841,13 @@ const TestTakingPage: React.FC = () => {
                     size="medium"
                     onClick={handleNextQuestion}
                     disabled={answers[currentQuestionIndex] === -1}
+                    endIcon={<KeyboardArrowRight />}
                     sx={{ 
-                      px: 3, 
+                      px: { xs: 2, sm: 3 }, 
                       py: 1.5, 
                       fontSize: '0.9rem',
                       borderRadius: 2,
-                      minWidth: '100px'
+                      minWidth: { xs: '80px', sm: '100px' }
                     }}
                   >
                     Next

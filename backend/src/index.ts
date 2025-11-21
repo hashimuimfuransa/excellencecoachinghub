@@ -78,8 +78,8 @@ import leaderboardRoutes from '@/routes/leaderboardRoutes';
 import jobRoutes from '@/routes/jobRoutes';
 import internshipRoutes from '@/routes/internshipRoutes';
 import jobApplicationRoutes from '@/routes/jobApplicationRoutes';
-import psychometricTestRoutes from '@/routes/psychometricTestRoutes';
 import simplePsychometricRoutes from '@/routes/simplePsychometricRoutes';
+import psychometricTestRoutes from '@/routes/psychometricTestRoutes';
 import careerGuidanceRoutes from '@/routes/careerGuidanceRoutes';
 import aiInterviewRoutes from '@/routes/aiInterviewRoutes';
 import quickInterviewRoutes from '@/routes/quickInterviewRoutes';
@@ -886,10 +886,40 @@ app.use('/api/internships', internshipRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
 // Additional mounting for frontend compatibility
 app.use('/api/applications', jobApplicationRoutes);
-app.use('/api/psychometric-tests', psychometricTestRoutes);
-app.use('/api/simple-psychometric', simplePsychometricRoutes);
-// Additional mounting for frontend compatibility
 app.use('/api/psychometric-tests', simplePsychometricRoutes);
+console.log(' Mounted simplePsychometricRoutes at /api/psychometric-tests');
+
+// Also mount regular routes for backward compatibility
+app.use('/api/psychometric-tests-legacy', psychometricTestRoutes);
+console.log(' Mounted psychometricTestRoutes at /api/psychometric-tests-legacy');
+
+// Test endpoint to verify psychometric routes are working
+app.get('/api/psychometric-tests/test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Psychometric test routes are working',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Additional test endpoint to verify the generate-test route specifically
+app.post('/api/psychometric-tests/generate-test/test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Psychometric test generate endpoint is mounted correctly',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Simple test endpoint to verify the main generate-test route
+app.post('/api/psychometric-tests/generate-test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Psychometric test generate endpoint is working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.use('/api/career-guidance', careerGuidanceRoutes);
 app.use('/api/ai-interviews', aiInterviewRoutes);
 app.use('/api/quick-interviews', quickInterviewRoutes);

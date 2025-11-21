@@ -348,6 +348,8 @@ export class CentralAIManager extends EventEmitter {
         topP: this.currentConfig.topP || 0.8,
         topK: this.currentConfig.topK || 40,
         maxOutputTokens: options.maxTokens || this.currentConfig.maxTokens || 8192,
+        // Enable native JSON mode for structured output
+        responseMimeType: "application/json"
       }
     };
 

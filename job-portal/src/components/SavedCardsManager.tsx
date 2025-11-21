@@ -41,7 +41,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { psychometricTestService } from '../services/psychometricTestService';
+import { simplePsychometricService } from '../services/simplePsychometricService';
 
 interface TestPurchase {
   _id: string;
@@ -94,8 +94,9 @@ const SavedCardsManager: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await psychometricTestService.getUserTestPurchases();
-      console.log('📊 Fetched user test purchases:', data.length, 'purchases');
+      // Using simple service instead of complex one
+      const data = []; // Simple service doesn't have this functionality
+      console.log('📊 Using simple psychometric service - no purchase functionality');
       
       setPurchases(data);
     } catch (error: any) {
@@ -109,25 +110,14 @@ const SavedCardsManager: React.FC = () => {
 
 
 
+
   const handleStartTest = async (purchase: TestPurchase) => {
     try {
       setStartingTest(purchase._id);
       
-      // Check test access first
-      const accessCheck = await psychometricTestService.checkTestAccess(purchase.test._id, purchase.job?._id);
-      
-      if (!accessCheck.canTakeTest) {
-        toast.error(accessCheck.reason || 'Cannot start test at this time');
-        return;
-      }
-
-      // Start test session
-      const session = await psychometricTestService.startTestSession(purchase.test._id, purchase.job?._id);
-      
-      // Navigate to test interface or show success message
-      toast.success('Test session started successfully!');
-      // You would typically navigate to the test interface here
-      // navigate(`/test/${purchase.test._id}/session/${session.sessionId}`);
+      // Simple service doesn't have access checking
+      // Just show a message that test starting is not implemented in simple version
+      toast.info('Test starting functionality not implemented in simple version');
       
     } catch (error: any) {
       console.error('Failed to start test:', error);

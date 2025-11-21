@@ -24,18 +24,18 @@ export class JobScrapingScheduler {
       return;
     }
 
-    // Run every hour (on the hour) for comprehensive job monitoring
-    // Cron format: second minute hour day month dayOfWeek
-    // '0 0 * * * *' = At the start of every hour
-    this.cronJob = cron.schedule('0 0 * * * *', async () => {
+    // Run once daily at 9:00 AM instead of every hour
+    // Cron format: minute hour day month dayOfWeek
+    // '0 9 * * *' = At 9:00 AM every day
+    this.cronJob = cron.schedule('0 9 * * *', async () => {
       await this.runScrapingTask();
     }, {
       scheduled: true,
       timezone: 'Africa/Kigali' // Rwanda timezone
     });
 
-    // Also schedule internship.rw specific scraping every 2 hours
-    const internshipJob = cron.schedule('0 30 */2 * * *', async () => {
+    // Also schedule internship.rw specific scraping once daily at 9:30 AM
+    const internshipJob = cron.schedule('30 9 * * *', async () => {
       console.log('🇷🇼 Starting internship.rw specific scraping...');
       await this.runInternshipRwScrapingTask();
     }, {
@@ -43,8 +43,8 @@ export class JobScrapingScheduler {
       timezone: 'Africa/Kigali'
     });
 
-    console.log('✅ Job scraping scheduler started - will run every hour (Rwanda time)');
-    console.log('✅ Internship.rw scraping scheduled every 2 hours at :30 minutes');
+    console.log('✅ Job scraping scheduler started - will run once daily at 9:00 AM (Rwanda time)');
+    console.log('✅ Internship.rw scraping scheduled once daily at 9:30 AM');
     
     // Run initial scraping in both development and production
     console.log(`🔄 Running initial job scraping in ${process.env.NODE_ENV || 'development'} mode...`);
@@ -263,6 +263,7 @@ export class JobScrapingScheduler {
     }
   }
 
+  /**
   /**
    * Internal method to run internship.rw specific scraping
    */

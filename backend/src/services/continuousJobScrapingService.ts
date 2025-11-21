@@ -33,13 +33,10 @@ export class ContinuousJobScrapingService {
     const isProduction = process.env.NODE_ENV === 'production';
     console.log(`📊 Production mode: ${isProduction}, Threshold: ${this.MIN_JOBS_THRESHOLD}, Interval: ${this.CHECK_INTERVAL_MINUTES}min`);
     
-    // Check every 15 minutes for new jobs
-    this.startFrequentChecks();
+    // Run once daily at 9:00 AM instead of frequent checks
+    this.startDailyChecks();
     
-    // Hourly maintenance check
-    this.startHourlyChecks();
-    
-    // Daily maintenance and stats
+    // Keep daily maintenance
     this.startDailyMaintenance();
 
     // Initial scraping run - longer delay in production for stability
@@ -49,7 +46,7 @@ export class ContinuousJobScrapingService {
     }, initialDelay);
 
     this.isInitialized = true;
-    console.log(`✅ Continuous job scraping service initialized (${isProduction ? 'production' : 'development'} mode)`);
+    console.log(`✅ Continuous job scraping service initialized (${isProduction ? 'production' : 'development'} mode) - running once daily`);
   }
 
   /**
@@ -57,12 +54,20 @@ export class ContinuousJobScrapingService {
    */
   private static startFrequentChecks(): void {
     this.frequentCheckJob = cron.schedule(`*/${this.CHECK_INTERVAL_MINUTES} * * * *`, async () => {
-      await this.performIntelligentScraping('frequent');
-    }, {
-      scheduled: true,
-      timezone: 'Africa/Kigali'
+      await this.performIntelligentScraping('daily');
     });
     console.log(`📅 Frequent job checks started (every ${this.CHECK_INTERVAL_MINUTES} minutes)`);
+  }
+
+  /**
+   * Start daily checks (once per day at 9:00 AM)
+   */
+  private static startDailyChecks(): void {
+    // Run once daily at 9:00 AM
+    this.frequentCheckJob = cron.schedule('0 9 * * *', async () => {
+      await this.performIntelligentScraping('daily');
+    });
+    console.log('📅 Daily job checks started (9:00 AM daily)');
   }
 
   /**
@@ -71,10 +76,7 @@ export class ContinuousJobScrapingService {
   private static startHourlyChecks(): void {
     // Run at 15 minutes past every hour
     this.hourlyCheckJob = cron.schedule('15 * * * *', async () => {
-      await this.performIntelligentScraping('hourly');
-    }, {
-      scheduled: true,
-      timezone: 'Africa/Kigali'
+      await this.performIntelligentScraping('daily');
     });
     console.log('🕐 Hourly job checks started (at 15 minutes past each hour)');
   }
@@ -86,9 +88,6 @@ export class ContinuousJobScrapingService {
     // Run at 3:30 AM daily for cleanup and stats
     this.dailyMaintenanceJob = cron.schedule('30 3 * * *', async () => {
       await this.performDailyMaintenance();
-    }, {
-      scheduled: true,
-      timezone: 'Africa/Kigali'
     });
     console.log('🧹 Daily maintenance scheduled (3:30 AM)');
   }
@@ -96,7 +95,7 @@ export class ContinuousJobScrapingService {
   /**
    * Perform intelligent scraping based on current conditions
    */
-  private static async performIntelligentScraping(trigger: 'initial' | 'frequent' | 'hourly' | 'manual'): Promise<void> {
+  private static async performIntelligentScraping(trigger: 'initial' | 'daily' | 'manual'): Promise<void> {
     if (this.isScrapingInProgress) {
       console.log(`⏳ Job scraping already in progress, skipping ${trigger} trigger`);
       return;
@@ -123,8 +122,8 @@ export class ContinuousJobScrapingService {
         console.log(`✅ ${trigger.toUpperCase()} scraping completed successfully`);
         console.log(`📊 Results: ${result.processedJobs} jobs processed, ${result.errors.length} errors`);
         
-        // If we got good results, check if we should do another round
-        if (result.processedJobs >= 10 && trigger !== 'frequent') {
+        // If we got good results, don't schedule another round for daily scraping
+        if (result.processedJobs >= 10 && trigger !== 'daily') {
           console.log('🔄 Good results, scheduling follow-up scraping in 5 minutes');
           setTimeout(() => {
             this.performIntelligentScraping('manual');
@@ -165,37 +164,18 @@ export class ContinuousJobScrapingService {
         createdAt: { $gte: today }
       });
 
-      const recentJobs = await Job.countDocuments({
-        isExternalJob: true,
-        createdAt: { $gte: new Date(Date.now() - 2 * 60 * 60 * 1000) } // Last 2 hours
-      });
-
       // Different logic for different triggers
       switch (trigger) {
         case 'initial':
           return { should: true, reason: 'Initial server startup scraping' };
           
-        case 'frequent':
-          // For frequent checks, only scrape if very few jobs today
-          if (todayJobs < this.MIN_JOBS_THRESHOLD) {
-            return { should: true, reason: `Low job count today (${todayJobs} < ${this.MIN_JOBS_THRESHOLD})` };
-          }
-          
-          // Or if no recent jobs in last 2 hours during business hours
-          const hour = new Date().getHours();
-          if (hour >= 8 && hour <= 18 && recentJobs === 0) {
-            return { should: true, reason: 'No jobs in last 2 hours during business hours' };
-          }
-          
-          return { should: false, reason: `Sufficient jobs today (${todayJobs}) and recent activity (${recentJobs})` };
-          
-        case 'hourly':
-          // More aggressive hourly scraping
+        case 'daily':
+          // For daily checks, scrape if we have fewer than 20 jobs today
           if (todayJobs < 20) {
-            return { should: true, reason: `Hourly check: jobs today (${todayJobs}) below target (20)` };
+            return { should: true, reason: `Daily check: jobs today (${todayJobs}) below target (20)` };
           }
           
-          return { should: false, reason: `Hourly check: sufficient jobs today (${todayJobs})` };
+          return { should: false, reason: `Daily check: sufficient jobs today (${todayJobs})` };
           
         case 'manual':
           return { should: true, reason: 'Manual trigger' };
@@ -224,7 +204,7 @@ export class ContinuousJobScrapingService {
       const stats = await JobScrapingService.getScrapingStats();
       console.log('📊 Daily Stats:', {
         todayJobs: stats.todayJobs,
-        totalJobs: stats.totalJobs,
+        totalJobs: stats.totalExternalJobs,
         lastSuccessfulScrape: this.lastSuccessfulScrape
       });
       
@@ -373,10 +353,7 @@ export class ContinuousJobScrapingService {
 
       // Start with new interval
       this.frequentCheckJob = cron.schedule(`*/${minutes} * * * *`, async () => {
-        await this.performIntelligentScraping('frequent');
-      }, {
-        scheduled: true,
-        timezone: 'Africa/Kigali'
+        await this.performIntelligentScraping('daily');
       });
 
       console.log(`✅ Check interval updated to ${minutes} minutes`);

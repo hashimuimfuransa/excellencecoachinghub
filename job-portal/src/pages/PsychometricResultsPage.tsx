@@ -66,7 +66,7 @@ import {
   Refresh
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { psychometricTestService } from '../services/psychometricTestService';
+import { simplePsychometricService } from '../services/simplePsychometricService';
 import { useAuth } from '../contexts/AuthContext';
 
 interface QuestionAnalysis {
@@ -289,7 +289,7 @@ const PsychometricResultsPage: React.FC = () => {
         setSelectedResult(null);
       }
       
-      const results = await psychometricTestService.getUserTestResults();
+      const results = await simplePsychometricService.getSimpleTestHistory();
       console.log('Fetched test results:', results.length, 'results');
       
       // Transform backend results to ensure all fields are properly calculated

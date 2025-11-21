@@ -1200,14 +1200,7 @@ export class OptimizedJobScrapingService {
         return matchesPattern && !isExcluded && hasMinLength && hasJobSegment;
       },
       requiresJS: true, // Government sites often use JavaScript
-      rateLimit: { delayMs: 8000, maxConcurrent: 1 },
-      // Special configuration for Mifotra
-      puppeteerConfig: {
-        timeout: 60000, // 60 seconds timeout for government sites
-        waitUntil: 'networkidle0', // Wait for network to be idle
-        viewport: { width: 1920, height: 1080 },
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      } as any // Respectful rate limiting for government site
+      rateLimit: { delayMs: 8000, maxConcurrent: 1 }
     }
   ];
 
@@ -1405,53 +1398,62 @@ export class OptimizedJobScrapingService {
       const match = cleanText.match(pattern);
       if (match) {
         try {
-          let year, month, day;
+          let year: number, month: number, day: number;
+          
+          // Define month names mapping
+          const monthNames: { [key: string]: number } = {
+            'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+            'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12,
+            'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'jun': 6,
+            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+          };
           
           if (pattern.source.includes('\\d{4}')) {
             // Pattern has year
-            if (match[1].length === 4) {
+            if (match[1] && match[1].length === 4) {
               // YYYY-MM-DD format
-              year = parseInt(match[1]);
-              month = parseInt(match[2]);
-              day = parseInt(match[3]);
+              year = parseInt(match[1], 10);
+              month = parseInt(match[2] || '1', 10); // Add fallback
+              day = parseInt(match[3] || '1', 10); // Add fallback
             } else {
               // DD-MM-YYYY format
-              day = parseInt(match[1]);
-              month = parseInt(match[2]);
-              year = parseInt(match[3]);
+              day = parseInt(match[1] || '1', 10);
+              month = parseInt(match[2] || '1', 10); // Add fallback
+              year = parseInt(match[3] || '2024', 10); // Add fallback
             }
           } else {
             // Month name pattern
-            const monthNames = {
-              'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
-              'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12,
-              'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'jun': 6,
-              'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
-            };
-            
             if (match[1] && match[1] in monthNames) {
               // Month DD, YYYY format
-              month = monthNames[match[1]];
-              day = parseInt(match[2] || '1');
-              year = parseInt(match[3] || '2024');
+              month = monthNames[match[1]] || 1; // Add fallback
+              day = parseInt(match[2] || '1', 10);
+              year = parseInt(match[3] || '2024', 10);
             } else if (match[2] && match[2] in monthNames) {
               // DD Month YYYY format
-              day = parseInt(match[1] || '1');
-              month = monthNames[match[2]];
-              year = parseInt(match[3] || '2024');
-            }
-          }
-          
-          // If no year specified, assume next year if month has passed, current year otherwise
-          if (!year) {
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth() + 1;
-            
-            if (month < currentMonth) {
-              year = currentYear + 1;
+              day = parseInt(match[1] || '1', 10);
+              month = monthNames[match[2]] || 1; // Add fallback
+              year = parseInt(match[3] || '2024', 10);
             } else {
-              year = currentYear;
+              // No year specified, assume next year if month has passed, current year otherwise
+              const now = new Date();
+              const currentYear = now.getFullYear();
+              const currentMonth = now.getMonth() + 1;
+              
+              if (match[1] && match[1] in monthNames) {
+                month = monthNames[match[1]] || 1; // Add fallback
+                day = 1;
+              } else if (match[2] && match[2] in monthNames) {
+                month = monthNames[match[2]] || 1; // Add fallback
+                day = parseInt(match[1] || '1', 10);
+              } else {
+                continue; // Skip this pattern
+              }
+              
+              if (month < currentMonth) {
+                year = currentYear + 1;
+              } else {
+                year = currentYear;
+              }
             }
           }
           
@@ -1655,7 +1657,7 @@ export class OptimizedJobScrapingService {
         }
       }
       
-      this.lastVersionCheck = now;
+      this.lastVersionCheck = now!;
     } catch (error) {
       console.warn('⚠️ AI model check failed:', error);
     }
@@ -1782,8 +1784,8 @@ export class OptimizedJobScrapingService {
                 return frameContent;
               }
             }
-          } catch (frameError) {
-            console.log(`⚠️ Error accessing frame: ${frameError.message}`);
+          } catch (frameError: unknown) {
+            console.log(`⚠️ Error accessing frame: ${(frameError as Error).message}`);
             continue;
           }
         }
@@ -1821,348 +1823,191 @@ export class OptimizedJobScrapingService {
   }
 
   /**
-   * Fetch webpage content with proper error handling, retry logic and rate limiting
+   * Fetch webpage with enhanced error handling and retry logic
    */
-  private static async fetchWebpage(url: string, config: JobSourceConfig, retryCount: number = 0): Promise<string> {
+  private static async fetchWebpage(url: string, config: JobSourceConfig): Promise<string> {
     const maxRetries = 3;
+    let lastError: Error | null = null;
     
-    try {
-      // Apply rate limiting with some randomization to appear more human-like
-      const baseDelay = config.rateLimit.delayMs;
-      const randomDelay = baseDelay + Math.random() * 3000; // Add 0-3 seconds random delay
-      await this.delay(randomDelay);
-
-      // Use Puppeteer for JavaScript-rendered content
-      if (config.requiresJS) {
-        console.log(`🚀 Using Puppeteer for JS-rendered content: ${url}`);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🌐 Attempt ${attempt}/${maxRetries} to fetch: ${url}`);
         
-        const browser = await puppeteer.launch({
-          headless: true,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu',
-            '--disable-background-timer-throttling',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-renderer-backgrounding',
-            '--disable-features=TranslateUI',
-            '--disable-ipc-flooding-protection'
-          ],
-          defaultViewport: null
-        });
+        // Set up headers
+        const headersToSet: Record<string, string> = {};
+        for (const key in config.headers) {
+          if (Object.prototype.hasOwnProperty.call(config.headers, key)) {
+            headersToSet[key] = config.headers[key]!;
+          }
+        }
         
-        let page: any = null;
-        try {
-          page = await browser.newPage();
+        // Special handling for specific sites
+        if (url.includes('mifotra.gov.rw')) {
+          console.log('🔄 Applying Mifotra-specific handling...');
           
-          // Use special configuration for Mifotra
-          const puppeteerConfig = (config as any).puppeteerConfig || {};
-          const timeout = puppeteerConfig.timeout || 60000;
-          const waitUntil = puppeteerConfig.waitUntil || 'networkidle2';
-          const viewport = puppeteerConfig.viewport || { width: 1920, height: 1080 };
-          const userAgent = puppeteerConfig.userAgent || config.headers['User-Agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
-          
-          // Increase timeouts for slow-loading sites
-          page.setDefaultNavigationTimeout(timeout);
-          page.setDefaultTimeout(timeout);
-          
-          // Set user agent and viewport
-          await page.setUserAgent(userAgent);
-          await page.setViewport(viewport);
-          
-          // Set extra headers
-          const headersToSet: Record<string, string> = {};
-          Object.keys(config.headers).forEach(key => {
-            if (key.toLowerCase() !== 'user-agent') {
-              headersToSet[key] = config.headers[key];
-            }
+          // Use Puppeteer for JavaScript-heavy sites
+          const browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
           });
-          if (Object.keys(headersToSet).length > 0) {
+        } else if (url.includes('workingnomads.com')) {
+          // Special handling for WorkingNomads with reduced timeout
+          console.log('🔄 Applying WorkingNomads-specific handling...');
+          
+          // Use Puppeteer with reduced timeout for WorkingNomads
+          const browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+          });
+          
+          try {
+            const page = await browser.newPage();
+            
+            // Apply configuration with reduced timeouts for WorkingNomads
+            const puppeteerConfig = (config as any).puppeteerConfig || {};
+            const timeout = 15000; // Reduced timeout for WorkingNomads specifically
+            const waitUntil = 'domcontentloaded'; // Faster loading strategy
+            const viewport = puppeteerConfig.viewport || { width: 1920, height: 1080 };
+            const userAgent = puppeteerConfig.userAgent || config.headers['User-Agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            
+            await page.setViewport(viewport);
+            await page.setUserAgent(userAgent);
             await page.setExtraHTTPHeaders(headersToSet);
-          }
-          
-          // Block unnecessary resources to speed up loading
-          await page.setRequestInterception(true);
-          page.on('request', (req: any) => {
-            const resourceType = req.resourceType();
-            if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
-              req.abort();
-            } else {
-              req.continue();
+            
+            // Navigate to page with multiple strategies and reduced timeouts
+            let navigationSuccess = false;
+            const strategies = [
+              () => page.goto(url, { waitUntil, timeout }),
+              () => page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 }),
+              () => page.goto(url, { waitUntil: 'load', timeout: 20000 })
+            ];
+            
+            for (const strategy of strategies) {
+              try {
+                await strategy();
+                navigationSuccess = true;
+                break;
+              } catch (commitError: unknown) { // Add type annotation
+                console.log(`⚠️ Navigation strategy failed: ${(commitError as Error).message}`);
+                continue;
+              }
             }
+            
+            if (!navigationSuccess) {
+              throw new Error('All navigation strategies failed');
+            }
+            
+            // Mifotra-specific enhancements
+            if (url.includes('mifotra.gov.rw')) {
+              try {
+                // Wait for content to load
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Scroll to load dynamic content
+                const linkCount = await page.evaluate(() => {
+                  return document.querySelectorAll('a').length;
+                });
+                console.log(`🔗 Initial link count: ${linkCount}`);
+                
+                // Scroll to bottom to trigger lazy loading
+                await page.evaluate(() => {
+                  window.scrollTo(0, document.body.scrollHeight);
+                });
+                
+                // Wait for new content
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                const newLinkCount = await page.evaluate(() => {
+                  // Type assertion to avoid TypeScript errors in Node.js environment
+                  return (document as any).querySelectorAll('a').length;
+                });
+                console.log(`🔗 Link count after scroll: ${newLinkCount}`);
+                
+                // Click "Load More" buttons if present
+                const loadMoreButtons = await page.$$('.load-more, .load-more-button, [data-load-more], button:contains("Load"), button:contains("More")');
+                for (const button of loadMoreButtons) {
+                  try {
+                    await button.click();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  } catch (buttonError) {
+                    console.log('⚠️ Could not click load more button');
+                  }
+                }
+              } catch (evalError: unknown) { // Add type annotation
+                console.log(`⚠️ Mifotra-specific checks failed: ${(evalError as Error).message}`);
+              }
+            }
+            
+            // Extract content with iframe handling
+            const content = await this.extractContentWithIframeHandling(page, url);
+            await browser.close();
+            return content;
+            
+          } catch (pageError) {
+            await browser.close();
+            throw pageError;
+          }
+        } else if (config.requiresJS) {
+          // Standard Puppeteer handling for JS-requiring sites
+          const browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
           });
           
-          // Use multiple fallback strategies for navigation
-          let html = '';
-          let navigationSuccess = false;
-          
-          // Strategy 1: Try with configured wait strategy
           try {
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1920, height: 1080 });
+            await page.setUserAgent(config.headers['User-Agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            await page.setExtraHTTPHeaders(headersToSet);
+            
             await page.goto(url, { 
-              waitUntil: waitUntil,
-              timeout: timeout 
+              waitUntil: 'domcontentloaded', // Faster loading
+              timeout: 15000 // Reduced timeout for better performance
             });
-            navigationSuccess = true;
-            console.log(`✅ Navigation successful with ${waitUntil} strategy`);
-          } catch (navError) {
-            console.log(`⚠️ ${waitUntil} failed for ${url}, trying domcontentloaded...`);
             
-            // Strategy 2: Try with domcontentloaded
-            try {
-              await page.goto(url, { 
-                waitUntil: 'domcontentloaded',
-                timeout: timeout 
-              });
-              navigationSuccess = true;
-              console.log(`✅ Navigation successful with domcontentloaded strategy`);
-            } catch (domError) {
-              console.log(`⚠️ DOMContentLoaded failed for ${url}, trying load event...`);
-              
-              // Strategy 3: Try with load event only
-              try {
-                await page.goto(url, { 
-                  waitUntil: 'load',
-                  timeout: timeout 
-                });
-                navigationSuccess = true;
-                console.log(`✅ Navigation successful with load strategy`);
-              } catch (loadError) {
-                console.log(`⚠️ Load event failed for ${url}, trying basic navigation...`);
-                
-                // Strategy 4: Basic navigation without waiting
-                try {
-                  await page.goto(url, { 
-                    waitUntil: 'commit',
-                    timeout: timeout 
-                  });
-                  navigationSuccess = true;
-                  console.log(`✅ Navigation successful with commit strategy`);
-                } catch (commitError) {
-                  console.log(`❌ All navigation strategies failed for ${url}`);
-                  throw new Error(`All navigation strategies failed: ${commitError.message}`);
-                }
-              }
-            }
-          }
-          
-          if (navigationSuccess) {
-            // Wait for dynamic content with progressive waiting
-            const waitTime = url.includes('unjobs.org') ? 8000 : 
-                             url.includes('mifotra.gov.rw') ? 10000 : 
-                             url.includes('oracle') ? 10000 : 4000;
-            
-            console.log(`⏳ Waiting ${waitTime}ms for dynamic content on ${url}...`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            
-            // Try to wait for specific selectors that indicate content is loaded
-            try {
-              await Promise.race([
-                page.waitForSelector('body', { timeout: 5000 }),
-                page.waitForSelector('[class*="job"], [class*="vacancy"], [class*="position"]', { timeout: 10000 }),
-                new Promise(resolve => setTimeout(resolve, 5000))
-              ]);
-            } catch (selectorError) {
-              console.log(`⚠️ Selector wait failed for ${url}, proceeding anyway...`);
-            }
-            
-            // Special handling for Mifotra - additional checks
-            if (url.includes('mifotra.gov.rw')) {
-              console.log(`🔍 Performing Mifotra-specific content checks...`);
-              try {
-                // Check if page has any links at all
-                const linkCount = await page.evaluate(() => document.querySelectorAll('a').length);
-                console.log(`🔗 Mifotra page has ${linkCount} links`);
-                
-                if (linkCount === 0) {
-                  console.log(`⚠️ No links found on Mifotra page, trying to trigger content loading...`);
-                  // Try scrolling to trigger lazy loading
-                  await page.evaluate(() => {
-                    window.scrollTo(0, document.body.scrollHeight);
-                  });
-                  await new Promise(resolve => setTimeout(resolve, 3000));
-                  
-                  // Check again
-                  const newLinkCount = await page.evaluate(() => document.querySelectorAll('a').length);
-                  console.log(`🔗 After scroll, Mifotra page has ${newLinkCount} links`);
-                }
-              } catch (evalError) {
-                console.log(`⚠️ Mifotra-specific checks failed: ${evalError.message}`);
-              }
-            }
-            
-            // Check for iframes and extract content from them
-            html = await this.extractContentWithIframeHandling(page, url);
-          }
-          
-          await browser.close();
-          
-          if (html && html.length > 1000) {
-            console.log(`✅ Puppeteer successfully loaded ${url} (${html.length} chars)`);
-            return html;
-          } else {
-            throw new Error('Page content too small or empty');
-          }
-          
-        } catch (error) {
-          // Ensure browser is always closed
-          try {
-            if (page) {
-              await page.close();
-            }
+            const content = await page.content();
             await browser.close();
-          } catch (closeError) {
-            console.log(`⚠️ Error closing browser for ${url}:`, closeError);
+            return content;
+            
+          } catch (pageError) {
+            await browser.close();
+            throw pageError;
           }
+        } else {
+          // Standard HTTP request for static sites
+          const response = await axios.get(url, {
+            headers: headersToSet,
+            timeout: 10000 // Reduced timeout for better performance
+          });
           
-          console.error(`❌ Puppeteer error for ${url}:`, error instanceof Error ? error.message : 'Unknown error');
-          
-          // Special fallback for Mifotra
-          if (url.includes('mifotra.gov.rw')) {
-            console.log(`🔧 Attempting Mifotra-specific fallback methods...`);
-            try {
-              // Try alternative Mifotra URLs
-              const alternativeUrls = [
-                'https://mifotra.gov.rw/recruitment',
-                'https://mifotra.gov.rw/vacancies',
-                'https://mifotra.gov.rw/jobs',
-                'https://www.mifotra.gov.rw/recruitment',
-                'https://www.mifotra.gov.rw/vacancies'
-              ];
-              
-              for (const altUrl of alternativeUrls) {
-                try {
-                  console.log(`🔄 Trying alternative Mifotra URL: ${altUrl}`);
-                  const altConfig = { ...config, requiresJS: false };
-                  const altHtml = await this.fetchWebpage(altUrl, altConfig, 0);
-                  if (altHtml && altHtml.length > 1000) {
-                    console.log(`✅ Successfully fetched content from alternative URL: ${altUrl}`);
-                    return altHtml;
-                  }
-                } catch (altError) {
-                  console.log(`❌ Alternative URL failed: ${altUrl}`);
-                }
-              }
-            } catch (fallbackError) {
-              console.log(`❌ Mifotra fallback methods failed: ${fallbackError.message}`);
-            }
-          }
-          
-          // If Puppeteer fails, try fallback to axios
-          if (retryCount < maxRetries) {
-            console.log(`🔄 Falling back to axios for ${url}...`);
-            const fallbackConfig = { ...config, requiresJS: false }; // Create new config without modifying original
-            return this.fetchWebpage(url, fallbackConfig, retryCount + 1);
-          }
-          
-          throw error;
+          return response.data;
+        }
+        
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Handle specific timeout errors
+        if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('TIMEDOUT'))) {
+          console.log(`⏱️ Attempt ${attempt} timed out for ${url}`);
+        } else {
+          console.log(`⚠️ Attempt ${attempt} failed:`, error);
+        }
+        
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
-
-      // Fallback to axios for non-JS content
-      const response = await axios.get(url, {
-        headers: config.headers,
-        timeout: 30000,
-        maxRedirects: 5,
-        validateStatus: (status) => status < 500 // Allow 4xx errors but retry on 5xx
-      });
-
-      // Handle specific status codes
-      if (response.status === 403) {
-        if (retryCount < maxRetries) {
-          // More aggressive delay for unjobs.org specifically
-          const baseDelay = url.includes('unjobs.org') ? 15000 : 8000;
-          const exponentialDelay = baseDelay + (retryCount * 5000);
-          console.log(`⚠️ Access forbidden for ${url}, retrying with longer delay... (${retryCount + 1}/${maxRetries})`);
-          await this.delay(exponentialDelay);
-          return this.fetchWebpage(url, config, retryCount + 1);
-        }
-        throw new Error('Access forbidden after retries');
-      }
-
-      if (response.status === 404) {
-        throw new Error('Page not found');
-      }
-
-      if (response.status === 429) {
-        if (retryCount < maxRetries) {
-          const waitTime = 15000 + (retryCount * 5000);
-          console.log(`⏳ Rate limited for ${url}, waiting ${waitTime/1000} seconds... (${retryCount + 1}/${maxRetries})`);
-          await this.delay(waitTime);
-          return this.fetchWebpage(url, config, retryCount + 1);
-        }
-        throw new Error('Rate limited after retries');
-      }
-
-      if (!response.data) {
-        throw new Error('Empty response received');
-      }
-
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT') {
-          if (retryCount < maxRetries) {
-            console.log(`🔄 Connection error for ${url}, retrying... (${retryCount + 1}/${maxRetries})`);
-            await this.delay(5000);
-            return this.fetchWebpage(url, config, retryCount + 1);
-          }
-        }
-      }
-      
-      throw new Error(`Failed to fetch ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
-  /**
-   * Validate if scraped content represents a real job posting
-   */
-  private static isValidJobContent(jobData: any): boolean {
-    if (!jobData || !jobData.title || !jobData.description) {
-      return false;
-    }
-
-    const title = jobData.title.toLowerCase();
-    const description = jobData.description.toLowerCase();
-    
-    // Exclude navigation/category pages
-    const excludePatterns = [
-      'employment types', 'employment by', 'jobs by', 'jobs types',
-      'categories', 'sectors', 'business sectors', 'cities',
-      'not specified', 'remote/not specified', 'other employments',
-      'employment links', 'job categories', 'vacancy types'
-    ];
-    
-    const hasExcludePattern = excludePatterns.some(pattern => 
-      title.includes(pattern) || description.includes(pattern)
-    );
-    
-    if (hasExcludePattern) {
-      return false;
     }
     
-    // Must have meaningful content
-    const hasMinDescription = jobData.description.length > 50;
-    const hasRealCompany = jobData.company && 
-                          !jobData.company.toLowerCase().includes('not specified') &&
-                          jobData.company.length > 2;
+    // Make sure we always return or throw
+    if (lastError) {
+      throw new Error(`Failed to fetch ${url} after ${maxRetries} attempts: ${lastError?.message}`);
+    }
     
-    // Must contain job-related keywords
-    const jobKeywords = [
-      'responsibilities', 'requirements', 'qualifications', 'skills',
-      'experience', 'education', 'degree', 'apply', 'application',
-      'salary', 'benefits', 'full-time', 'part-time', 'contract',
-      'deadline', 'start date', 'location', 'duties', 'role'
-    ];
-    
-    const hasJobKeywords = jobKeywords.some(keyword => 
-      description.includes(keyword) || title.includes(keyword)
-    );
-    
-    return hasMinDescription && hasRealCompany && hasJobKeywords;
+    // This should never be reached, but TypeScript needs it for type safety
+    throw new Error(`Failed to fetch ${url} - unknown error occurred`);
   }
 
   /**
@@ -2210,7 +2055,7 @@ export class OptimizedJobScrapingService {
           
           // Debug HTML content for workingnomads (minimal)
           if (source.name === 'workingnomads') {
-            console.log(`� HTML length: ${html.length}, Contains jobs: ${html.includes('/jobs/')}`);
+            console.log(`📄 HTML length: ${html.length}, Contains jobs: ${html.includes('/jobs/')}`);
           }
           if (source.name === 'unjobnet') {
             console.log(`📄 HTML length: ${html.length}, Contains jobs/detail: ${html.includes('/jobs/detail/')}, Contains organizations: ${html.includes('/organizations')}`);
@@ -2383,7 +2228,7 @@ export class OptimizedJobScrapingService {
   /**
    * Extract text content from elements using multiple selectors
    */
-  private static extractTextContent($: cheerio.CheerioAPI, selectors: string[]): string {
+  private static extractTextContent($: any, selectors: string[]): string {
     for (const selector of selectors) {
       const element = $(selector).first();
       if (element.length) {
@@ -2415,17 +2260,17 @@ export class OptimizedJobScrapingService {
   /**
    * Extract array content (for skills, requirements, etc.)
    */
-  private static extractArrayContent($: cheerio.CheerioAPI, selectors: string[]): string[] {
+  private static extractArrayContent($: any, selectors: string[]): string[] {
     const items: string[] = [];
     
     for (const selector of selectors) {
       const elements = $(selector);
       if (elements.length) {
-        elements.each((_, el) => {
+        elements.each((_: any, el: any) => {
           const text = $(el).text().trim();
           if (text) {
             // Split by common delimiters and add to items
-            const splitItems = text.split(/[,;•\n]/).map(item => item.trim()).filter(item => item);
+            const splitItems = text.split(/[,;•\n]/).map((item: string) => item.trim()).filter((item: string) => item);
             items.push(...splitItems);
           }
         });
@@ -2433,7 +2278,7 @@ export class OptimizedJobScrapingService {
         if (items.length > 0) break; // Found content with this selector
       }
     }
-    
+
     return [...new Set(items)]; // Remove duplicates
   }
 
@@ -2486,29 +2331,34 @@ export class OptimizedJobScrapingService {
         }
       }
       
-      // Fallback: if description is poor or contains iframe, try to extract from main content areas
-      if (!description || description.length < 100 || description.includes('Toggle navigation') || description.includes('<iframe')) {
-        console.log('🔄 Using fallback description extraction...');
-        const fallbackSelectors = ['main', 'article', '.main-content', '.post', '.job-posting', '.content-wrapper', '.job-description', '.vacancy-description', '.description', '.content'];
+      // Enhanced iframe and tracking content filtering
+      if (!description || description.length < 100 || 
+          description.includes('Toggle navigation') || 
+          description.includes('<iframe') ||
+          this.containsTrackingContent(description)) {
+        console.log('🔄 Using enhanced fallback description extraction...');
+        const fallbackSelectors = [
+          '.job-description', 
+          '.vacancy-description', 
+          '.description:not(:contains("googletagmanager"))',
+          'main:not(:contains("googletagmanager"))',
+          'article:not(:contains("googletagmanager"))',
+          '.content-wrapper:not(:contains("googletagmanager"))'
+        ];
         description = this.extractTextContent($, fallbackSelectors);
         
         // Clean up fallback description more aggressively
         if (description) {
-          description = description.replace(/Toggle navigation.*?(?=\n|\r|$)/gi, '');
-          description = description.replace(/Navigation.*?(?=\n|\r|$)/gi, '');
-          description = description.replace(/<iframe.*?<\/iframe>/gi, ''); // Remove iframe tags
-          description = description.replace(/<script.*?<\/script>/gi, ''); // Remove script tags
-          description = description.replace(/<style.*?<\/style>/gi, ''); // Remove style tags
-          description = description.trim();
+          description = this.cleanDescriptionContent(description);
         }
         
         // If still no good description, try to extract from body text
         if (!description || description.length < 100) {
-          console.log('🔄 Extracting from body text...');
+          console.log('🔄 Extracting from body text with enhanced filtering...');
           const bodyText = $('body').text();
           if (bodyText && bodyText.length > 200) {
             // Remove navigation and common non-content elements
-            const cleanedText = bodyText
+            let cleanedText = bodyText
               .replace(/Toggle navigation.*?(?=\n|\r|$)/gi, '')
               .replace(/Navigation.*?(?=\n|\r|$)/gi, '')
               .replace(/Menu.*?(?=\n|\r|$)/gi, '')
@@ -2517,9 +2367,17 @@ export class OptimizedJobScrapingService {
               .replace(/Cookie.*?(?=\n|\r|$)/gi, '')
               .replace(/Privacy.*?(?=\n|\r|$)/gi, '')
               .replace(/Terms.*?(?=\n|\r|$)/gi, '')
+              .replace(/googletagmanager\.com.*?ns\.html.*?display:none;visibility:hidden/gi, '')
+              .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+              .replace(/<script[^>]*>.*?<\/script>/gi, '')
+              .replace(/<style[^>]*>.*?<\/style>/gi, '')
+              .replace(/\s+/g, ' ')
               .trim();
             
-            if (cleanedText.length > 200) {
+            // Additional tracking content filtering
+            cleanedText = this.cleanDescriptionContent(cleanedText);
+            
+            if (cleanedText.length > 200 && !this.containsTrackingContent(cleanedText)) {
               description = cleanedText.substring(0, 2000); // Limit to 2000 chars
               console.log(`📝 Extracted description from body text (${description.length} chars)`);
             }
@@ -2582,34 +2440,53 @@ export class OptimizedJobScrapingService {
           description: description || 'Job description not available',
           company: this.extractCompanyFromTitle(title) || 'Company Not Specified',
           location: 'Location Not Specified',
-          jobType: 'full_time',
-          category: 'jobs',
-          experienceLevel: 'mid_level',
-          educationLevel: 'bachelor',
+          jobType: JobType.FULL_TIME,
+          category: JobCategory.JOBS,
+          experienceLevel: ExperienceLevel.MID_LEVEL,
+          educationLevel: EducationLevel.BACHELOR,
           skills: ['General Skills'],
           requirements: ['See job description for requirements'],
           responsibilities: ['See job description for responsibilities'],
           benefits: [],
-          salary: null,
-          applicationDeadline: null,
-          postedDate: null,
-          contactInfo: {
-            email: null,
-            phone: null,
-            website: null,
-            address: null,
-            contactPerson: null,
-            applicationInstructions: null
-          }
+          externalApplicationUrl: jobUrl,
+          externalJobId: this.extractJobId(jobUrl)
         };
       }
 
-      return {
-        ...enhancedJobData,
-        postedDate: postedDate || enhancedJobData.postedDate, // Prefer extracted date
+      const result: Partial<ScrapedJobData> = {
+        title: enhancedJobData ? enhancedJobData.title : title || 'Job Title Not Available',
+        description: enhancedJobData ? enhancedJobData.description : description || 'Job description not available',
+        company: enhancedJobData ? enhancedJobData.company : this.extractCompanyFromTitle(title) || 'Company Not Specified',
+        location: enhancedJobData ? enhancedJobData.location : 'Location Not Specified',
+        jobType: enhancedJobData ? enhancedJobData.jobType : JobType.FULL_TIME,
+        category: enhancedJobData && enhancedJobData.category ? enhancedJobData.category : JobCategory.JOBS,
+        experienceLevel: enhancedJobData ? enhancedJobData.experienceLevel : ExperienceLevel.MID_LEVEL,
+        educationLevel: enhancedJobData ? enhancedJobData.educationLevel : EducationLevel.BACHELOR,
+        skills: enhancedJobData ? enhancedJobData.skills : ['General Skills'],
+        requirements: enhancedJobData ? enhancedJobData.requirements : ['See job description for requirements'],
+        responsibilities: enhancedJobData ? enhancedJobData.responsibilities : ['See job description for responsibilities'],
+        benefits: enhancedJobData ? enhancedJobData.benefits : [],
         externalApplicationUrl: jobUrl,
         externalJobId: this.extractJobId(jobUrl)
       };
+      
+      // Only add optional properties if they have values
+      if (enhancedJobData && enhancedJobData.salary !== undefined) {
+        result.salary = enhancedJobData.salary;
+      }
+      if (enhancedJobData && enhancedJobData.applicationDeadline !== undefined) {
+        result.applicationDeadline = enhancedJobData.applicationDeadline;
+      }
+      if (enhancedJobData && enhancedJobData.postedDate !== undefined) {
+        result.postedDate = enhancedJobData.postedDate;
+      } else if (postedDate) {
+        result.postedDate = postedDate;
+      }
+      if (enhancedJobData && enhancedJobData.contactInfo !== undefined) {
+        result.contactInfo = enhancedJobData.contactInfo;
+      }
+      
+      return result as ScrapedJobData;
 
     } catch (error) {
       console.error(`❌ Error scraping job ${jobUrl}:`, error instanceof Error ? error.message : 'Unknown error');
@@ -2648,6 +2525,7 @@ export class OptimizedJobScrapingService {
         Contact Information: ${rawJobData.contactInfoText || 'Not specified'}
 
         Extract and return this exact JSON structure:
+
         {
           "title": "cleaned job title",
           "description": "comprehensive job description",
@@ -2741,28 +2619,28 @@ export class OptimizedJobScrapingService {
         const descriptionMatch = aiResponse.match(/"description"\s*:\s*"([^"]+)"/);
         
         jobData = {
-          title: titleMatch ? titleMatch[1] : title || 'Job Title Not Available',
-          company: companyMatch ? companyMatch[1] : this.extractCompanyFromTitle(title) || 'Company Not Specified',
-          description: descriptionMatch ? descriptionMatch[1] : description || 'Job description not available',
+          title: titleMatch ? titleMatch[1] : rawJobData.title || 'Job Title Not Available',
+          company: companyMatch ? companyMatch[1] : this.extractCompanyFromTitle(rawJobData.title) || 'Company Not Specified',
+          description: descriptionMatch ? descriptionMatch[1] : rawJobData.description || 'Job description not available',
           location: 'Location Not Specified',
-          jobType: 'full_time',
-          category: 'jobs',
-          experienceLevel: 'mid_level',
-          educationLevel: 'bachelor',
+          jobType: JobType.FULL_TIME,
+          category: JobCategory.JOBS,
+          experienceLevel: ExperienceLevel.MID_LEVEL,
+          educationLevel: EducationLevel.BACHELOR,
           skills: ['General Skills'],
           requirements: ['See job description for requirements'],
           responsibilities: ['See job description for responsibilities'],
           benefits: [],
-          salary: null,
-          applicationDeadline: null,
-          postedDate: null,
+          salary: undefined,
+          applicationDeadline: undefined,
+          postedDate: undefined,
           contactInfo: {
-            email: null,
-            phone: null,
-            website: null,
-            address: null,
-            contactPerson: null,
-            applicationInstructions: null
+            email: undefined,
+            phone: undefined,
+            website: undefined,
+            address: undefined,
+            contactPerson: undefined,
+            applicationInstructions: undefined
           }
         };
         console.log('✅ Fallback extraction successful');
@@ -2813,23 +2691,23 @@ export class OptimizedJobScrapingService {
       // Validate and provide fallbacks for required fields
       if (!jobData.title) {
         console.log('⚠️ AI response missing title, using extracted title');
-        jobData.title = title || 'Job Title Not Available';
+        jobData.title = rawJobData.title || 'Job Title Not Available';
       }
       
       if (!jobData.description) {
         console.log('⚠️ AI response missing description, using extracted description');
-        jobData.description = description || 'Job description not available';
+        jobData.description = rawJobData.description || 'Job description not available';
       }
       
       if (!jobData.company) {
         console.log('⚠️ AI response missing company, extracting from title or using default');
         // Try to extract company from title with Rwanda-specific patterns
-        const companyMatch = title.match(/at\s+([^,]+)|@\s*([^,]+)|-\s*([^,]+)|:\s*([^,]+)/i);
+        const companyMatch = rawJobData.title?.match(/at\s+([^,]+)|@\s*([^,]+)|-\s*([^,]+)|:\s*([^,]+)/i);
         if (companyMatch) {
           jobData.company = (companyMatch[1] || companyMatch[2] || companyMatch[3] || companyMatch[4]).trim();
         } else {
           // For Rwanda jobs, try to extract from URL patterns
-          const urlMatch = sourceUrl?.match(/rwandajob\.com\/job-vacancies-[a-z]+\/([a-z0-9-]+)/);
+          const urlMatch = rawJobData.sourceUrl?.match(/rwandajob\.com\/job-vacancies-[a-z]+\/([a-z0-9-]+)/);
           if (urlMatch) {
             jobData.company = 'Company Not Specified';
           } else {
@@ -3011,8 +2889,8 @@ export class OptimizedJobScrapingService {
             console.log(`📅 Job deadline is valid (${normalizedDeadline.toDateString()}), keeping as ACTIVE`);
           }
         } else {
-          console.log(`⚠️ Invalid deadline format, setting to null: ${jobData.applicationDeadline}`);
-          cleanedApplicationDeadline = null;
+          console.log(`⚠️ Invalid deadline format, setting to undefined: ${jobData.applicationDeadline}`);
+          cleanedApplicationDeadline = undefined;
         }
       }
 
@@ -3029,7 +2907,7 @@ export class OptimizedJobScrapingService {
           
           if (isPlaceholder || !isValidFormat) {
             console.log(`📧 Invalid or placeholder email detected (${cleanedContactInfo.email}), removing from contact info`);
-            cleanedContactInfo.email = undefined;
+            delete cleanedContactInfo.email;
           }
         }
         
@@ -3312,5 +3190,193 @@ export class OptimizedJobScrapingService {
       totalExternalJobs,
       sourceBreakdown
     };
+  }
+
+  /**
+   * Check if content contains tracking/analytics code
+   */
+  private static containsTrackingContent(content: string): boolean {
+    const trackingPatterns = [
+      /googletagmanager\.com/,
+      /google-analytics\.com/,
+      /doubleclick\.net/,
+      /facebook\.com.*\/tr\?/,
+      /twitter\.com.*\/p\.html/,
+      /linkedin\.com.*\/li\.js/,
+      /hotjar\.com/,
+      /mixpanel\.com/,
+      /segment\.com/,
+      /optimizely\.com/,
+      /adobe\.com.*\/target/,
+      /googlesyndication\.com/,
+      /youtube\.com.*\/iframe_api/,
+      /vimeo\.com.*\/player/,
+      /analytics\.js/,
+      /gtag\/js/,
+      /gtm\.js/,
+      /fbevents\.js/
+    ];
+
+    return trackingPatterns.some(pattern => pattern.test(content.toLowerCase()));
+  }
+
+  /**
+   * Clean description content by removing tracking code and unwanted elements
+   */
+  private static cleanDescriptionContent(content: string): string {
+    if (!content) return '';
+
+    return content
+      // Remove iframe tags and their content
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+      // Remove script tags and their content
+      .replace(/<script[^>]*>.*?<\/script>/gi, '')
+      // Remove style tags and their content
+      .replace(/<style[^>]*>.*?<\/style>/gi, '')
+      // Remove Google Tag Manager tracking code
+      .replace(/googletagmanager\.com.*?ns\.html.*?display:none;visibility:hidden/gi, '')
+      // Remove Google Analytics tracking code
+      .replace(/ga\([^)]*\)/gi, '')
+      // Remove Facebook Pixel tracking code
+      .replace(/fbq\([^)]*\)/gi, '')
+      // Remove LinkedIn Insight tracking code
+      .replace(/_linkedin_partner_id\s*=\s*['"][^'"]*['"]/gi, '')
+      // Remove generic tracking parameters
+      .replace(/[?&](?:utm_[^&=]*|fbclid|gclid|msclkid)=[^&]*/gi, '')
+      // Remove tracking pixel images
+      .replace(/<img[^>]*src[^>]*googletagmanager\.com[^>]*>/gi, '')
+      .replace(/<img[^>]*src[^>]*google-analytics\.com[^>]*>/gi, '')
+      // Normalize whitespace
+      .replace(/\s+/g, ' ')
+      // Trim whitespace
+      .trim();
+  }
+
+  /**
+   * Validate if scraped content represents a real job posting
+   */
+  private static isValidJobContent(jobData: any): boolean {
+    if (!jobData || !jobData.title || !jobData.description) {
+      return false;
+    }
+
+    const title = jobData.title.toLowerCase();
+    const description = jobData.description.toLowerCase();
+    
+    // Exclude navigation/category pages
+    const excludePatterns = [
+      'employment types', 'employment by', 'jobs by', 'jobs types',
+      'categories', 'sectors', 'business sectors', 'cities',
+      'not specified', 'remote/not specified', 'other employments',
+      'employment links', 'job categories', 'vacancy types'
+    ];
+    
+    const hasExcludePattern = excludePatterns.some(pattern => 
+      title.includes(pattern) || description.includes(pattern)
+    );
+    
+    if (hasExcludePattern) {
+      return false;
+    }
+    
+    // Must have meaningful content
+    const hasMinDescription = jobData.description.length > 50;
+    const hasRealCompany = jobData.company && 
+                          !jobData.company.toLowerCase().includes('not specified') &&
+                          jobData.company.length > 2;
+    
+    // Must contain job-related keywords
+    const jobKeywords = [
+      'responsibilities', 'requirements', 'qualifications', 'skills',
+      'experience', 'education', 'degree', 'apply', 'application',
+      'salary', 'benefits', 'full-time', 'part-time', 'contract',
+      'deadline', 'start date', 'location', 'duties', 'role'
+    ];
+    
+    const hasJobKeywords = jobKeywords.some(keyword => 
+      description.includes(keyword) || title.includes(keyword)
+    );
+    
+    // Check for tracking content
+    const hasTrackingContent = this.containsTrackingContent(description);
+    
+    return hasMinDescription && hasRealCompany && hasJobKeywords && !hasTrackingContent;
+  }
+
+  // AI Scraping Prevention System - Prevent reprocessing jobs on the same day
+  private static aiProcessingLog: Map<string, Date> = new Map();
+
+  /**
+   * Check if a job has already been processed with AI today
+   */
+  private static hasBeenProcessedToday(jobId: string): boolean {
+    const lastProcessed = this.aiProcessingLog.get(jobId);
+    if (!lastProcessed) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const lastProcessedDate = new Date(lastProcessed);
+    lastProcessedDate.setHours(0, 0, 0, 0);
+
+    return lastProcessedDate.getTime() === today.getTime();
+  }
+
+  /**
+   * Mark a job as processed with AI today
+   */
+  private static markAsProcessed(jobId: string): void {
+    this.aiProcessingLog.set(jobId, new Date());
+    
+    // Clean up old entries (older than 7 days) to prevent memory leaks
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    for (const [id, processedDate] of this.aiProcessingLog.entries()) {
+      if (processedDate < oneWeekAgo) {
+        this.aiProcessingLog.delete(id);
+      }
+    }
+  }
+
+  /**
+   * Process jobs in chunks to avoid errors with long files
+   */
+  private static async processJobsInChunks<T>(
+    items: T[], 
+    processor: (item: T) => Promise<boolean>,
+    chunkSize: number = 5
+  ): Promise<{ successCount: number, errors: string[] }> {
+    const results = {
+      successCount: 0,
+      errors: [] as string[]
+    };
+
+    // Process in chunks
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const chunk = items.slice(i, i + chunkSize);
+      console.log(`🔄 Processing chunk ${Math.floor(i/chunkSize) + 1}/${Math.ceil(items.length/chunkSize)} (${chunk.length} items)`);
+
+      // Process each item in the chunk
+      for (let j = 0; j < chunk.length; j++) {
+        try {
+          const success = await processor(chunk[j]);
+          if (success) {
+            results.successCount++;
+          }
+        } catch (error) {
+          const errorMsg = `Error processing item ${i + j}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          console.error(`❌ ${errorMsg}`);
+          results.errors.push(errorMsg);
+        }
+      }
+
+      // Add delay between chunks to avoid rate limiting
+      if (i + chunkSize < items.length) {
+        console.log(`⏳ Waiting 30 seconds before next chunk...`);
+        await new Promise(resolve => setTimeout(resolve, 30000));
+      }
+    }
+
+    return results;
   }
 }

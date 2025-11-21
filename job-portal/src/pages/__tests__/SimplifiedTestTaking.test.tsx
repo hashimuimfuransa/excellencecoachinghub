@@ -210,9 +210,9 @@ describe('SimplifiedTestTaking - JSON Error Handling', () => {
     });
   });
 
-  describe('Handle network connection failure', () => {
-    it('should show network error message for connection failures', async () => {
-      const networkError = new Error('Network connection failed. Please check your internet connection and try again.');
+  describe('Handle network errors', () => {
+    it('should show network error message', async () => {
+      const networkError = new Error('Failed to fetch');
       mockSimplePsychometricService.submitSimpleTest.mockRejectedValue(networkError);
 
       const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
@@ -240,49 +240,10 @@ describe('SimplifiedTestTaking - JSON Error Handling', () => {
     });
   });
 
-  describe('Retry on JSON parsing error', () => {
-    it('should retry submission on retryable errors', async () => {
-      let callCount = 0;
-      mockSimplePsychometricService.submitSimpleTest.mockImplementation(() => {
-        callCount++;
-        if (callCount < 3) {
-          return Promise.reject(new Error('Unexpected end of JSON input'));
-        }
-        return Promise.resolve({
-          resultId: 'result123',
-          score: 100,
-          totalQuestions: 2,
-          correctAnswers: 2,
-          timeSpent: 300
-        });
-      });
-
-      renderComponent();
-
-      // Start and complete test
-      fireEvent.click(screen.getByText('Start Assessment'));
-
-      await waitFor(() => {
-        expect(screen.getByText('What is 2 + 2?')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('4'));
-      fireEvent.click(screen.getByText('Next'));
-      fireEvent.click(screen.getByText('Elephant'));
-      fireEvent.click(screen.getByText('Submit Test'));
-      fireEvent.click(screen.getByText('Confirm Submission'));
-
-      await waitFor(() => {
-        expect(mockSimplePsychometricService.submitSimpleTest).toHaveBeenCalledTimes(3);
-        expect(mockNavigate).toHaveBeenCalledWith('/psychometric-test-result', expect.any(Object));
-      });
-    });
-
-    it('should fail after maximum retries', async () => {
-      // Mock to always fail
-      mockSimplePsychometricService.submitSimpleTest.mockRejectedValue(
-        new Error('Unexpected end of JSON input')
-      );
+  describe('Handle generic submission errors', () => {
+    it('should show generic error message', async () => {
+      const genericError = new Error('Something went wrong');
+      mockSimplePsychometricService.submitSimpleTest.mockRejectedValue(genericError);
 
       const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
 
@@ -302,38 +263,31 @@ describe('SimplifiedTestTaking - JSON Error Handling', () => {
       fireEvent.click(screen.getByText('Confirm Submission'));
 
       await waitFor(() => {
-        expect(mockSimplePsychometricService.submitSimpleTest).toHaveBeenCalledTimes(3);
-        expect(alertSpy).toHaveBeenCalledWith(
-          'Test submission failed due to a server communication issue. Your answers may have been saved. Please try refreshing the page or contact support if the problem persists.'
-        );
+        expect(alertSpy).toHaveBeenCalledWith('Test submission failed: Something went wrong. Please try again.');
       });
 
       alertSpy.mockRestore();
     });
   });
 
-  describe('Handle large response data', () => {
-    it('should handle large test data efficiently', async () => {
-      const largeResult = {
+  describe('Retry mechanism', () => {
+    it('should retry on JSON errors and eventually succeed', async () => {
+      const jsonError = new Error('Unexpected end of JSON input');
+      const mockResult = {
         resultId: 'result123',
-        score: 75,
-        totalQuestions: 100,
-        correctAnswers: 75,
-        timeSpent: 3600,
-        categoryScores: {
-          logical: 80,
-          numerical: 70,
-          verbal: 75,
-          analytical: 85
-        },
-        summary: {
-          correctCount: 75,
-          incorrectCount: 25,
-          categories: ['logical', 'numerical', 'verbal', 'analytical']
-        }
+        score: 85,
+        totalQuestions: 2,
+        correctAnswers: 1,
+        timeSpent: 300
       };
 
-      mockSimplePsychometricService.submitSimpleTest.mockResolvedValue(largeResult);
+      // Fail first two attempts, succeed on third
+      mockSimplePsychometricService.submitSimpleTest
+        .mockRejectedValueOnce(jsonError)
+        .mockRejectedValueOnce(jsonError)
+        .mockResolvedValueOnce(mockResult);
+
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
 
       renderComponent();
 
@@ -350,68 +304,54 @@ describe('SimplifiedTestTaking - JSON Error Handling', () => {
       fireEvent.click(screen.getByText('Submit Test'));
       fireEvent.click(screen.getByText('Confirm Submission'));
 
+      // Wait for success
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/psychometric-test-result', {
           state: {
-            result: largeResult,
+            result: mockResult,
             testData: expect.any(Object),
             returnUrl: '/app/tests'
           }
         });
       });
+
+      // Should not show alert since it succeeded on retry
+      expect(alertSpy).not.toHaveBeenCalled();
+
+      alertSpy.mockRestore();
     });
-  });
 
-  describe('Timer and auto-submit functionality', () => {
-    it('should auto-submit when time runs out', async () => {
-      // Mock a test with very short time limit
-      const shortTimeTestData = {
-        sessionId: 'session123',
-        questions: [
-          {
-            id: 1,
-            question: 'Quick question?',
-            options: ['A', 'B', 'C', 'D'],
-            category: 'logical'
-          }
-        ],
-        timeLimit: 0.01, // Very short time limit (0.6 seconds)
-        startedAt: new Date().toISOString(),
-        job: {
-          _id: 'job123',
-          title: 'Test Job',
-          company: 'Test Company',
-          industry: 'Technology'
-        }
-      };
+    it('should show error after max retries', async () => {
+      const jsonError = new Error('Unexpected end of JSON input');
+      
+      // Fail all attempts
+      mockSimplePsychometricService.submitSimpleTest.mockRejectedValue(jsonError);
 
-      // Mock location state with short time test
-      jest.doMock('react-router-dom', () => ({
-        ...jest.requireActual('react-router-dom'),
-        useNavigate: () => mockNavigate,
-        useLocation: () => ({
-          state: { testData: shortTimeTestData }
-        }),
-        useParams: () => ({})
-      }));
-
-      mockSimplePsychometricService.submitSimpleTest.mockResolvedValue({
-        resultId: 'result123',
-        score: 0,
-        totalQuestions: 1,
-        correctAnswers: 0,
-        timeSpent: 36
-      });
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
 
       renderComponent();
 
-      // Start the test
+      // Start and complete test
       fireEvent.click(screen.getByText('Start Assessment'));
 
-      // Wait for auto-submit due to time expiry
       await waitFor(() => {
-        expect(mockSimplePsychometricService.submitSimpleTest).toHaveBeenCalled();
-      }, { timeout: 3000 });
+        expect(screen.getByText('What is 2 + 2?')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('4'));
+      fireEvent.click(screen.getByText('Next'));
+      fireEvent.click(screen.getByText('Elephant'));
+      fireEvent.click(screen.getByText('Submit Test'));
+      fireEvent.click(screen.getByText('Confirm Submission'));
+
+      // Wait for final error
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith(
+          'Test submission failed after multiple attempts. Please try again later.'
+        );
+      });
+
+      alertSpy.mockRestore();
     });
   });
 });

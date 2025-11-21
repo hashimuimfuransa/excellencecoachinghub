@@ -62,8 +62,8 @@ const testSessionSchema = new Schema<ITestSessionDocument>({
     correctAnswer: {
       type: Number,
       required: true,
-      min: 0,
-      max: 3
+      min: 0
+      // Removed max constraint to allow for variable number of options
     },
     explanation: {
       type: String,
@@ -71,7 +71,6 @@ const testSessionSchema = new Schema<ITestSessionDocument>({
     },
     category: {
       type: String,
-      enum: ['cognitive', 'personality', 'problem-solving', 'situational'],
       required: true
     }
   }],
@@ -162,8 +161,12 @@ testSessionSchema.statics.expireOldSessions = function(): Promise<void> {
 // Pre-save middleware
 testSessionSchema.pre('save', function(next) {
   // Auto-expire if time limit exceeded
-  if (this.status === 'in_progress' && this.startedAt && this.isExpired) {
-    this.status = 'expired';
+  if (this.status === 'in_progress' && this.startedAt) {
+    // Calculate if expired manually since we can't access virtuals in pre-save
+    const expiryTime = new Date(this.startedAt.getTime() + (this.timeLimit * 60 * 1000));
+    if (new Date() > expiryTime) {
+      this.status = 'expired';
+    }
   }
   next();
 });

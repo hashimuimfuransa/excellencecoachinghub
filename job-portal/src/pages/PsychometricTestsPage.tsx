@@ -604,8 +604,8 @@ Alternatively, you can:
         jobTitle: selectedJobForPayment?.title || 'Premium Psychometric Assessment',
         company: selectedJobForPayment?.company || 'Excellence Coaching Hub',
         testType: 'Premium Psychometric Assessment',
-        questionCount: 40,
-        estimatedDuration: 60,
+        questionCount: 20,
+        estimatedDuration: 30,
         requestedAt: new Date().toISOString(),
         status: 'pending' as const
       };
@@ -685,8 +685,8 @@ Alternatively, you can:
         experienceLevel: job.experienceLevel,
         industry: 'General',
         testType: 'premium',
-        questionCount: 40,
-        timeLimit: 60,
+        questionCount: 20,
+        timeLimit: 30,
         categories: selectedCategoryIds
       });
 
@@ -694,7 +694,10 @@ Alternatively, you can:
       console.log('🏁 Starting test session...');
       
       // Start test session
-      const session = await simplePsychometricService.startSimpleTestSession(testGeneration.testSessionId);
+      const sessionStart = await simplePsychometricService.startSimpleTestSession(testGeneration.testSessionId);
+      
+      // Get full test session details including questions
+      const session = await simplePsychometricService.getTestSession(testGeneration.testSessionId);
       
       console.log('✅ Test session started:', {
         sessionId: session.sessionId,

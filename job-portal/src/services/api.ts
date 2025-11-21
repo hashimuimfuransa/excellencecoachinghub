@@ -1,5 +1,10 @@
 import axios from 'axios';
 
+// Debug environment variables
+console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('Default API URL:', 'http://localhost:5000/api');
+console.log('Final baseURL:', import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
+
 // Create axios instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -323,6 +328,7 @@ export const apiGet = async <T>(url: string, params?: any, signal?: AbortSignal)
 export const apiPost = async <T>(url: string, data?: any): Promise<T> => {
   try {
     console.log(`🌐 Making POST request to ${url}`);
+    console.log(`🌐 Full URL should be: ${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${url}`);
     console.log(`🌐 Request data:`, data);
     
     const response = await api.post<T>(url, data);

@@ -1,146 +1,14 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import mongoose from 'mongoose';
-import { GeneratedPsychometricTest } from '../models/GeneratedPsychometricTest';
 import { centralAIManager, AIGenerationOptions } from './centralAIManager';
+import { jsonrepair } from 'jsonrepair';
+import { GeneratedPsychometricTest } from '../models/GeneratedPsychometricTest';
 
-// AI Service for various educational tasks - Now using Central AI Manager
 export class AIService {
   private aiManager = centralAIManager;
 
   constructor() {
-    console.log('🎓 AI Service initialized with Central AI Manager');
-    
-    // Listen to AI manager events for monitoring
-    this.aiManager.on('modelUpgraded', (data) => {
-      console.log(`🎓 AI Service: Model upgraded from ${data.from} to ${data.to}`);
-    });
-    
-    this.aiManager.on('generationError', (data) => {
-      console.warn(`🎓 AI Service: Generation error on attempt ${data.attempt}: ${data.error}`);
-    });
+    console.log('🤖 AI Service initialized with Central AI Manager');
   }
 
-  // Helper function to extract JSON from AI responses that might be wrapped in markdown
-  private extractJsonFromResponse(text: string): any {
-    let jsonText = text.trim();
-    
-    // Remove markdown code blocks if present
-    if (jsonText.startsWith('```json') && jsonText.endsWith('```')) {
-      jsonText = jsonText.slice(7, -3).trim();
-    } else if (jsonText.startsWith('```') && jsonText.endsWith('```')) {
-      jsonText = jsonText.slice(3, -3).trim();
-    }
-    
-    // Find JSON content between first { and last }
-    const firstBrace = jsonText.indexOf('{');
-    const lastBrace = jsonText.lastIndexOf('}');
-    
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      jsonText = jsonText.substring(firstBrace, lastBrace + 1);
-    }
-    
-    // Clean up common JSON formatting issues
-    jsonText = jsonText
-      .replace(/,\s*}/g, '}')  // Remove trailing commas before closing braces
-      .replace(/,\s*]/g, ']')  // Remove trailing commas before closing brackets
-      .replace(/\n\s*\n/g, '\n')  // Remove double newlines
-      .replace(/\r/g, '')  // Remove carriage returns
-      .trim();
-    
-    try {
-      return JSON.parse(jsonText);
-    } catch (error) {
-      console.error('Failed to parse JSON from AI response:', error);
-      console.error('Raw response length:', text.length);
-      console.error('Processed JSON text length:', jsonText.length);
-      console.error('First 500 chars of processed text:', jsonText.substring(0, 500));
-      console.error('Last 500 chars of processed text:', jsonText.substring(jsonText.length - 500));
-      
-      // Try multiple recovery strategies
-      try {
-        // Strategy 1: Extract just the questions array
-        const questionsMatch = jsonText.match(/"questions":\s*(\[[\s\S]*?\])/);
-        if (questionsMatch && questionsMatch[1]) {
-          // Try to fix common JSON issues in the questions array
-          let questionsStr = questionsMatch[1];
-          questionsStr = questionsStr.replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
-          questionsStr = questionsStr.replace(/([}\]])(\s*)([{])/g, '$1,$2$3'); // Add missing commas between objects
-          
-          const questionsArray = JSON.parse(questionsStr);
-          console.log('✅ Recovered questions array from partial JSON');
-          return { questions: questionsArray };
-        }
-      } catch (recoveryError) {
-        console.error('Questions array recovery failed:', recoveryError);
-      }
-      
-      // Strategy 2: Try to extract individual question objects
-      try {
-        const questionObjects = [];
-        const questionMatches = jsonText.match(/\{\s*"question":\s*"[^"]*"[\s\S]*?\}/g);
-        if (questionMatches && questionMatches.length > 0) {
-          for (const questionMatch of questionMatches) {
-            try {
-              const cleanMatch = questionMatch.replace(/,(\s*})/g, '$1');
-              const questionObj = JSON.parse(cleanMatch);
-              if (questionObj.question && questionObj.options && Array.isArray(questionObj.options)) {
-                questionObjects.push(questionObj);
-              }
-            } catch (objError) {
-              console.warn('Failed to parse individual question object:', objError);
-            }
-          }
-          
-          if (questionObjects.length > 0) {
-            console.log(`✅ Recovered ${questionObjects.length} individual questions from malformed JSON`);
-            return { questions: questionObjects };
-          }
-        }
-      } catch (individualRecoveryError) {
-        console.error('Individual question recovery failed:', individualRecoveryError);
-      }
-      
-      throw new Error(`Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
-    }
-  }
-
-  // General content generation method - Now using Central AI Manager
-  async generateContent(prompt: string, options?: AIGenerationOptions): Promise<string> {
-    try {
-      return await this.aiManager.generateContent(prompt, {
-        retries: 3,
-        timeout: 30000,
-        priority: 'normal',
-        ...options
-      });
-    } catch (error) {
-      console.error('🎓 Error generating content with AI:', error);
-      throw error;
-    }
-  }
-
-  // Legacy method alias for backward compatibility
-  async generateText(prompt: string, options?: AIGenerationOptions): Promise<string> {
-    console.log('🔄 Using legacy generateText method, redirecting to generateContent');
-    return this.generateContent(prompt, options);
-  }
-
-  // Check if AI service is available
-  async isAvailable(): Promise<boolean> {
-    return await this.aiManager.isAvailable();
-  }
-
-  // Get current AI model information
-  getCurrentModel() {
-    return this.aiManager.getCurrentModel();
-  }
-
-  // Get AI service statistics
-  getServiceStats() {
-    return this.aiManager.getModelStats();
-  }
-
-  // Generate psychometric test questions with proper JSON parsing
   async generatePsychometricTest(params: {
     jobTitle: string;
     jobDescription: string;
@@ -176,7 +44,271 @@ export class AIService {
         previousQuestions = [];
       }
       
-      const prompt = `You are an expert psychometric test designer. Create a psychometric test only for the role of ${jobTitle}. Do not include technical or job-knowledge questions. The test should only measure psychological and cognitive traits relevant to the role.
+      // Optimize for faster processing: reduce question count and use smaller chunks
+      const maxQuestionCount = Math.min(20, questionCount); // Limit to 20 questions maximum for faster processing
+      const chunkSize = 10;
+      let allQuestions: any[] = [];
+      
+      // Use only two chunks maximum for faster processing
+      const totalChunks = Math.min(2, Math.ceil(maxQuestionCount / chunkSize));
+      
+      // Create promises for simultaneous chunk processing
+      const chunkPromises: Promise<any[]>[] = [];
+      
+      // Generate chunk promises
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        // Calculate how many questions to generate in this chunk
+        const questionsInThisChunk = Math.min(chunkSize, maxQuestionCount - (chunkIndex * chunkSize));
+        
+        // Create a promise for this chunk
+        const chunkPromise = this.generateSingleChunk({
+          jobTitle,
+          jobDescription,
+          industry,
+          experienceLevel,
+          skills,
+          testLevel,
+          timeLimit,
+          questionCount: maxQuestionCount,
+          categories,
+          questionsInThisChunk,
+          chunkIndex,
+          totalChunks,
+          previousQuestions: [...previousQuestions, ...allQuestions.map(q => q.question)]
+        });
+        
+        chunkPromises.push(chunkPromise);
+      }
+      
+      // Process all chunks simultaneously
+      try {
+        const chunkResults = await Promise.all(chunkPromises);
+        
+        // Combine results from all chunks
+        for (const chunkQuestions of chunkResults) {
+          allQuestions.push(...chunkQuestions);
+        }
+        
+        console.log(`✅ Successfully processed ${chunkResults.length} chunks simultaneously with ${allQuestions.length} total questions`);
+      } catch (error) {
+        console.error('❌ Error processing chunks simultaneously:', error);
+        throw error;
+      }
+      
+      // Process the chunked questions
+      console.log('🤖 Processing chunked psychometric test response');
+      
+      // Validate and clean up the generated questions
+      let processedQuestions = [...allQuestions]; // Create a copy to avoid modifying the constant
+      if (processedQuestions.length > 0) {
+        // Validate each question for completeness and quality
+        processedQuestions = processedQuestions.map((question: any, index: number) => {
+          // Handle different question field names from AI
+          let questionText = '';
+          if (question.question && typeof question.question === 'string') {
+            questionText = question.question;
+          } else if (question.question_text && typeof question.question_text === 'string') {
+            questionText = question.question_text;
+          } else {
+            console.warn(`⚠️ Question ${index + 1} has invalid question text, using fallback`);
+            questionText = `${testLevel} level question ${index + 1} for ${jobTitle} position`;
+          }
+          
+          // Update the question object to use the standard field name
+          question.question = questionText;
+
+          // Validate options - handle both array and object formats
+          let optionsArray: string[] = [];
+          if (!question.options) {
+            console.warn(`⚠️ Question ${index + 1} has no options, using fallback`);
+            optionsArray = ["Option A", "Option B", "Option C", "Option D"];
+          } else if (Array.isArray(question.options)) {
+            // Handle array format
+            if (question.options.length < 2) {
+              console.warn(`⚠️ Question ${index + 1} has insufficient options, using fallback`);
+              optionsArray = ["Option A", "Option B", "Option C", "Option D"];
+            } else {
+              // Ensure all options are strings and not empty
+              optionsArray = question.options.map((option: any, optIndex: number) => {
+                if (!option || typeof option !== 'string' || option.trim().length === 0) {
+                  return `Option ${String.fromCharCode(65 + optIndex)}`;
+                }
+                return option.trim();
+              });
+            }
+          } else if (typeof question.options === 'object') {
+            // Handle object format (e.g., {"A": "Option text", "B": "Option text"})
+            const optionKeys = Object.keys(question.options);
+            if (optionKeys.length < 2) {
+              console.warn(`⚠️ Question ${index + 1} has insufficient options in object format, using fallback`);
+              optionsArray = ["Option A", "Option B", "Option C", "Option D"];
+            } else {
+              optionsArray = optionKeys.map(key => {
+                const optionValue = question.options[key];
+                if (!optionValue || typeof optionValue !== 'string' || optionValue.trim().length === 0) {
+                  return `Option ${key}`;
+                }
+                return optionValue.trim();
+              });
+            }
+          } else {
+            console.warn(`⚠️ Question ${index + 1} has invalid options format, using fallback`);
+            optionsArray = ["Option A", "Option B", "Option C", "Option D"];
+          }
+          
+          question.options = optionsArray;
+
+          // Validate correct answer - handle both number and letter formats
+          let correctAnswerIndex: number = 0;
+          if (typeof question.correctAnswer === 'number') {
+            // Handle numeric format
+            if (question.correctAnswer >= 0 && question.correctAnswer < question.options.length) {
+              correctAnswerIndex = question.correctAnswer;
+            } else {
+              console.warn(`⚠️ Question ${index + 1} has out-of-range numeric correctAnswer, defaulting to 0`);
+              correctAnswerIndex = 0;
+            }
+          } else if (typeof question.correctAnswer === 'string') {
+            // Handle letter format (e.g., "A", "B", "C", "D")
+            const letterAnswer = question.correctAnswer.toUpperCase().trim();
+            const letterToIndex: Record<string, number> = { 'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4 };
+            if (letterToIndex[letterAnswer] !== undefined && letterToIndex[letterAnswer] < question.options.length) {
+              correctAnswerIndex = letterToIndex[letterAnswer];
+            } else {
+              console.warn(`⚠️ Question ${index + 1} has invalid letter correctAnswer "${letterAnswer}", defaulting to 0`);
+              correctAnswerIndex = 0;
+            }
+          } else {
+            console.warn(`⚠️ Question ${index + 1} has invalid correctAnswer type, defaulting to 0`);
+            correctAnswerIndex = 0;
+          }
+          
+          question.correctAnswer = correctAnswerIndex;
+
+          // Validate explanation
+          if (!question.explanation || typeof question.explanation !== 'string' || question.explanation.trim().length === 0) {
+            console.warn(`⚠️ Question ${index + 1} has invalid explanation, using fallback`);
+            question.explanation = "This is the correct answer for this question.";
+          }
+
+          // Clean up category values with comprehensive normalization
+          let category: string = 'cognitive'; // Default category
+          if (question.category && typeof question.category === 'string') {
+            category = question.category.toLowerCase().trim().replace(/\s+/g, '_');
+            
+            // Allow all categories - no validation needed
+            console.log(`🔄 Category mapping: "${question.category}" → "${category}"`);
+          } else {
+            console.log(`⚠️ Question ${index + 1} missing or invalid category, using default: ${category}`);
+          }
+          
+          return {
+            question: question.question.trim(),
+            options: question.options,
+            correctAnswer: question.correctAnswer,
+            explanation: question.explanation.trim(),
+            category: category
+          };
+        });
+
+        // Filter out any completely invalid questions
+        processedQuestions = processedQuestions.filter((question: any) => 
+          question.question && 
+          question.options && 
+          Array.isArray(question.options) && 
+          question.options.length >= 2 &&
+          typeof question.correctAnswer === 'number' &&
+          question.explanation
+        );
+        
+        // Ensure exact question count
+        if (processedQuestions.length > maxQuestionCount) {
+          console.log(`⚠️ AI generated ${processedQuestions.length} valid questions, trimming to ${maxQuestionCount}`);
+          processedQuestions = processedQuestions.slice(0, maxQuestionCount);
+        } else if (processedQuestions.length < maxQuestionCount) {
+          console.log(`⚠️ AI generated ${processedQuestions.length} valid questions, padding to ${maxQuestionCount}`);
+          // Add high-quality fallback questions to reach the target count
+          const needed = maxQuestionCount - processedQuestions.length;
+          
+          for (let i = 0; i < needed; i++) {
+            const questionNum = processedQuestions.length + 1;
+            const category = 'cognitive';
+            
+            processedQuestions.push({
+              question: `As a ${jobTitle} professional in the ${industry} industry, how would you approach a ${testLevel} level challenge that requires ${category.replace(/_/g, ' ')}?`,
+              options: [
+                "Take a systematic and analytical approach",
+                "Rely on past experience only",
+                "Avoid the challenge if possible",
+                "Ask others to handle it instead"
+              ],
+              correctAnswer: 0,
+              explanation: "A systematic and analytical approach demonstrates the professional skills required for this role.",
+              category: category
+            });
+          }
+        }
+        
+        console.log(`🎉 Final test generation complete with ${processedQuestions.length} questions`);
+        
+        return {
+          questions: processedQuestions
+        };
+      } else {
+        // If no questions were generated, provide fallback questions
+        console.warn('⚠️ No valid questions generated, providing fallback questions');
+        const fallbackQuestions = this.generateFallbackQuestions({
+          jobTitle,
+          industry,
+          questionCount: Math.min(20, questionCount), // Limit fallback questions to 20 for faster processing
+          testLevel,
+          categories
+        });
+        
+        return {
+          questions: fallbackQuestions
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error in AI service:', error);
+      throw error;
+    }
+  }
+
+  private async generateSingleChunk(params: {
+    jobTitle: string;
+    jobDescription: string;
+    industry: string;
+    experienceLevel: string;
+    skills: string[];
+    testLevel: string;
+    timeLimit: number;
+    questionCount: number;
+    categories: string[];
+    questionsInThisChunk: number;
+    chunkIndex: number;
+    totalChunks: number;
+    previousQuestions: string[];
+  }): Promise<any[]> {
+    const {
+      jobTitle,
+      jobDescription,
+      industry,
+      experienceLevel,
+      skills,
+      testLevel,
+      timeLimit,
+      questionCount,
+      categories,
+      questionsInThisChunk,
+      chunkIndex,
+      totalChunks,
+      previousQuestions
+    } = params;
+
+    console.log(`🎓 Generating chunk ${chunkIndex + 1}/${totalChunks} with ${questionsInThisChunk} questions`);
+    
+    const chunkPrompt = `You are an expert psychometric test designer. Create a psychometric test only for the role of ${jobTitle}. Do not include technical or job-knowledge questions. The test should only measure psychological and cognitive traits relevant to the role.
 
 **Focus areas:**
 - Cognitive ability (numerical, verbal, abstract reasoning)
@@ -191,12 +323,12 @@ Job Context:
 - Required Skills: ${skills.length > 0 ? skills.join(', ') : 'General skills for the position'}
 
 Test Specifications:
-- Total Questions: EXACTLY ${questionCount} questions (this is critical)
+- Total Questions: EXACTLY ${questionsInThisChunk} questions (this is critical)
 - Test Level: ${testLevel}
-- Time Allocation: ${timeLimit} minutes (1 minute per question)
+- Time Allocation: ${Math.ceil(questionsInThisChunk * (timeLimit / questionCount))} minutes (${timeLimit / questionCount} minutes per question)
 
 **CRITICAL Guidelines:**
-1. Create exactly ${questionCount} unique, numbered questions (Q1, Q2, Q3, etc.)
+1. Create exactly ${questionsInThisChunk} unique, numbered questions (Q1, Q2, Q3, etc.)
 2. Question types: multiple-choice reasoning, situational judgment, personality inventory
 3. Exclude ALL technical/job-specific knowledge questions (e.g., coding, accounting, finance, industry facts)
 4. ONLY measure psychological and cognitive traits
@@ -218,731 +350,493 @@ Requirements:
 - Clear, professional language appropriate for ${experienceLevel} level
 - Questions must be directly relevant to ${jobTitle} role in ${industry}
 - Provide detailed explanations for correct answers
-- Provide answer key + explanations where applicable
-- Provide a simple scoring guide for interpretation
 
-CRITICAL OUTPUT FORMAT - Return ONLY this JSON structure (no markdown, no extra text, ensure proper JSON formatting):
-{
-  "questions": [
-    {
-      "question": "Complete question text here",
-      "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
-      "correctAnswer": 0,
-      "explanation": "Detailed explanation of why this answer is correct",
-      "category": "cognitive"
-    }
-  ]
-}
+Generate all ${questionsInThisChunk} questions now in valid JSON format with a "questions" array:`;
 
-MANDATORY CATEGORY VALUES (use only these):
-- "cognitive" (logical reasoning, analytical thinking)
-- "personality" (behavior assessment, work preferences)  
-- "problem-solving" (creative solutions, critical thinking)
-- "situational" (workplace scenarios, judgment calls)
-
-QUALITY STANDARDS:
-- Questions must be complete and professionally written
-- Options must be realistic and relevant
-- Explanations must be educational and clear
-- No truncated or incomplete content
-- Test the full range of psychological traits needed for ${jobTitle}
-
-Generate all ${questionCount} questions now:`;
-
-      // Use the enhanced AI manager with built-in retry logic
-      let text: string;
-      try {
-        console.log(`🎓 Generating psychometric test using enhanced AI manager`);
-        text = await this.aiManager.generateContent(prompt, {
-          retries: 3,
-          timeout: 45000, // Longer timeout for complex generation
-          priority: 'high', // High priority for test generation
-          temperature: 0.3 // Lower temperature for more consistent results
-        });
-      } catch (aiError: any) {
-        console.error('🎓 AI service failed, using fallback questions:', aiError.message);
-        // Use fallback questions when AI service is unavailable
-        return this.generateFallbackQuestions(params);
-      }
-      
-      console.log('🤖 Raw psychometric test response:', text.substring(0, 200) + '...');
-      
-      try {
-        const result = this.extractJsonFromResponse(text);
-        
-        // Validate and clean up the generated questions
-        if (result.questions && Array.isArray(result.questions)) {
-          // Validate each question for completeness and quality
-          result.questions = result.questions.map((question: any, index: number) => {
-            // Validate question structure
-            if (!question.question || typeof question.question !== 'string' || question.question.trim().length === 0) {
-              console.warn(`⚠️ Question ${index + 1} has invalid question text, using fallback`);
-              question.question = `${testLevel} level question ${index + 1} for ${jobTitle} position`;
-            }
-
-            // Validate options
-            if (!question.options || !Array.isArray(question.options) || question.options.length !== 4) {
-              console.warn(`⚠️ Question ${index + 1} has invalid options, using fallback`);
-              question.options = ["Option A", "Option B", "Option C", "Option D"];
-            } else {
-              // Ensure all options are strings and not empty
-              question.options = question.options.map((option: any, optIndex: number) => {
-                if (!option || typeof option !== 'string' || option.trim().length === 0) {
-                  return `Option ${String.fromCharCode(65 + optIndex)}`;
-                }
-                return option.trim();
-              });
-            }
-
-            // Validate correct answer
-            if (typeof question.correctAnswer !== 'number' || 
-                question.correctAnswer < 0 || 
-                question.correctAnswer >= 4) {
-              console.warn(`⚠️ Question ${index + 1} has invalid correctAnswer, defaulting to 0`);
-              question.correctAnswer = 0;
-            }
-
-            // Validate explanation
-            if (!question.explanation || typeof question.explanation !== 'string' || question.explanation.trim().length === 0) {
-              console.warn(`⚠️ Question ${index + 1} has invalid explanation, using fallback`);
-              question.explanation = "This is the correct answer for this question.";
-            }
-
-            // Clean up category values with comprehensive normalization
-            let category = question.category;
-            if (typeof category === 'string') {
-              category = category.toLowerCase().trim().replace(/\s+/g, '_');
-              
-              if (!categories.includes(category)) {
-                console.warn(`⚠️ Question ${index + 1} category "${question.category}" not in selected categories, defaulting to ${categories[0]}`);
-                category = categories[0];
-              }
-              
-              console.log(`🔄 Category mapping: "${question.category}" → "${category}"`);
-            } else {
-              category = categories[0];
-            }
-            
-            return {
-              question: question.question.trim(),
-              options: question.options,
-              correctAnswer: question.correctAnswer,
-              explanation: question.explanation.trim(),
-              category: category
-            };
-          });
-
-          // Filter out any completely invalid questions
-          result.questions = result.questions.filter((question: any) => 
-            question.question && 
-            question.options && 
-            Array.isArray(question.options) && 
-            question.options.length === 4 &&
-            categories.includes(question.category)
-          );
-          
-          // Ensure exact question count
-          if (result.questions.length > questionCount) {
-            console.log(`⚠️ AI generated ${result.questions.length} valid questions, trimming to ${questionCount}`);
-            result.questions = result.questions.slice(0, questionCount);
-          } else if (result.questions.length < questionCount) {
-            console.log(`⚠️ AI generated ${result.questions.length} valid questions, padding to ${questionCount}`);
-            // Add high-quality fallback questions to reach the target count
-            const needed = questionCount - result.questions.length;
-            
-            for (let i = 0; i < needed; i++) {
-              const questionNum = result.questions.length + 1;
-              const category = categories[i % categories.length];
-              
-              result.questions.push({
-                question: `As a ${jobTitle} professional in the ${industry} industry, how would you approach a ${testLevel} level challenge that requires ${category.replace(/_/g, ' ')}?`,
-                options: [
-                  "Take a systematic and analytical approach",
-                  "Rely on past experience only",
-                  "Avoid the challenge if possible",
-                  "Ask others to handle it instead"
-                ],
-                correctAnswer: 0,
-                explanation: "A systematic and analytical approach demonstrates the professional skills required for this role.",
-                category: category
-              });
-            }
-          }
-          
-          console.log(`✅ Final validated question count: ${result.questions.length} (target: ${questionCount})`);
-          
-          // Final quality check
-          const hasIncompleteQuestions = result.questions.some((q: any) => 
-            !q.question || 
-            !q.options || 
-            q.options.length !== 4 || 
-            typeof q.correctAnswer !== 'number' ||
-            !q.explanation ||
-            !q.category
-          );
-          
-          if (hasIncompleteQuestions) {
-            console.error('⚠️ Some questions are still incomplete after validation');
-          } else {
-            console.log('✅ All questions passed validation');
-          }
-        }
-        
-        return result;
-      } catch (parseError) {
-        console.error('Failed to parse psychometric test response:', parseError);
-        
-        // Use the better fallback system instead of placeholder questions
-        console.log('⚠️ Using fallback questions due to AI parsing error');
-        return this.generateFallbackQuestions(params);
-      }
-    } catch (error: any) {
-      console.error('Error generating psychometric test:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
-      
-      // Preserve the original error code if it exists
-      if (error.code) {
-        throw error;
-      }
-      
-      throw new Error('Failed to generate psychometric test');
-    }
-  }
-
-  // Generate job preparation test (separate from psychometric tests)
-  async generateJobPreparationTest(prompt: string, params: {
-    jobTitle: string;
-    company: string;
-    industry?: string;
-    difficulty: string;
-    questionCount: number;
-  }): Promise<{ questions: Array<{ 
-    id: string; 
-    question: string; 
-    type: string; 
-    options: string[]; 
-    correctAnswer: number; 
-    explanation: string; 
-    category: string; 
-  }> }> {
+    // Use the enhanced AI manager with built-in retry logic
+    let text: string;
     try {
-      console.log(`🎯 Generating job preparation test for ${params.jobTitle} at ${params.company}`);
-      
-      let textResponse = await this.aiManager.generateContent(prompt, {
-        retries: 3,
-        timeout: 45000,
+      console.log(`🎓 Generating psychometric test chunk ${chunkIndex + 1}/${totalChunks}`);
+      text = await this.aiManager.generateContent(chunkPrompt, {
+        retries: 2, // Reduced retries for faster processing
+        timeout: 20000, // Reduced timeout for faster processing
         priority: 'high',
         temperature: 0.3
       });
-
-      // Clean and parse the response
-      textResponse = textResponse.replace(/```json\s*|\s*```/g, '').trim();
       
-      try {
-        const parsedResponse = JSON.parse(textResponse);
-        
-        if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
-          throw new Error('Invalid response structure');
-        }
-
-        // Validate and format questions
-        const formattedQuestions = parsedResponse.questions.map((q: any, index: number) => ({
-          id: q.id || `q${index + 1}`,
-          question: q.question,
-          type: q.type || 'multiple_choice',
-          options: Array.isArray(q.options) ? q.options : [],
-          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
-          explanation: q.explanation || 'Explanation not provided',
-          category: q.category || 'general'
-        }));
-
-        return { questions: formattedQuestions };
-        
-      } catch (parseError) {
-        console.error('Failed to parse job preparation test response:', parseError);
-        
-        // Generate fallback questions for job preparation
-        return this.generateJobPreparationFallback(params);
+      console.log(`🤖 Raw psychometric test response received for chunk ${chunkIndex + 1}`);
+      
+      // Parse the chunk response
+      const chunkResult = this.extractJsonFromResponse(text);
+      
+      // Extract questions from the chunk
+      let chunkQuestions: any[] = [];
+      
+      // Handle different possible structures from AI
+      if (chunkResult.questions && Array.isArray(chunkResult.questions)) {
+        chunkQuestions = chunkResult.questions;
+      } else if (chunkResult.data && chunkResult.data.questions && Array.isArray(chunkResult.data.questions)) {
+        chunkQuestions = chunkResult.data.questions;
+      } else if (Array.isArray(chunkResult)) {
+        chunkQuestions = chunkResult;
       }
-    } catch (error) {
-      console.error('Error generating job preparation test:', error);
-      return this.generateJobPreparationFallback(params);
+      
+      if (chunkQuestions.length > 0) {
+        console.log(`✅ Successfully generated ${chunkQuestions.length} questions from chunk ${chunkIndex + 1}`);
+        return chunkQuestions;
+      } else {
+        console.warn(`⚠️ No questions found in chunk ${chunkIndex + 1} response`);
+        return [];
+      }
+    } catch (chunkError: any) {
+      console.error(`🎓 AI service failed for chunk ${chunkIndex + 1}:`, chunkError.message);
+      return [];
     }
   }
 
-  // Generate fallback questions for job preparation tests
-  private generateJobPreparationFallback(params: {
-    jobTitle: string;
-    company: string;
-    industry?: string;
-    difficulty: string;
-    questionCount: number;
-  }): { questions: Array<{ 
-    id: string; 
-    question: string; 
-    type: string; 
-    options: string[]; 
-    correctAnswer: number; 
-    explanation: string; 
-    category: string; 
-  }> } {
-    
-    const { jobTitle, company, industry, difficulty, questionCount } = params;
-    
-    console.log(`🔄 Generating ${questionCount} fallback job preparation questions for ${jobTitle}`);
-    
-    const fallbackQuestions = [
-      {
-        id: 'q1',
-        question: `What is the most important skill for a ${jobTitle} position?`,
-        type: 'multiple_choice',
-        options: [
-          'Technical expertise in relevant tools and technologies',
-          'Strong communication and teamwork abilities',
-          'Problem-solving and analytical thinking',
-          'Time management and organizational skills'
-        ],
-        correctAnswer: 2,
-        explanation: 'Problem-solving and analytical thinking are fundamental skills that enable success in most professional roles.',
-        category: 'general_skills'
-      },
-      {
-        id: 'q2',
-        question: `When working on a project as a ${jobTitle}, how would you handle competing deadlines?`,
-        type: 'multiple_choice',
-        options: [
-          'Work overtime to meet all deadlines',
-          'Prioritize based on business impact and communicate with stakeholders',
-          'Complete tasks in the order they were assigned',
-          'Ask colleagues to help with some tasks'
-        ],
-        correctAnswer: 1,
-        explanation: 'Prioritizing based on business impact and maintaining clear communication ensures optimal resource allocation.',
-        category: 'situational'
-      },
-      {
-        id: 'q3',
-        question: `What would you do if you disagreed with your manager's approach to a project?`,
-        type: 'multiple_choice',
-        options: [
-          'Follow their instructions without question',
-          'Express your concerns respectfully and suggest alternatives',
-          'Discuss the issue with other team members first',
-          'Implement your own approach instead'
-        ],
-        correctAnswer: 1,
-        explanation: 'Professional communication about concerns shows initiative while respecting hierarchy.',
-        category: 'behavioral'
-      },
-      {
-        id: 'q4',
-        question: `How do you stay current with industry trends in ${industry || 'your field'}?`,
-        type: 'multiple_choice',
-        options: [
-          'Read industry publications and attend conferences',
-          'Take online courses and certifications',
-          'Network with industry professionals',
-          'All of the above'
-        ],
-        correctAnswer: 3,
-        explanation: 'A combination of learning methods ensures comprehensive knowledge of industry developments.',
-        category: 'professional_development'
-      },
-      {
-        id: 'q5',
-        question: `Describe your approach to handling a difficult customer or client.`,
-        type: 'multiple_choice',
-        options: [
-          'Listen actively, empathize, and work toward a solution',
-          'Transfer them to your supervisor immediately',
-          'Explain company policies and stick to them strictly',
-          'Try to end the conversation quickly'
-        ],
-        correctAnswer: 0,
-        explanation: 'Active listening and empathy are key to resolving difficult customer situations effectively.',
-        category: 'customer_service'
-      }
-    ];
-
-    // Adjust number of questions to match requested count
-    const questions = [];
-    for (let i = 0; i < Math.min(questionCount, 20); i++) {
-      const baseQuestion = fallbackQuestions[i % fallbackQuestions.length];
-      if (baseQuestion) {
-        questions.push({
-          ...baseQuestion,
-          id: `q${i + 1}`,
-          question: baseQuestion.question.replace(/\$\{jobTitle\}/g, jobTitle)
-        });
-      }
-    }
-
-    return { questions };
-  }
-
-  // Generate fallback questions when AI service is unavailable
   private generateFallbackQuestions(params: {
     jobTitle: string;
-    jobDescription: string;
     industry: string;
-    experienceLevel: string;
-    skills: string[];
     questionCount: number;
     testLevel: string;
-    timeLimit: number;
-    userId: string;
-    jobId: string;
-  }): { questions: Array<{ question: string; options: string[]; correctAnswer: number; explanation: string; category: string; }> } {
-    const { jobTitle, industry, experienceLevel, questionCount, testLevel } = params;
-    
-    console.log(`🔄 Generating ${questionCount} fallback questions for ${jobTitle}`);
-    
-    // Predefined question templates based on job characteristics
-    const questionTemplates = {
-      cognitive: [
-        {
-          question: `In your role as a ${jobTitle}, you encounter a complex problem that requires breaking down into smaller parts. What is your best approach?`,
-          options: [
-            "Analyze each component systematically and prioritize based on impact",
-            "Work on the easiest parts first to build momentum",
-            "Tackle the most difficult aspect first to get it out of the way",
-            "Ask for help immediately without attempting to understand the problem"
-          ],
-          correctAnswer: 0,
-          explanation: "Systematic analysis and impact-based prioritization demonstrate strong analytical thinking skills essential for professional roles."
-        },
-        {
-          question: `When processing information for decision-making in a ${industry} context, which approach would be most effective?`,
-          options: [
-            "Gather all available data, analyze patterns, and consider multiple perspectives",
-            "Make quick decisions based on initial impressions",
-            "Always follow established procedures without deviation",
-            "Rely primarily on colleague opinions and consensus"
-          ],
-          correctAnswer: 0,
-          explanation: "Comprehensive data analysis and considering multiple perspectives shows cognitive flexibility and analytical depth."
-        }
-      ],
-      personality: [
-        {
-          question: `In a team setting as a ${jobTitle}, how do you typically handle disagreements with colleagues?`,
-          options: [
-            "Listen actively to understand different viewpoints and work toward consensus",
-            "Stand firm on your position until others agree",
-            "Avoid confrontation and go along with the majority",
-            "Escalate the disagreement to management immediately"
-          ],
-          correctAnswer: 0,
-          explanation: "Active listening and consensus-building demonstrate strong interpersonal skills and emotional intelligence."
-        }
-      ],
-      'problem-solving': [
-        {
-          question: `You're facing an unexpected challenge in your ${jobTitle} role that requires creative thinking. What's your approach?`,
-          options: [
-            "Research similar situations, brainstorm multiple solutions, and test the most promising ones",
-            "Apply the first solution that comes to mind",
-            "Wait for the problem to resolve itself",
-            "Immediately ask someone else to solve it"
-          ],
-          correctAnswer: 0,
-          explanation: "Research, brainstorming, and systematic testing demonstrate comprehensive problem-solving methodology."
-        }
-      ],
-      situational: [
-        {
-          question: `As a ${jobTitle} in the ${industry} industry, you're given a tight deadline for an important project. How do you proceed?`,
-          options: [
-            "Assess the scope, prioritize key deliverables, and communicate realistic timelines",
-            "Work overtime without considering quality implications",
-            "Accept the deadline without question and hope for the best",
-            "Immediately declare the deadline impossible"
-          ],
-          correctAnswer: 0,
-          explanation: "Strategic assessment, prioritization, and clear communication demonstrate professional project management skills."
-        }
-      ]
-    };
+    categories: string[];
+  }): any[] {
+    const { jobTitle, industry, questionCount, testLevel, categories } = params;
 
-    const categories = Object.keys(questionTemplates) as Array<keyof typeof questionTemplates>;
-    const questions: Array<{ question: string; options: string[]; correctAnswer: number; explanation: string; category: string; }> = [];
-    
-    // Generate questions evenly across categories
+    console.warn('⚠️ Generating fallback questions');
+
+    const fallbackQuestions = [];
+
     for (let i = 0; i < questionCount; i++) {
-      const categoryIndex = i % categories.length;
-      const category = categories[categoryIndex];
-      if (category && questionTemplates[category]) {
-        const templates = questionTemplates[category];
-        const template = templates[Math.floor(Math.random() * templates.length)];
-        
-        questions.push({
-          question: template.question,
-          options: template.options,
-          correctAnswer: template.correctAnswer,
-          explanation: template.explanation,
-          category: category as string
-        });
-      }
-    }
-    
-    return { questions };
-  }
-
-  // Grade psychometric test responses
-  async gradePsychometricTest(params: {
-    test: any;
-    answers: Record<string, any>;
-    userId: string;
-    jobId?: string;
-  }): Promise<{
-    scores: Record<string, number>;
-    categoryScores: Record<string, number>;
-    overallScore: number;
-    grade: string;
-    percentile: number;
-    questionByQuestionAnalysis: any[];
-    failedQuestions: any[];
-    interpretation: string;
-    recommendations: string[];
-    detailedAnalysis: any;
-  }> {
-    try {
-      const { test, answers, userId, jobId } = params;
-
-      const prompt = `
-        You are a professional psychometric assessment expert. Grade this psychometric test and provide comprehensive, detailed feedback in JSON format.
-
-        **Test Details:**
-        - Title: ${test.title}
-        - Type: ${test.type} 
-        - Questions Answered: ${Object.keys(answers).length}/${test.questions.length}
-
-        **Questions & Answers Analysis:**
-        ${test.questions.map((q: any, index: number) => {
-          const answer = answers[q._id] || answers[q.id] || 'Not answered';
-          const answerText = typeof answer === 'object' ? JSON.stringify(answer) : answer;
-          const correctAnswer = q.correctAnswer || 'See explanation';
-          return `
-        Q${index + 1}: ${q.question}
-        ${q.options ? `Options: ${q.options.join(', ')}` : ''}
-        Candidate's Answer: ${answerText}
-        Correct/Best Answer: ${correctAnswer}
-        Explanation: ${q.explanation || 'Measures ' + (q.traits ? q.traits.join(', ') : 'psychological traits')}
-        Question Type: ${q.type}
-        Traits Measured: ${q.traits ? q.traits.join(', ') : 'general assessment'}
-        `;
-        }).join('\n')}
-
-        **Grading Instructions:**
-        1. Provide detailed analysis for EACH question showing what they answered vs. what they should have answered
-        2. Explain WHY each incorrect answer is suboptimal and what the better choice demonstrates
-        3. Analyze their psychological profile based on response patterns
-        4. Calculate realistic scores on a 0-100 scale for each competency area
-        5. Provide specific development recommendations based on weak areas identified
-        6. Show overall psychometric fitness for the role
-
-        **Required JSON Response Format:**
-        {
-          "overallScore": 78,
-          "grade": "B+",
-          "percentile": 65,
-          "scores": {
-            "cognitiveAbility": 80,
-            "problemSolving": 75,
-            "leadership": 78,
-            "teamwork": 82,
-            "stressManagement": 70,
-            "adaptability": 85,
-            "integrity": 90,
-            "attentionToDetail": 72
-          },
-          "categoryScores": {
-            "cognitive": 77,
-            "personality": 79,
-            "behavioral": 76,
-            "situationalJudgment": 73
-          },
-          "questionByQuestionAnalysis": [
-            {
-              "questionNumber": 1,
-              "question": "When facing a complex problem at work...",
-              "candidateAnswer": "Take immediate action based on initial assessment",
-              "correctAnswer": "Break it down into smaller, manageable tasks",
-              "isCorrect": false,
-              "pointsEarned": 0,
-              "maxPoints": 2,
-              "analysis": "Your answer suggests impulsiveness. The better approach demonstrates systematic problem-solving skills essential for this role.",
-              "traitImpact": "Shows lower analytical thinking and planning abilities"
-            }
-          ],
-          "failedQuestions": [
-            {
-              "questionNumber": 1,
-              "question": "When facing a complex problem at work...",
-              "yourAnswer": "Take immediate action based on initial assessment",
-              "correctAnswer": "Break it down into smaller, manageable tasks",
-              "explanation": "This approach shows impulsiveness rather than systematic thinking. The better answer demonstrates structured problem-solving and analytical skills crucial for the role.",
-              "category": "Problem Solving"
-            }
-          ],
-          "interpretation": "Comprehensive assessment showing specific strengths and clear development areas. Detailed analysis of each response pattern reveals psychological profile.",
-          "recommendations": [
-            "Develop systematic problem-solving skills through structured methodologies",
-            "Practice situational judgment scenarios to improve decision-making",
-            "Focus on building patience and analytical thinking before taking action"
-          ],
-          "detailedAnalysis": {
-            "strengths": [
-              "Shows strong interpersonal skills",
-              "Good communication preferences",
-              "Demonstrates collaborative tendencies"
-            ],
-            "criticalWeaknesses": [
-              "Impulsive decision-making patterns detected",
-              "Needs improvement in systematic thinking approach",
-              "Strategic planning abilities require development"
-            ],
-            "psychometricProfile": {
-              "personalityType": "Action-oriented with collaborative tendencies",
-              "workStyle": "Prefers quick decisions but values team input",
-              "stressCoping": "May struggle with complex problem-solving under pressure"
-            },
-            "roleReadiness": {
-              "currentFit": "Moderate - requires development in key areas",
-              "recommendedActions": "Complete problem-solving training before role placement",
-              "timeframe": "3-6 months of targeted development recommended"
-            },
-            "benchmarkComparison": {
-              "industryAverage": "Below average in analytical thinking, above average in teamwork",
-              "roleRequirements": "70% match - needs improvement in cognitive areas"
-            }
-          }
-        }
-
-        Provide ONLY the JSON response, no additional text.
-      `;
-
-      console.log('Sending prompt to AI model...');
-      const text = await this.aiManager.generateContent(prompt, {
-        retries: 3,
-        timeout: 45000,
-        priority: 'high',
-        temperature: 0.3
-      });
+      const questionNum = i + 1;
+      const category = categories[i % categories.length] || 'cognitive';
       
-      console.log('AI response received, length:', text?.length || 0);
-      console.log('Raw AI response (first 500 chars):', text?.substring(0, 500));
-
-      try {
-        const gradingResult = this.extractJsonFromResponse(text);
-        console.log('Successfully parsed AI grading result');
-        
-        // Validate and ensure proper structure
-        return {
-          scores: gradingResult.scores || {},
-          categoryScores: gradingResult.categoryScores || {},
-          overallScore: Math.min(Math.max(gradingResult.overallScore || 0, 0), 100),
-          grade: gradingResult.grade || 'N/A',
-          percentile: gradingResult.percentile || 0,
-          questionByQuestionAnalysis: gradingResult.questionByQuestionAnalysis || [],
-          failedQuestions: gradingResult.failedQuestions || [],
-          interpretation: gradingResult.interpretation || 'Assessment completed',
-          recommendations: gradingResult.recommendations || [],
-          detailedAnalysis: gradingResult.detailedAnalysis || {
-            strengths: [],
-            criticalWeaknesses: [],
-            psychometricProfile: {},
-            roleReadiness: {},
-            benchmarkComparison: {}
-          }
-        };
-      } catch (parseError) {
-        console.error('Failed to parse AI grading response:', parseError);
-        console.error('Raw response:', text);
-        
-        // Return fallback result
-        return {
-          scores: {},
-          categoryScores: {},
-          overallScore: 0,
-          grade: 'Unable to Grade',
-          percentile: 0,
-          questionByQuestionAnalysis: [],
-          failedQuestions: [],
-          interpretation: 'Unable to process grading due to AI response parsing error',
-          recommendations: ['Please retake the assessment'],
-          detailedAnalysis: {
-            strengths: [],
-            criticalWeaknesses: ['Assessment could not be properly evaluated'],
-            psychometricProfile: {},
-            roleReadiness: { currentFit: 'Unable to determine' },
-            benchmarkComparison: {}
-          }
-        };
-      }
-    } catch (error) {
-      console.error('Error grading psychometric test with AI:', error);
-      throw error;
+      const fallbackQuestion = {
+        question: `As a ${jobTitle} professional in the ${industry} industry, how would you approach a ${testLevel} level challenge that requires ${category.replace(/_/g, ' ')}?`,
+        options: [
+          "Take a systematic and analytical approach",
+          "Rely on past experience only",
+          "Avoid the challenge if possible",
+          "Ask others to handle it instead"
+        ],
+        correctAnswer: 0,
+        explanation: "A systematic and analytical approach demonstrates the professional skills required for this role.",
+        category: category
+      };
+      
+      fallbackQuestions.push(fallbackQuestion);
     }
+
+    return fallbackQuestions;
   }
 
   /**
-   * Categorize job opportunity based on title and description
+   * Helper function to extract JSON from AI responses
    */
-  async categorizeJob(title: string, description: string): Promise<string> {
-    try {
-      const prompt = `
-        Analyze the following job opportunity and categorize it into one of these categories:
-
-        Categories:
-        1. "jobs" - Regular employment positions (full-time, part-time, contract, freelance)
-        2. "tenders" - Government or private sector procurement opportunities, contracts, bidding processes
-        3. "trainings" - Professional development, workshops, courses, skill-building programs, certifications
-        4. "internships" - Student placements, entry-level positions, graduate programs, apprenticeships
-        5. "scholarships" - Educational funding, grants, study abroad programs, academic awards
-        6. "access_to_finance" - Business loans, grants, funding opportunities, investment programs, microfinance
-
-        Job Title: ${title}
-        Job Description: ${description.substring(0, 1000)}
-
-        Rules:
-        - If it mentions "tender", "bid", "procurement", "contract award", "RFP", "proposal" -> "tenders"
-        - If it mentions "training", "course", "workshop", "certification", "skill development" -> "trainings"  
-        - If it mentions "intern", "graduate program", "entry level", "student placement" -> "internships"
-        - If it mentions "scholarship", "grant", "study abroad", "educational funding" -> "scholarships"
-        - If it mentions "loan", "funding", "investment", "finance", "grant", "microfinance" -> "access_to_finance"
-        - Otherwise, regular employment positions -> "jobs"
-
-        Return only the category name in lowercase, no additional text or explanation.
-      `;
-
-      const response = await this.aiManager.generateContent(prompt, {
-        retries: 2,
-        timeout: 15000,
-        priority: 'normal'
-      });
-      const category = response.trim().toLowerCase();
-
-      // Validate the category
-      const validCategories = ['jobs', 'tenders', 'trainings', 'internships', 'scholarships', 'access_to_finance'];
+  private extractJsonFromResponse(text: string): any {
+    let jsonText = text.trim();
+    
+    console.log('🔍 Raw AI response length:', jsonText.length);
+    console.log('🔍 Raw AI response (first 1000 chars):', jsonText.substring(0, 1000));
+    
+    // Check if the response is actually JSON or just plain text
+    if (!jsonText.startsWith('{') && !jsonText.startsWith('[')) {
+      console.error('❌ AI response does not start with JSON object or array');
+      // Try to find JSON anywhere in the response
+      const jsonStart = jsonText.indexOf('{');
+      const jsonArrayStart = jsonText.indexOf('[');
       
-      if (validCategories.includes(category)) {
-        return category;
+      if (jsonStart !== -1 && (jsonArrayStart === -1 || jsonStart < jsonArrayStart)) {
+        // Found object start first
+        const jsonEnd = jsonText.lastIndexOf('}');
+        if (jsonEnd !== -1 && jsonEnd > jsonStart) {
+          jsonText = jsonText.substring(jsonStart, jsonEnd + 1);
+        }
+      } else if (jsonArrayStart !== -1) {
+        // Found array start first
+        const jsonEnd = jsonText.lastIndexOf(']');
+        if (jsonEnd !== -1 && jsonEnd > jsonArrayStart) {
+          jsonText = jsonText.substring(jsonArrayStart, jsonEnd + 1);
+        }
+      } else {
+        console.error('❌ No JSON object or array found in AI response');
+        throw new Error('AI response does not contain valid JSON');
       }
-
-      // Default fallback
-      console.log(`Invalid category returned: ${category}, defaulting to 'jobs'`);
-      return 'jobs';
-
-    } catch (error) {
-      console.error('Error categorizing job with AI:', error);
-      return 'jobs'; // Default category on error
     }
-  }
+    
+    // Remove markdown code blocks more aggressively
+    jsonText = jsonText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+    jsonText = jsonText.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+    
+    // Handle cases where the AI response might be wrapped in other text
+    // Look for the first { and last } to extract the JSON object
+    const firstBrace = jsonText.indexOf('{');
+    const lastBrace = jsonText.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+    } else {
+      // If we can't find a JSON object, try to find a JSON array
+      const firstBracket = jsonText.indexOf('[');
+      const lastBracket = jsonText.lastIndexOf(']');
+      
+      if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+        jsonText = jsonText.substring(firstBracket, lastBracket + 1);
+      }
+    }
+    
+    // More aggressive cleanup for common AI response issues
+    // First, let's check if we have unbalanced braces which might indicate truncation
+    const openBraces = (jsonText.match(/{/g) || []).length;
+    const closeBraces = (jsonText.match(/}/g) || []).length;
+    const openBrackets = (jsonText.match(/\[/g) || []).length;
+    const closeBrackets = (jsonText.match(/\]/g) || []).length;
+    
+    console.log(`🔧 Brace count - Open: ${openBraces}, Close: ${closeBraces}, Bracket count - Open: ${openBrackets}, Close: ${closeBrackets}`);
+    
+    // If we have unbalanced braces/brackets, this might be a truncated response
+    if ((openBraces !== closeBraces) || (openBrackets !== closeBrackets)) {
+      console.warn('⚠️ Unbalanced braces/brackets detected - possible truncated response');
+      
+      // Try to find the last complete object/array
+      if (jsonText.endsWith('}') || jsonText.endsWith(']')) {
+        // Already ends with a closing brace/bracket
+        console.log('✅ Response already ends with closing brace/bracket');
+      } else {
+        // Try to truncate at the last complete object
+        const lastCompleteObject = jsonText.lastIndexOf('},');
+        const lastCompleteArrayItem = jsonText.lastIndexOf('],');
+        
+        if (lastCompleteObject !== -1 || lastCompleteArrayItem !== -1) {
+          const truncateAt = Math.max(lastCompleteObject, lastCompleteArrayItem) + 1;
+          jsonText = jsonText.substring(0, truncateAt) + (jsonText.includes('}') ? '}' : ']');
+          console.log('🔧 Truncated response at last complete item');
+        }
+      }
+    }
+    
+    // Clean up common JSON issues
+    jsonText = jsonText
+      .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+      .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
+      .replace(/\r\n/g, '\\n')  // Normalize line endings
+      .replace(/\r/g, '\\n')
+      .replace(/\n/g, '\\n')     // Replace newlines with escaped newlines
+      .replace(/\t/g, ' ')        // Replace tabs with spaces
+      .replace(/\s+/g, ' ')       // Normalize whitespace
+      .trim();
+    
+    // Additional cleanup for common AI response issues
+    jsonText = jsonText.replace(/\\'/g, "'");  // Unescape single quotes
+    jsonText = jsonText.replace(/\\"/g, '"'); // Unescape double quotes
+    
+    // Handle escaped unicode characters
+    jsonText = jsonText.replace(/\\u([0-9a-fA-F]{4})/g, (match, hex) => {
+      try {
+        return String.fromCharCode(parseInt(hex, 16));
+      } catch (e) {
+        return match;
+      }
+    });
+    
+    // Remove any invisible/control characters that might cause issues
+    jsonText = jsonText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+    
+    // Additional cleanup for control characters that might cause JSON parsing issues
+    jsonText = jsonText.replace(/[\x00-\x1F]/g, function (match) {
+      const charCode = match.charCodeAt(0);
+      // Allow common whitespace characters (tab, newline, carriage return)
+      if (charCode === 9 || charCode === 10 || charCode === 13) {
+        return match;
+      }
+      // Replace other control characters with space
+      return ' ';
+    });
+    
+    // Fix escaped characters that might cause issues
+    jsonText = jsonText.replace(/\\n/g, '\n');  // Fix escaped newlines
+    jsonText = jsonText.replace(/\\r/g, '\r');  // Fix escaped carriage returns
+    jsonText = jsonText.replace(/\\t/g, '\t');  // Fix escaped tabs
+    jsonText = jsonText.replace(/\\"/g, '"');  // Fix escaped quotes
+    jsonText = jsonText.replace(/\\\\/g, '\\');  // Fix double escaped backslashes
+    
+    console.log('🔧 Cleaned JSON text length:', jsonText.length);
+    console.log('🔧 Cleaned JSON text (first 500 chars):', jsonText.substring(0, 500));
+    
+    // Validate JSON structure before parsing
+    if (jsonText.length === 0) {
+      throw new Error('Empty JSON response after cleaning');
+    }
+    
+    // Additional debugging - check the first few characters
+    console.log('🔍 First 10 chars of cleaned JSON:', JSON.stringify(jsonText.substring(0, 10)));
+    console.log('🔍 Char codes of first 10 chars:', [...jsonText.substring(0, 10)].map((c, i) => `${i}:${c.charCodeAt(0)}`).join(','));
+    
+    // Check if the string actually starts with { or [
+    if (jsonText.charAt(0) !== '{' && jsonText.charAt(0) !== '[') {
+      console.error('❌ JSON does not start with { or [');
+      console.error('First char code:', jsonText.charAt(0).charCodeAt(0));
+    }
+    
+    // Special fix for escaped characters at the beginning
+    if (jsonText.startsWith('{\\')) {
+      console.log('🔧 Fixing escaped characters at beginning of JSON');
+      jsonText = jsonText.replace('{\\n', '{\n').replace('{\\r', '{\r').replace('{\\t', '{\t');
+    }
+    
+    // More comprehensive fix for escaped characters throughout the JSON
+    jsonText = jsonText.replace(/\\n/g, '\n');
+    jsonText = jsonText.replace(/\\r/g, '\r');
+    jsonText = jsonText.replace(/\\t/g, '\t');
+    jsonText = jsonText.replace(/\\"/g, '\"');
+    jsonText = jsonText.replace(/\\\\/g, '\\');
+    
+    try {
+      // Try to parse the JSON
+      const parsed = JSON.parse(jsonText);
+      console.log('✅ Successfully parsed JSON');
+      return parsed;
+    } catch (error) {
+      console.error('❌ Failed to parse JSON from AI response:', error);
+      
+      // Handle truncated JSON responses
+      if (jsonText.length > 0) {
+        // Check if JSON ends with incomplete content
+        const trimmedJson = jsonText.trim();
+        if (trimmedJson.endsWith(',') || trimmedJson.endsWith(':') || trimmedJson.endsWith('{') || trimmedJson.endsWith('[') || (trimmedJson.endsWith('"') && !trimmedJson.endsWith('"}'))) {
+          console.log('🔧 Detected potentially truncated JSON, attempting repair');
+          
+          // Try to repair truncated JSON
+          let repairedJson = jsonText;
+          
+          // Remove trailing commas or incomplete elements
+          repairedJson = repairedJson.replace(/[,:\s]+$/, '');
+          
+          // Count opening and closing braces/brackets
+          const openBraces = (repairedJson.match(/{/g) || []).length;
+          const closeBraces = (repairedJson.match(/}/g) || []).length;
+          const openBrackets = (repairedJson.match(/\[/g) || []).length;
+          const closeBrackets = (repairedJson.match(/\]/g) || []).length;
+          
+          // Add missing closing braces/brackets
+          for (let i = closeBraces; i < openBraces; i++) {
+            repairedJson += '}';
+          }
+          for (let i = closeBrackets; i < openBrackets; i++) {
+            repairedJson += ']';
+          }
+          
+          try {
+            console.log('🔧 Trying to parse repaired truncated JSON');
+            return JSON.parse(repairedJson);
+          } catch (repairError) {
+            console.error('❌ Truncated JSON repair failed:', repairError);
+          }
+        }
+      }
+      
+      // Special handling for the specific error we're seeing
+      if (error instanceof SyntaxError && (error.message.includes('Expected property name or \'}\'') || error.message.includes('Bad control character in string literal') || error.message.includes("Expected ',' or ']'"))) {
+        console.log('🔧 Trying special handling for truncated JSON or control character issues');
+        
+        // Handle bad control characters specifically
+        if (error.message.includes('Bad control character in string literal')) {
+          console.log('🔧 Detected bad control characters, attempting deep clean');
+          
+          // Deep clean of control characters in strings
+          let deepCleanedJson = jsonText.replace(/([^\\])\\([bfnrtv\'"])|\\\\/g, '$1$2');
+          
+          // Remove any remaining control characters in a more targeted way
+          deepCleanedJson = deepCleanedJson.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, function(match) {
+            const charCode = match.charCodeAt(0);
+            // Preserve legitimate escape sequences and whitespace
+            if (charCode === 9 || charCode === 10 || charCode === 13) {
+              return match;
+            }
+            return ' ';
+          });
+          
+          try {
+            console.log('🔧 Trying to parse deeply cleaned JSON');
+            return JSON.parse(deepCleanedJson);
+          } catch (deepCleanError) {
+            console.error('❌ Deep clean approach also failed:', deepCleanError);
+          }
+        }
+        
+        // Try to find the last complete object
+        const lastCompleteObject = jsonText.lastIndexOf('},');
+        const lastCompleteArrayItem = jsonText.lastIndexOf('],');
+        
+        if (lastCompleteObject !== -1 || lastCompleteArrayItem !== -1) {
+          const truncateAt = Math.max(lastCompleteObject, lastCompleteArrayItem) + 1;
+          const truncatedJson = jsonText.substring(0, truncateAt) + (jsonText.includes('}') ? '}' : ']');
+          
+          console.log('🔧 Trying to parse truncated JSON length:', truncatedJson.length);
+          console.log('🔧 Trying to parse truncated JSON:', truncatedJson.substring(0, 200));
+          
+          try {
+            return JSON.parse(truncatedJson);
+          } catch (truncationError) {
+            console.error('❌ Truncation approach also failed:', truncationError);
+          }
+        }
+        
+        // Handle unbalanced braces/brackets by adding missing closing brackets
+        const openBraces = (jsonText.match(/{/g) || []).length;
+        const closeBraces = (jsonText.match(/}/g) || []).length;
+        const openBrackets = (jsonText.match(/\[/g) || []).length;
+        const closeBrackets = (jsonText.match(/\]/g) || []).length;
+        
+        console.log(`🔧 Brace count - Open: ${openBraces}, Close: ${closeBraces}`);
+        console.log(`🔧 Bracket count - Open: ${openBrackets}, Close: ${closeBrackets}`);
+        
+        // If we have unbalanced braces/brackets, try to balance them
+        if (openBraces > closeBraces || openBrackets > closeBrackets) {
+          console.log('🔧 Detected unbalanced braces/brackets, attempting to balance');
+          let balancedJson = jsonText;
+          
+          // Add missing closing braces
+          for (let i = closeBraces; i < openBraces; i++) {
+            balancedJson += '}';
+          }
+          
+          // Add missing closing brackets
+          for (let i = closeBrackets; i < openBrackets; i++) {
+            balancedJson += ']';
+          }
+          
+          console.log('🔧 Trying to parse balanced JSON length:', balancedJson.length);
+          console.log('🔧 Trying to parse balanced JSON:', balancedJson.substring(0, 200));
+          
+          try {
+            return JSON.parse(balancedJson);
+          } catch (balanceError) {
+            console.error('❌ Balancing approach also failed:', balanceError);
+          }
+        }
+        
+        // Handle truncated arrays specifically
+        if (error.message.includes("Expected ',' or ']'")) {
+          console.log('🔧 Detected truncated array, attempting repair');
+          
+          // Try to fix truncated arrays by closing them properly
+          let repairedJson = jsonText;
+          
+          // If the JSON ends with a comma or incomplete element, try to close the array properly
+          if (repairedJson.endsWith(',') || repairedJson.endsWith(':') || repairedJson.endsWith('"')) {
+            // Try to find the last opening bracket
+            const lastOpenBracket = repairedJson.lastIndexOf('[');
+            const lastOpenBrace = repairedJson.lastIndexOf('{');
+            
+            // Close the appropriate container
+            if (lastOpenBracket > lastOpenBrace) {
+              // Last container was an array, close it
+              repairedJson = repairedJson.replace(/,$/, '').trim() + ']';
+            } else if (lastOpenBrace > -1) {
+              // Last container was an object, close it
+              repairedJson = repairedJson.replace(/,$/, '').trim() + '}';
+            }
+          }
+          
+          // Ensure all arrays and objects are properly closed
+          const stack = [];
+          let repaired = '';
+          for (let i = 0; i < repairedJson.length; i++) {
+            const char = repairedJson[i];
+            repaired += char;
+            
+            if (char === '{' || char === '[') {
+              stack.push(char);
+            } else if (char === '}' || char === ']') {
+              if (stack.length > 0) {
+                stack.pop();
+              }
+            }
+          }
+          
+          // Close any unclosed containers
+          while (stack.length > 0) {
+            const last = stack.pop();
+            if (last === '{') {
+              repaired += '}';
+            } else if (last === '[') {
+              repaired += ']';
+            }
+          }
+          
+          console.log('🔧 Trying to parse array-repaired JSON length:', repaired.length);
+          console.log('🔧 Trying to parse array-repaired JSON:', repaired.substring(0, 200));
+          
+          try {
+            return JSON.parse(repaired);
+          } catch (arrayRepairError) {
+            console.error('❌ Array repair approach also failed:', arrayRepairError);
+          }
+        }
+      }
+      
+      // Try alternative parsing approaches
+      try {
+        // Sometimes AI adds extra text before/after JSON, try to find and extract just the JSON part
+        const jsonMatch = jsonText.match(/\{[^{]*(?:\{[^{]*\}[^{]*)*\}/s) || jsonText.match(/\[[^\[]*(?:\[[^\[]*\][^\[]*)*\]/s);
+        if (jsonMatch) {
+          const extractedJson = jsonMatch[0]
+            .replace(/,\s*}/g, '}')
+            .replace(/,\s*]/g, ']')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          console.log('🔧 Trying to parse extracted JSON length:', extractedJson.length);
+          console.log('🔧 Trying to parse extracted JSON:', extractedJson.substring(0, 200));
+          console.log('🔍 First 10 chars of extracted JSON:', JSON.stringify(extractedJson.substring(0, 10)));
+          return JSON.parse(extractedJson);
+        }
+      } catch (secondaryError) {
+        console.error('❌ Secondary parsing also failed:', secondaryError);
+      }
+      
+      // As a last resort, try to fix common JSON issues
+      try {
+        // Try to fix unescaped quotes inside strings
+        let fixedJson = jsonText.replace(/([^\\])"([^:]*(?:[,:\}\]])[^\"]*)"/g, '$1\"$2\"');
+        
+        // Try to fix missing quotes around keys
+        fixedJson = fixedJson.replace(/([\{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+        
+        console.log('🔧 Trying to parse fixed JSON length:', fixedJson.length);
+        console.log('🔧 Trying to parse fixed JSON:', fixedJson.substring(0, 200));
+        console.log('🔍 First 10 chars of fixed JSON:', JSON.stringify(fixedJson.substring(0, 10)));
+        return JSON.parse(fixedJson);
+      } catch (fixError) {
+        console.error('❌ JSON fixing also failed:', fixError);
+      }
+      
+      // Try using jsonrepair as a final solution
+      try {
+        console.log('🔧 Trying jsonrepair library to fix JSON');
+        // Log more details about the JSON to help debug jsonrepair issues
+        console.log('🔧 JSON length before repair:', jsonText.length);
+        console.log('🔧 First 50 chars before repair:', JSON.stringify(jsonText.substring(0, 50)));
+        const repairedJson = jsonrepair(jsonText);
+        console.log('🔧 JSON repaired successfully');
+        console.log('🔧 Repaired JSON length:', repairedJson.length);
+        console.log('🔧 Repaired JSON (first 200 chars):', JSON.stringify(repairedJson.substring(0, 200)));
+        return JSON.parse(repairedJson);
+      } catch (repairError) {
+        console.error('❌ JSON repair also failed:', repairError);
+        // Log the problematic JSON for debugging
+        console.error('❌ Problematic JSON (first 100 chars):', JSON.stringify(jsonText.substring(0, 100)));
+      }
+      
+      // If all else fails, log the full response for debugging
+      console.error('❌ All JSON parsing attempts failed. Full response:');
+      console.error('Full response length:', jsonText.length);
+      console.error('First 5000 chars:', jsonText.substring(0, Math.min(5000, jsonText.length)));
+      
+      throw new Error(`Failed to parse AI response. Original error: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
+    }
+}
 }
 
-// Export a singleton instance
 export const aiService = new AIService();

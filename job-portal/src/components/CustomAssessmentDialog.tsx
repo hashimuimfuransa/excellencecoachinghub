@@ -151,8 +151,8 @@ const CustomAssessmentDialog: React.FC<CustomAssessmentDialogProps> = ({
       difficulty: 'Hard',
       price: 8000,
       currency: 'RWF',
-      questionCount: 40,
-      timeLimit: 60,
+      questionCount: 20,
+      timeLimit: 30,
       features: [
         'Executive-level assessment',
         'Complex situational judgment',
@@ -537,7 +537,7 @@ const CustomAssessmentDialog: React.FC<CustomAssessmentDialogProps> = ({
                     <Chip 
                       label={`${selectedLevel.name} - ${formatCurrency(selectedLevel.price)}`}
                       color="primary"
-                      size="large"
+                      size="medium"
                       sx={{ fontWeight: 'bold' }}
                     />
                   </Box>

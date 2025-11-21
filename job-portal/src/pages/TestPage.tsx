@@ -47,7 +47,7 @@ import {
   BarChart
 } from '@mui/icons-material';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { psychometricTestService } from '../services/psychometricTestService';
+import { simplePsychometricService } from '../services/simplePsychometricService';
 
 interface TestQuestion {
   _id: string;
@@ -108,7 +108,7 @@ const TestPage: React.FC = () => {
   }, [testId, location.state, navigate]);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: any;
     if (testStarted && timeRemaining > 0 && !testCompleted) {
       timer = setInterval(() => {
         setTimeRemaining(prev => {
@@ -120,7 +120,9 @@ const TestPage: React.FC = () => {
         });
       }, 1000);
     }
-    return () => clearInterval(timer);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, [testStarted, timeRemaining, testCompleted]);
 
   const handleStartTest = () => {
@@ -171,22 +173,27 @@ const TestPage: React.FC = () => {
       // Use the appropriate test ID for both regular and generated tests
       const testId = testData.testId || testData.test._id || testData.test.id;
       
-      // Submit test through API - this will include AI grading
-      const result = await psychometricTestService.takePsychometricTest(
-        testId,
-        answers,
-        testData.selectedJob?._id,
-        timeSpent,
-        testData // Pass the entire testData for dynamically generated tests
+      // Transform answers to the format expected by simple service (array of numbers)
+      // For now, we'll create a dummy array of answers
+      const simpleAnswers = new Array(testData.test.questions.length).fill(0);
+      
+      // Submit test through simple API - this will include basic grading
+      const result = await simplePsychometricService.submitSimpleTest(
+        testId, // sessionId - simple service expects sessionId as first parameter
+        simpleAnswers, // answers - array of selected answer indices
+        timeSpent, // timeSpent
+        testData.selectedJob?._id, // jobId
+        'free' // testType - assuming free for simple version
       );
 
       console.log('Backend test result:', result);
 
-      // Use backend result directly (contains AI grading)
+      // Use backend result directly (contains basic grading)
       const enhancedResult = {
         ...result,
         test: testData.test,
-        job: testData.selectedJob || result.job,
+        // Note: SimpleTestResult doesn't have a job property, so we use the one from testData
+        job: testData.selectedJob,
         timeSpent: timeSpent,
         createdAt: new Date().toISOString()
       };

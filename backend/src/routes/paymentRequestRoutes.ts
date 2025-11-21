@@ -33,8 +33,8 @@ router.post('/', protect, validatePaymentRequest, async (req, res) => {
       jobTitle,
       company,
       testType = 'Premium Psychometric Assessment',
-      questionCount = 40,
-      estimatedDuration = 60
+      questionCount = 20,
+      estimatedDuration = 30
     } = req.body;
 
     // Check if user already has a pending request for this job

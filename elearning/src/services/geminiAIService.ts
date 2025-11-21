@@ -3,7 +3,7 @@
 
 // Initialize Gemini AI
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || '';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 interface GeminiContext {
   userMessage: string;
@@ -442,29 +442,76 @@ const getEnhancedMockResponse = (data: GeminiContext): GeminiResponse => {
     response = `I'm happy to help you navigate Excellence Coaching Hub! 🎓\n\n`;
 
     if (message.includes('course') || message.includes('enroll')) {
-      response += `**To enroll in courses:**\n1. Go to "My Courses" in the sidebar\n2. Click the "Browse Courses" tab\n3. Use filters to find courses you're interested in\n4. Click "Enroll Now" on any course\n\n`;
+      response += `**To enroll in courses:**
+1. Go to "My Courses" in the sidebar
+2. Click the "Browse Courses" tab
+3. Use filters to find courses you're interested in
+4. Click "Enroll Now" on any course
+
+`;
     }
 
     if (message.includes('assessment') || message.includes('quiz') || message.includes('test')) {
-      response += `**For assessments and quizzes:**\n1. Visit "Assessments" in the sidebar\n2. See all available assessments for your enrolled courses\n3. Click "Take Assessment" to start\n4. Your results are automatically saved\n\n`;
+      response += `**For assessments and quizzes:**
+1. Visit "Assessments" in the sidebar
+2. See all available assessments for your enrolled courses
+3. Click "Take Assessment" to start
+4. Your results are automatically saved
+
+`;
     }
 
     if (message.includes('live session') || message.includes('session')) {
-      response += `**To join live sessions:**\n1. Check "Live Sessions" in the sidebar\n2. See upcoming sessions for your courses\n3. Click "Join Session" when it's time\n4. Participate in real-time with your instructor\n\n`;
+      response += `**To join live sessions:**
+1. Check "Live Sessions" in the sidebar
+2. See upcoming sessions for your courses
+3. Click "Join Session" when it's time
+4. Participate in real-time with your instructor
+
+`;
     }
 
     if (message.includes('progress') || message.includes('track')) {
-      response += `**To track your progress:**\n1. Visit "Progress" in the sidebar\n2. See detailed charts of your learning journey\n3. View completion rates, scores, and achievements\n4. Identify areas that need more focus\n\n`;
+      response += `**To track your progress:**
+1. Visit "Progress" in the sidebar
+2. See detailed charts of your learning journey
+3. View completion rates, scores, and achievements
+4. Identify areas that need more focus
+
+`;
     }
 
-    response += `**Other helpful features:**\n• AI Assistant (that's me!) - Always available to help\n• Course Content - Access all your learning materials\n• Dashboard Overview - See everything at a glance\n\nWhat specific feature would you like to know more about?`;
+    response += `**Other helpful features:**
+• AI Assistant (that's me!) - Always available to help
+• Course Content - Access all your learning materials
+• Dashboard Overview - See everything at a glance
+
+What specific feature would you like to know more about?`;
 
   } else if (message.includes('what can you do') || message.includes('what are you') || message.includes('who are you')) {
     response = `Hi there! I'm your AI learning assistant for Excellence Coaching Hub! 🤖✨\n\n`;
     response += `**Here's what I can help you with:**\n\n`;
-    response += `📚 **Learning Support:**\n• Explain complex concepts in simple terms\n• Create practice quizzes on any topic\n• Provide personalized study tips\n• Help with homework and assignments\n\n`;
-    response += `🎯 **Platform Guidance:**\n• Show you how to use website features\n• Help you navigate courses and assessments\n• Guide you through live sessions\n• Explain how to track your progress\n\n`;
-    response += `💬 **Conversational Help:**\n• Answer questions about your courses\n• Discuss learning strategies\n• Provide motivation and encouragement\n• Chat about any topic related to your studies\n\n`;
+    response += `📚 **Learning Support:**
+• Explain complex concepts in simple terms
+• Create practice quizzes on any topic
+• Provide personalized study tips
+• Help with homework and assignments
+
+`;
+    response += `🎯 **Platform Guidance:**
+• Show you how to use website features
+• Help you navigate courses and assessments
+• Guide you through live sessions
+• Explain how to track your progress
+
+`;
+    response += `💬 **Conversational Help:**
+• Answer questions about your courses
+• Discuss learning strategies
+• Provide motivation and encouragement
+• Chat about any topic related to your studies
+
+`;
     response += `I'm context-aware, so I know what course you're studying and can provide relevant help. Just ask me anything!`;
 
   } else if (message.includes('explain') || message.includes('what is')) {
@@ -476,7 +523,13 @@ const getEnhancedMockResponse = (data: GeminiContext): GeminiResponse => {
   } else if (message.includes('quiz') || message.includes('test') || message.includes('practice')) {
     response = `Great idea! I can create a personalized quiz for you${context?.courseTitle ? ` based on ${context.courseTitle}` : ''}! 📝\n\n`;
     response += `I'll generate questions that match your learning level and focus on the key concepts you need to master.\n\n`;
-    response += `**Quiz options:**\n• Multiple choice questions\n• Short answer questions\n• Mixed question types\n• Different difficulty levels\n\n`;
+    response += `**Quiz options:**
+• Multiple choice questions
+• Short answer questions
+• Mixed question types
+• Different difficulty levels
+
+`;
     response += `Just let me know what topic you'd like to practice, and I'll create a custom quiz for you!`;
 
   } else if (message.includes('study') || message.includes('tips') || message.includes('how to learn')) {
@@ -487,7 +540,13 @@ const getEnhancedMockResponse = (data: GeminiContext): GeminiResponse => {
     response += `3. **Pomodoro Technique** - Study in 25-minute focused sessions\n`;
     response += `4. **Connect Concepts** - Link new information to what you already know\n`;
     response += `5. **Practice Problems** - Apply concepts through exercises\n\n`;
-    response += `**Platform-specific tips:**\n• Use the Progress page to identify weak areas\n• Take practice assessments regularly\n• Attend live sessions for interactive learning\n• Ask me questions whenever you're stuck!\n\n`;
+    response += `**Platform-specific tips:**
+• Use the Progress page to identify weak areas
+• Take practice assessments regularly
+• Attend live sessions for interactive learning
+• Ask me questions whenever you're stuck!
+
+`;
     response += `What specific study challenge are you facing?`;
 
   } else if (message.includes('help') || message.includes('stuck') || message.includes('confused')) {
@@ -498,7 +557,12 @@ const getEnhancedMockResponse = (data: GeminiContext): GeminiResponse => {
     response += `• I can break complex topics into smaller, manageable pieces\n`;
     response += `• We can work through examples step by step\n`;
     response += `• I can suggest different ways to approach the problem\n\n`;
-    response += `Remember, you can also:\n• Check the Course Content for additional materials\n• Review your Progress to see what you've mastered\n• Join Live Sessions for real-time help from instructors\n\n`;
+    response += `Remember, you can also:
+• Check the Course Content for additional materials
+• Review your Progress to see what you've mastered
+• Join Live Sessions for real-time help from instructors
+
+`;
     response += `What specific topic or concept is giving you trouble?`;
 
   } else if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {

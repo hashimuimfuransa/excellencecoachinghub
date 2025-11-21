@@ -23,7 +23,6 @@ import { setSocketIO } from '@/services/notificationService';
 import { liveSessionScheduler } from '@/services/liveSessionScheduler';
 import { proctoringService } from '@/services/proctoringService';
 import { validateCloudinaryConfig } from '@/config/cloudinary';
-import { getUploadcareClient } from '@/services/uploadcareService';
 import videoProviderService from '@/services/videoProviderService';
 import { JobScrapingScheduler } from '@/services/jobScrapingScheduler';
 import { ContinuousJobScrapingService } from '@/services/continuousJobScrapingService';
@@ -339,13 +338,13 @@ app.use((req, res, next) => {
 });
 
 // Debug middleware to log all requests
-app.use((req, res, next) => {
-  console.log(`📝 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
+app.use((_req, _res, next) => {
+  console.log(`📝 ${_req.method} ${_req.path} - Origin: ${_req.headers.origin || 'none'}`);
   next();
 });
 
 // EARLY TEST ENDPOINT - NO AUTH REQUIRED
-app.get('/api/test-levels-early', (req, res) => {
+app.get('/api/test-levels-early', (_req, res) => {
   console.log('🚀 EARLY test levels endpoint hit - should have no auth');
   res.status(200).json({
     success: true,
@@ -399,7 +398,7 @@ app.get('/api/test-levels-early', (req, res) => {
 
 // EARLY TEST JOBS ENDPOINT - NO AUTH REQUIRED (for testing dialog)
 // Updated endpoint to fetch real jobs from database instead of mock data
-app.get('/api/test-jobs-early', async (req, res) => {
+app.get('/api/test-jobs-early', async (_req, res) => {
   console.log('🚀 Fetching actual jobs from database for psychometric tests');
   try {
     // Import Job model properly
@@ -516,7 +515,7 @@ app.get('/api/test-jobs-early', async (req, res) => {
 
     console.log(`✅ Successfully fetched ${formattedJobs.length} real jobs from database`);
     
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: formattedJobs,
       pagination: {
@@ -532,7 +531,7 @@ app.get('/api/test-jobs-early', async (req, res) => {
     console.error('❌ Error fetching real jobs:', error);
     
     // Return fallback mock data in case of error
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: [
         {
@@ -568,9 +567,9 @@ app.use(globalAsyncErrorCatcher);
 // Body parsing middleware with security considerations
 app.use(express.json({ 
   limit: '10mb',
-  verify: (req: any, res, buf) => {
+  verify: (_req: any, _res, buf) => {
     // Store raw body for webhook verification if needed
-    req.rawBody = buf;
+    _req.rawBody = buf;
   }
 }));
 app.use(express.urlencoded({ 
@@ -590,7 +589,7 @@ app.use(hpp({
 })); // Prevent HTTP Parameter Pollution attacks
 
 // Additional security middleware for input validation
-app.use((req, res, next) => {
+app.use((_req, _res, next) => {
   // Remove null bytes from all string inputs to prevent path traversal
   const sanitizeObject = (obj: any): any => {
     if (typeof obj === 'string') {
@@ -611,15 +610,15 @@ app.use((req, res, next) => {
     return obj;
   };
 
-  if (req.body) {
-    req.body = sanitizeObject(req.body);
-  }
-  if (req.query) {
-    req.query = sanitizeObject(req.query);
-  }
-  if (req.params) {
-    req.params = sanitizeObject(req.params);
-  }
+  // if (req.body) {
+  //   req.body = sanitizeObject(req.body);
+  // }
+  // if (req.query) {
+  //   req.query = sanitizeObject(req.query);
+  // }
+  // if (req.params) {
+  //   req.params = sanitizeObject(req.params);
+  // }
 
   next();
 });
@@ -785,7 +784,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ 
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -800,7 +799,7 @@ app.post('/api/upload/cv-silent', upload.single('cv'), async (_req, _res) => {
   console.log('🔇 Silent CV upload - no response expected due to Render proxy');
   
   try {
-    const userId = (_req as any).user?.id || 'anonymous';
+    // const userId = (_req as any).user?.id || 'anonymous';
     const file = (_req as any).file;
     
     if (file) {
@@ -899,7 +898,7 @@ app.use('/api/psychometric-tests-legacy', psychometricTestRoutes);
 console.log(' Mounted psychometricTestRoutes at /api/psychometric-tests-legacy');
 
 // Test endpoint to verify psychometric routes are working
-app.get('/api/psychometric-tests/test', (req, res) => {
+app.get('/api/psychometric-tests/test', (_req, res) => {
   res.status(200).json({
     success: true,
     message: 'Psychometric test routes are working',
@@ -908,7 +907,7 @@ app.get('/api/psychometric-tests/test', (req, res) => {
 });
 
 // Additional test endpoint to verify the generate-test route specifically
-app.post('/api/psychometric-tests/generate-test/test', (req, res) => {
+app.post('/api/psychometric-tests/generate-test/test', (_req, res) => {
   res.status(200).json({
     success: true,
     message: 'Psychometric test generate endpoint is mounted correctly',
@@ -917,7 +916,7 @@ app.post('/api/psychometric-tests/generate-test/test', (req, res) => {
 });
 
 // Simple test endpoint to verify the main generate-test route
-app.post('/api/psychometric-tests/generate-test', (req, res) => {
+app.post('/api/psychometric-tests/generate-test', (_req, res) => {
   res.status(200).json({
     success: true,
     message: 'Psychometric test generate endpoint is working',
@@ -965,7 +964,7 @@ app.use('/api/social/stories', storyRoutes);
 app.use('/api/chat', chatRoutes);
 
 // Test endpoint to check jobs in database
-app.get('/api/jobs-debug', async (req, res) => {
+app.get('/api/jobs-debug', async (_req, res) => {
   try {
     const { Job } = await import('./models');
     const jobCount = await Job.countDocuments();
@@ -992,7 +991,7 @@ app.get('/api/jobs-debug', async (req, res) => {
 });
 
 // Simple test endpoint to debug auth issues - Easy: 20, Intermediate: 30, Hard: 40 questions
-app.get('/api/test-levels-debug', (req, res) => {
+app.get('/api/test-levels-debug', (_req, res) => {
   console.log('🚀 Direct test levels endpoint hit - no middleware');
   res.status(200).json({
     success: true,

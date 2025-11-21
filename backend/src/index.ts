@@ -1107,15 +1107,7 @@ app.get('*', (req, res, next) => {
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
-
-// Always bind to 0.0.0.0 for cloud deployment compatibility (Render, Heroku, etc.)
-const HOST = '0.0.0.0';
-
-// Log startup information
-console.log(`🔧 Starting server with PORT: ${PORT}`);
-console.log(`🔧 Starting server with HOST: ${HOST}`);
-console.log(`🔧 NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+const PORT = process.env.PORT || 3000;
 
 // Handle unhandled promise rejections - Don't exit in development
 process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
@@ -1127,9 +1119,7 @@ process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
   } else {
     // In production, gracefully shutdown
     console.log('🛑 Shutting down due to unhandled rejection in production...');
-    server.close(() => {
-      process.exit(1);
-    });
+    process.exit(1);
   }
 });
 
@@ -1151,18 +1141,11 @@ process.on('uncaughtException', (err: Error) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('Process terminated');
-  });
+  process.exit(0);
 });
 
-// Start server immediately
-console.log('🔧 Attempting to start server...');
-server.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running on ${HOST}:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 API URL: http://${HOST}:${PORT}/api`);
-  console.log(`💾 Database: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
   
   // Connect to database after server starts
   connectDatabase().then(() => {
@@ -1170,12 +1153,6 @@ server.listen(PORT, HOST, () => {
   }).catch((error) => {
     console.error('❌ Database connection error:', error);
   });
-}).on('error', (error: Error) => {
-  console.error('❌ Failed to bind to port:', error);
-  if (error.message.includes('EADDRINUSE')) {
-    console.error(`Port ${PORT} is already in use. Please use a different port.`);
-  }
-  process.exit(1);
 });
 
 export { app, io };

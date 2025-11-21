@@ -308,7 +308,7 @@ class PaymentService {
   }) {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/simple-psychometric/generate-test`, {
+      const response = await fetch(`${API_BASE_URL}/psychometric-tests/generate-test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -335,7 +335,7 @@ class PaymentService {
   async startPsychometricTest(sessionId: string) {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/simple-psychometric/start/${sessionId}`, {
+      const response = await fetch(`${API_BASE_URL}/psychometric-tests/start/${sessionId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -361,7 +361,7 @@ class PaymentService {
   async submitPsychometricTest(sessionId: string, answers: any) {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/simple-psychometric/submit/${sessionId}`, {
+      const response = await fetch(`${API_BASE_URL}/psychometric-tests/submit/${sessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -388,7 +388,7 @@ class PaymentService {
   async getUserTestResults() {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/simple-psychometric/my-results`, {
+      const response = await fetch(`${API_BASE_URL}/psychometric-tests/my-results`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`

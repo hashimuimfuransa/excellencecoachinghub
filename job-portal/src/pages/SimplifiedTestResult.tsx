@@ -53,6 +53,9 @@ const SimplifiedTestResult: React.FC = () => {
   const jobTitle = location.state?.jobTitle;
   const company = location.state?.company;
 
+  // Log the result data for debugging
+  console.log('📊 Test result data received:', result);
+
   if (!result) {
     return (
       <Container maxWidth="md" sx={{ py: 4 }}>
@@ -135,9 +138,17 @@ const SimplifiedTestResult: React.FC = () => {
             <Chip 
               label={getPerformanceLevel(result.score)}
               color={getScoreColor(result.score)}
-              size="large"
+              size="medium"
               sx={{ fontSize: '1rem', px: 2, py: 1 }}
             />
+            {result.grade && (
+              <Chip 
+                label={`Grade: ${result.grade}`}
+                color="primary"
+                size="medium"
+                sx={{ fontSize: '1rem', px: 2, py: 1, mt: 1 }}
+              />
+            )}
           </Box>
 
           <Grid container spacing={3} sx={{ mt: 2 }}>
@@ -305,7 +316,7 @@ const SimplifiedTestResult: React.FC = () => {
               // Fetch detailed result from backend
               console.log('📊 Fetching detailed result for:', result.resultId);
               
-              const response = await fetch(`/api/simple-psychometric/result/${result.resultId}`, {
+              const response = await fetch(`/api/psychometric-tests/result/${result.resultId}`, {
                 headers: {
                   'Authorization': `Bearer ${localStorage.getItem('token')}`,
                   'Content-Type': 'application/json'

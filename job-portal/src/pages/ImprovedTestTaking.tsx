@@ -283,7 +283,7 @@ const ImprovedTestTaking: React.FC = () => {
         });
 
         const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const response = await fetch(`${apiBaseUrl}/simple-psychometric/submit/${testData.sessionId}`, {
+        const response = await fetch(`${apiBaseUrl}/psychometric-tests/submit/${testData.sessionId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

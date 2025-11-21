@@ -105,7 +105,11 @@ class SimplePsychometricService {
     try {
       console.log('🎯 Starting simple test session:', sessionId);
       
-      const response = await apiGet(`/psychometric-tests/start/${sessionId}`);
+      const response = await apiGet(`/psychometric-tests/start/${sessionId}`) as {
+              success: boolean;
+              data?: SimpleTestSession;
+              error?: string;
+            };
       
       if (response.success) {
         console.log('✅ Simple test session started:', response.data);
@@ -157,7 +161,11 @@ class SimplePsychometricService {
         throw new Error('This test has already been completed. You can only take each test once. Please request a new test from your super admin if needed.');
       }
       
-      const response = await apiGet(`/psychometric-tests/session/${sessionId}`) as any;
+      const response = await apiGet(`/psychometric-tests/session/${sessionId}`) as {
+              success: boolean;
+              data?: SimpleTestSession;
+              error?: string;
+            };
       
       if (response.success) {
         console.log('✅ Test session retrieved:', response.data);
@@ -206,10 +214,25 @@ class SimplePsychometricService {
       const response = await apiPost(`/psychometric-tests/submit/${sessionId}`, {
         answers,
         timeSpent: timeSpent || 0
-      }) as any;
+      }) as {
+        success: boolean;
+        data?: SimpleTestResult;
+        error?: string;
+      };
       
       if (response.success) {
         console.log('✅ Simple test submitted successfully:', response.data);
+        
+        // Log grading information specifically
+        if (response.data) {
+          console.log('📊 Grading data from backend:', {
+            score: response.data.score,
+            grade: response.data.grade,
+            correctAnswers: response.data.correctAnswers,
+            totalQuestions: response.data.totalQuestions,
+            resultId: response.data.resultId
+          });
+        }
         
         // Mark test as completed to prevent retaking
         localStorage.setItem(`testCompleted_${sessionId}`, 'true');
@@ -246,7 +269,11 @@ class SimplePsychometricService {
     try {
       console.log('📊 Getting simple test result:', sessionId);
       
-      const response = await apiGet(`/psychometric-tests/result/${sessionId}`);
+      const response = await apiGet(`/psychometric-tests/result/${sessionId}`) as {
+              success: boolean;
+              data?: SimpleTestResult;
+              error?: string;
+            };
       
       if (response.success) {
         console.log('✅ Simple test result retrieved:', response.data);
@@ -265,7 +292,11 @@ class SimplePsychometricService {
     try {
       console.log('📋 Getting simple test history');
       
-      const response = await apiGet('/psychometric-tests/my-results');
+      const response = await apiGet('/psychometric-tests/my-results') as {
+              success: boolean;
+              data?: SimpleTestResult[];
+              error?: string;
+            };
       
       if (response.success) {
         console.log('✅ Simple test history retrieved:', response.data);

@@ -209,8 +209,9 @@ const PsychometricResultsPage: React.FC = () => {
         console.log('Found recent test result in session storage:', parsedResult);
         
         // Transform the session storage result to match our interface
+        // Only use real IDs from the backend, don't create temporary IDs
         const transformedResult: TestResult = {
-          _id: parsedResult._id || `temp-${Date.now()}`,
+          _id: parsedResult._id || '',
           test: parsedResult.test,
           testMetadata: parsedResult.testMetadata,
           user: parsedResult.user || { _id: 'current-user', name: 'You' },
@@ -342,7 +343,7 @@ const PsychometricResultsPage: React.FC = () => {
     try {
       console.log('📊 Fetching detailed result for:', resultId);
       
-      const response = await fetch(`/api/simple-psychometric/result/${resultId}`, {
+      const response = await fetch(`/api/psychometric-tests/result/${resultId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'

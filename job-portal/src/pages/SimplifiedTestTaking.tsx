@@ -168,7 +168,7 @@ const SimplifiedTestTaking: React.FC = () => {
       console.log('🚀 Starting test session:', sessionId);
       
       // Make API call to start the test session
-      const response = await fetch(`/api/simple-psychometric/start/${sessionId}`, {
+      const response = await fetch(`/api/psychometric-tests/start/${sessionId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -287,6 +287,12 @@ const SimplifiedTestTaking: React.FC = () => {
         );
         
         console.log('✅ Test submitted successfully:', result);
+        console.log('📊 Grading information:', {
+          score: result.score,
+          grade: result.grade,
+          correctAnswers: result.correctAnswers,
+          totalQuestions: result.totalQuestions
+        });
         
         setTestCompleted(true);
         

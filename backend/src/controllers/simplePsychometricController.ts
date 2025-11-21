@@ -24,14 +24,11 @@ const PSYCHOMETRIC_CATEGORY_DEFINITIONS: Record<string, { label: string }> = {
 
 const DEFAULT_CATEGORY_IDS = ['time_management', 'teamwork', 'communication', 'decision_making'];
 
-// Helper function to calculate grade based on score
-const getGrade = (score: number): string => {
-  if (score >= 90) return 'A+';
-  if (score >= 80) return 'A';
-  if (score >= 70) return 'B';
-  if (score >= 60) return 'C';
-  if (score >= 50) return 'D';
-  return 'F';
+// Helper function to calculate percentile (simplified implementation)
+const calculatePercentile = (score: number): number => {
+  // This is a simplified implementation
+  // In a real system, this would be based on actual distribution data
+  return Math.min(99, Math.max(1, Math.round(score)));
 };
 
 const sanitizeCategoryIds = (rawCategories: unknown): string[] => {
@@ -85,6 +82,151 @@ Return ONLY a valid JSON object with this exact structure:
     }
   ]
 }`;
+};
+
+/**
+ * Create a prompt for AI grading
+ */
+const createGradingPrompt = (params: {
+  jobTitle: string;
+  questions: any[];
+  userAnswers: any[];
+  timeSpent: number;
+}): string => {
+  const { jobTitle, questions, userAnswers, timeSpent } = params;
+  
+  return `You are an expert psychometric test evaluator. Please grade the following psychometric test for the role of ${jobTitle}.
+
+Test Details:
+- Total Questions: ${questions.length}
+- Time Spent: ${timeSpent} seconds
+
+Please analyze each question and the candidate's answer, then provide:
+1. An overall score (0-100)
+2. A grade (A+, A, B, C, D, or F)
+3. Detailed feedback for each question including explanation of correct answers
+4. Strengths and areas for improvement
+5. A percentile ranking
+6. Category-based scores if applicable
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "overallScore": 85,
+  "grade": "A",
+  "interpretation": "Detailed interpretation of the score",
+  "recommendations": ["Recommendation 1", "Recommendation 2"],
+  "percentile": 75,
+  "categoryScores": {},
+  "correctQuestions": [
+    {
+      "questionNumber": 1,
+      "question": "The question text",
+      "candidateAnswer": 2,
+      "correctAnswer": 2,
+      "isCorrect": true,
+      "category": "communication",
+      "explanation": "Explanation of why this is correct",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"]
+    }
+  ],
+  "failedQuestions": [
+    {
+      "questionNumber": 2,
+      "question": "The question text",
+      "yourAnswer": 1,
+      "correctAnswer": 3,
+      "explanation": "Explanation of why the correct answer is better",
+      "category": "problem_solving"
+    }
+  ]
+}
+
+Questions and Answers:
+${questions.map((q: any, index: number) => `
+Question ${index + 1}: ${q.question}
+Options: ${q.options ? q.options.join(', ') : 'N/A'}
+Candidate's Answer: ${userAnswers[index] !== undefined ? userAnswers[index] : 'No answer'}
+Correct Answer: ${q.correctAnswer}
+Category: ${q.category || 'general'}
+`).join('\n')}
+`;
+};
+
+/**
+ * Helper function to get AI grading
+ */
+const getAIGrading = async (prompt: string): Promise<any> => {
+  // Get API key from environment
+  const apiKey = process.env.GEMINI_API_KEY || process.env.PSYCHOMETRIC_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('AI service not configured properly - missing API key');
+  }
+
+  // Log the prompt being sent (first 1000 characters to avoid too much logging)
+  console.log('📝 AI Grading Prompt (first 1000 chars):', prompt.substring(0, 1000) + (prompt.length > 1000 ? '...' : ''));
+  
+  // Call the Gemini API directly
+  console.log(`🎓 Requesting AI grading using direct API call`);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  
+  const payload = {
+    contents: [{
+      parts: [{
+        text: prompt
+      }]
+    }],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 8192,
+      topP: 0.8,
+      topK: 40
+    }
+  };
+
+  const response = await axios.post(url, payload, {
+    timeout: 60000, // 60 seconds
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.data.candidates || response.data.candidates.length === 0) {
+    throw new Error('No valid response from AI service');
+  }
+
+  const candidate = response.data.candidates[0];
+  if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+    throw new Error('No valid content in AI response');
+  }
+
+  const textResponse = candidate.content.parts[0].text;
+  console.log('🧠 Raw AI grading response received');
+
+  // Extract JSON from response
+  let result;
+  try {
+    // Try to parse the entire response as JSON
+    result = JSON.parse(textResponse);
+  } catch (error) {
+    // If that fails, try to extract JSON from markdown code blocks
+    const jsonMatch = textResponse.match(/```(?:json)?\s*({.*?})\s*```/s);
+    if (jsonMatch && jsonMatch[1]) {
+      result = JSON.parse(jsonMatch[1]);
+    } else {
+      // If that fails, try to find JSON-like content
+      const jsonStart = textResponse.indexOf('{');
+      const jsonEnd = textResponse.lastIndexOf('}') + 1;
+      
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        const jsonString = textResponse.substring(jsonStart, jsonEnd);
+        result = JSON.parse(jsonString);
+      } else {
+        throw new Error(`Could not extract valid JSON from AI response`);
+      }
+    }
+  }
+
+  return result;
 };
 
 /**
@@ -307,89 +449,6 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
   }
 };
 
-export const getDetailedTestResult = async (req: AuthRequest, res: Response) => {
-  try {
-    const { resultId } = req.params;
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'User not authenticated'
-      });
-    }
-
-    if (!resultId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Result ID is required'
-      });
-    }
-
-    // Extract session ID from result ID (format: result_sessionId)
-    const sessionId = resultId.replace('result_', '');
-    
-    if (!sessionId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid result ID format'
-      });
-    }
-
-    // Fetch the test session from the database
-    const testSession = await TestSession.findById(sessionId).populate('job');
-    
-    if (!testSession) {
-      return res.status(404).json({
-        success: false,
-        error: 'Test session not found'
-      });
-    }
-
-    // Check if the session belongs to the requesting user
-    if (testSession.user.toString() !== userId) {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied to this test result'
-      });
-    }
-
-    // Check if test has been completed
-    if (testSession.status !== 'completed') {
-      return res.status(400).json({
-        success: false,
-        error: 'Test has not been completed yet'
-      });
-    }
-
-    // Return the test result details
-    res.status(200).json({
-      success: true,
-      data: {
-        resultId: `result_${testSession._id}`,
-        sessionId: testSession._id,
-        jobId: testSession.job?._id,
-        jobTitle: testSession.job ? (testSession.job as any).title : undefined,
-        score: (testSession as any).score || 0,
-        grade: (testSession as any).grade || 'N/A',
-        correctAnswers: (testSession as any).correctAnswers || 0,
-        totalQuestions: testSession.questions?.length || 0,
-        timeSpent: (testSession as any).timeSpent || 0,
-        submittedAt: testSession.completedAt,
-        questions: testSession.questions
-      },
-      message: 'Detailed test result retrieved successfully'
-    });
-  } catch (error: any) {
-    console.error('Error getting detailed test result:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve test result',
-      message: error.message
-    });
-  }
-};
-
 // Start a psychometric test session
 export const startPsychometricTest = async (req: AuthRequest, res: Response) => {
   try {
@@ -493,53 +552,177 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
       });
     }
 
-    // Calculate score by comparing answers with correct answers
-    let correctAnswers = 0;
-    const detailedResults = [];
+    // Ensure timeSpent is at least 1 minute (60 seconds) to pass validation
+    const validatedTimeSpent = timeSpent && timeSpent > 0 ? timeSpent : 60;
 
-    for (let i = 0; i < questions.length; i++) {
-      const question = questions[i];
-      const userAnswer = answers[i];
-      const isCorrect = userAnswer === (question as any).correctAnswer;
+    // Use AI to grade the test - this will wait for the AI to finish processing
+    console.log('🤖 Initiating AI grading for psychometric test');
+    const jobTitle = (testSession as any).job?.title || 'Job';
+    
+    // Log the questions and answers being sent to AI
+    console.log('📝 Questions and Answers being sent to AI:', {
+      questionCount: questions.length,
+      answerCount: answers.length,
+      questions: questions.map((q: any, index: number) => ({
+        questionNumber: index + 1,
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        userAnswer: answers[index],
+        category: q.category
+      })),
+      timeSpent: validatedTimeSpent
+    });
+    
+    const gradingPrompt = createGradingPrompt({
+      jobTitle,
+      questions,
+      userAnswers: answers,
+      timeSpent: validatedTimeSpent
+    });
 
-      if (isCorrect) {
-        correctAnswers++;
-      }
-
-      detailedResults.push({
-        questionId: i,
-        userAnswer,
-        correctAnswer: (question as any).correctAnswer,
-        isCorrect,
-        category: (question as any).category
-      });
+    // This will wait for the AI grading to complete
+    const aiGradingResult = await getAIGrading(gradingPrompt);
+    console.log('✅ AI grading completed successfully');
+    console.log('📝 AI Grading Result:', JSON.stringify(aiGradingResult, null, 2));
+    
+    // Log specific fields to debug
+    console.log('📝 AI Grading Result Fields:', {
+      overallScore: aiGradingResult.overallScore,
+      grade: aiGradingResult.grade,
+      correctQuestionsLength: aiGradingResult.correctQuestions?.length,
+      failedQuestionsLength: aiGradingResult.failedQuestions?.length,
+      hasCorrectQuestions: !!aiGradingResult.correctQuestions,
+      hasFailedQuestions: !!aiGradingResult.failedQuestions
+    });
+    
+    // Ensure we have valid data from AI
+    const validAiGradingResult = {
+      overallScore: aiGradingResult.overallScore || 0,
+      grade: aiGradingResult.grade || 'F',
+      interpretation: aiGradingResult.interpretation || 'No interpretation provided',
+      recommendations: Array.isArray(aiGradingResult.recommendations) ? aiGradingResult.recommendations : [],
+      percentile: aiGradingResult.percentile || 0,
+      categoryScores: aiGradingResult.categoryScores || {},
+      correctQuestions: Array.isArray(aiGradingResult.correctQuestions) ? aiGradingResult.correctQuestions : [],
+      failedQuestions: Array.isArray(aiGradingResult.failedQuestions) ? aiGradingResult.failedQuestions : []
+    };
+    
+    // Make sure the total questions count matches the original test
+    const totalQuestionsInTest = questions.length;
+    const gradedQuestionsCount = validAiGradingResult.correctQuestions.length + validAiGradingResult.failedQuestions.length;
+    
+    console.log('📝 Question count validation:', {
+      totalInTest: totalQuestionsInTest,
+      gradedCount: gradedQuestionsCount,
+      mismatch: totalQuestionsInTest !== gradedQuestionsCount
+    });
+    
+    // If there's a mismatch, we might need to adjust (this could happen if AI doesn't grade all questions)
+    if (totalQuestionsInTest !== gradedQuestionsCount) {
+      console.log('⚠️ Question count mismatch detected, using test question count as total');
     }
-
-    const score = Math.round((correctAnswers / questions.length) * 100);
-    const grade = getGrade(score);
+    
+    console.log('📝 Validated AI Grading Result:', {
+      overallScore: validAiGradingResult.overallScore,
+      grade: validAiGradingResult.grade,
+      correctQuestionsLength: validAiGradingResult.correctQuestions.length,
+      failedQuestionsLength: validAiGradingResult.failedQuestions.length
+    });
 
     // Update test session status to completed and store results
     testSession.status = 'completed';
     testSession.completedAt = new Date();
-    (testSession as any).timeSpent = timeSpent || 0;
-    (testSession as any).score = score;
-    (testSession as any).grade = grade;
-    (testSession as any).correctAnswers = correctAnswers;
+    (testSession as any).timeSpent = validatedTimeSpent;
+    (testSession as any).score = validAiGradingResult.overallScore;
+    (testSession as any).grade = validAiGradingResult.grade;
+    (testSession as any).correctAnswers = validAiGradingResult.correctQuestions.length;
     await testSession.save();
 
-    // In a full implementation, you would save this to a results collection
-    // For now, we'll just return the result data
+    // Save results to database
+    const resultId = new mongoose.Types.ObjectId();
+    console.log('📝 Creating new psychometric test result with ID:', resultId.toString());
+    
+    const testResult = new PsychometricTestResult({
+      _id: resultId,
+      user: userId,
+      job: testSession.job,
+      answers: answers.reduce((acc, answer, index) => {
+        acc[`question_${index}`] = answer;
+        return acc;
+      }, {} as Record<string, any>),
+      scores: { overall: validAiGradingResult.overallScore },
+      overallScore: validAiGradingResult.overallScore,
+      interpretation: validAiGradingResult.interpretation,
+      recommendations: validAiGradingResult.recommendations,
+      completedAt: new Date(),
+      timeSpent: validatedTimeSpent,
+      grade: validAiGradingResult.grade,
+      percentile: validAiGradingResult.percentile,
+      categoryScores: validAiGradingResult.categoryScores,
+      failedQuestions: validAiGradingResult.failedQuestions,
+      correctQuestions: validAiGradingResult.correctQuestions,
+      testMetadata: {
+        testId: sessionId,
+        title: `Psychometric Test for ${jobTitle}`,
+        type: 'simple',
+        categories: [...new Set(questions.map((q: any) => q.category))],
+        difficulty: testSession.testLevel,
+        isGenerated: true,
+        jobSpecific: true,
+        questions: questions
+      }
+    });
+    
+    console.log('📝 Creating test result with data:', {
+      overallScore: validAiGradingResult.overallScore,
+      grade: validAiGradingResult.grade,
+      correctQuestionsLength: validAiGradingResult.correctQuestions.length,
+      failedQuestionsLength: validAiGradingResult.failedQuestions.length,
+      timeSpent: validatedTimeSpent
+    });
+    
+    // Verify that the data contains grades before saving
+    console.log('📝 Verifying AI grades before database save:', {
+      hasOverallScore: validAiGradingResult.overallScore !== undefined,
+      hasGrade: validAiGradingResult.grade !== undefined,
+      overallScore: validAiGradingResult.overallScore,
+      grade: validAiGradingResult.grade
+    });
+
+    await testResult.save();
+    console.log('✅ Psychometric test result saved successfully with ID:', (testResult._id as mongoose.Types.ObjectId).toString());
+
+    // Use the actual saved ID from the database
+    const rawResultId = (testResult._id as mongoose.Types.ObjectId).toString();
+    const formattedResultId = `result_${rawResultId}`;
+    
+    console.log('📝 Sending psychometric test result response with IDs:', {
+      resultId: formattedResultId,
+      rawResultId: rawResultId,
+      id: rawResultId,
+      _id: rawResultId
+    });
 
     res.status(200).json({
       success: true,
       data: {
-        resultId: `result_${sessionId}`,
-        score,
-        grade,
-        correctAnswers,
-        totalQuestions: questions.length,
-        timeSpent: timeSpent || 0,
-        message: 'Test submitted and graded successfully'
+        resultId: formattedResultId,
+        rawResultId: rawResultId,
+        id: rawResultId, // Additional field for frontend compatibility
+        _id: rawResultId, // Additional field for frontend compatibility
+        score: validAiGradingResult.overallScore,
+        grade: validAiGradingResult.grade,
+        correctAnswers: validAiGradingResult.correctQuestions.length,
+        incorrectAnswers: validAiGradingResult.failedQuestions.length,
+        totalQuestions: totalQuestionsInTest, // Use original test count to ensure consistency
+        timeSpent: validatedTimeSpent,
+        categoryScores: validAiGradingResult.categoryScores,
+        interpretation: validAiGradingResult.interpretation,
+        recommendations: validAiGradingResult.recommendations,
+        percentile: validAiGradingResult.percentile,
+        hasDetailedResults: true,
+        message: 'Test submitted and graded successfully by AI'
       }
     });
   } catch (error: any) {
@@ -611,11 +794,265 @@ export const getTestSession = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getUserTestResults = async (req: AuthRequest, res: Response) => {
-  res.status(200).json({
-    success: true,
-    data: [],
-    message: 'Test results retrieved successfully'
-  });
+// Get detailed test result by ID
+export const getDetailedTestResult = async (req: AuthRequest, res: Response) => {
+  try {
+    const { resultId } = req.params;
+    const userId = req.user?.id;
+
+    console.log('📝 Fetching detailed test result with parameter:', { resultId, userId });
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    if (!resultId || resultId === 'undefined') {
+      console.log('❌ Invalid result ID provided:', resultId);
+      return res.status(400).json({
+        success: false,
+        error: 'Result ID is required'
+      });
+    }
+
+    // Handle the case where resultId is already in the format "result_xxx"
+    let sessionId = resultId;
+    if (resultId.startsWith('result_')) {
+      sessionId = resultId.replace('result_', '');
+      console.log('📝 Converted formatted result ID to raw ID:', { original: resultId, converted: sessionId });
+    }
+    
+    console.log('📝 Extracted session ID for database query:', sessionId);
+    
+    // Log all recent test results for this user to help with debugging
+    const recentResults = await PsychometricTestResult.find({ user: userId })
+      .sort({ completedAt: -1 })
+      .limit(5);
+    
+    console.log('📝 Recent test results for user (last 5):', recentResults.map(r => ({
+      id: (r._id as mongoose.Types.ObjectId).toString(),
+      completedAt: r.completedAt,
+      overallScore: r.overallScore,
+      grade: r.grade
+    })));
+    
+    // Check if the requested result ID matches any recent result
+    const matchingResult = recentResults.find(r => (r._id as mongoose.Types.ObjectId).toString() === sessionId);
+    if (!matchingResult) {
+      console.log('⚠️ Warning: Requested result ID does not match any recent results for this user');
+    }
+    
+    // Handle temporary IDs (format: temp-*) - these are not valid MongoDB ObjectIds
+    if (sessionId && sessionId.startsWith('temp-')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid result ID: Temporary IDs cannot be used to fetch detailed results'
+      });
+    }
+
+    // Validate ObjectId format
+    if (!/^[0-9a-fA-F]{24}$/.test(sessionId)) {
+      console.log('❌ Invalid ObjectId format:', sessionId);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid result ID format: Must be a valid MongoDB ObjectId'
+      });
+    }
+
+    // Fetch the test result from database
+    const testResult = await PsychometricTestResult.findById(sessionId);
+    
+    if (!testResult) {
+      console.log('❌ Test result not found in database for ID:', sessionId);
+      return res.status(404).json({
+        success: false,
+        error: 'Test result not found'
+      });
+    }
+
+    console.log('✅ Test result found in database:', {
+      id: (testResult._id as mongoose.Types.ObjectId).toString(),
+      user: testResult.user.toString(),
+      overallScore: testResult.overallScore,
+      grade: testResult.grade,
+      correctQuestionsLength: testResult.correctQuestions?.length,
+      failedQuestionsLength: testResult.failedQuestions?.length,
+      timeSpent: testResult.timeSpent
+    });
+    
+    // Verify that the retrieved data contains grades
+    console.log('📝 Verifying database grades after retrieval:', {
+      hasOverallScore: testResult.overallScore !== undefined,
+      hasGrade: testResult.grade !== undefined,
+      overallScore: testResult.overallScore,
+      grade: testResult.grade
+    });
+    
+    // Check if this might be an incomplete result
+    const isCompleteResult = testResult.overallScore !== undefined && 
+                            testResult.grade !== undefined && 
+                            ((testResult.correctQuestions?.length ?? 0) > 0 || (testResult.failedQuestions?.length ?? 0) > 0);
+    
+    if (!isCompleteResult) {
+      console.log('⚠️ Warning: This appears to be an incomplete test result');
+    }
+
+    // Check if the result belongs to the requesting user
+    if (testResult.user.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied to this test result'
+      });
+    }
+
+    // Format the response to match the frontend expectations
+    const rawResultId = (testResult._id as mongoose.Types.ObjectId).toString();
+    const correctQuestionsCount = testResult.correctQuestions?.length || 0;
+    const failedQuestionsCount = testResult.failedQuestions?.length || 0;
+    const totalQuestionsCount = correctQuestionsCount + failedQuestionsCount;
+    
+    // Ensure we have valid data from database, with special handling for incomplete results
+    const overallScore = testResult.overallScore !== undefined ? testResult.overallScore : 0;
+    const grade = testResult.grade || (isCompleteResult ? 'F' : 'Incomplete'); // Different default for incomplete results
+    
+    console.log('📝 Calculating question counts for response:', {
+      correct: correctQuestionsCount,
+      failed: failedQuestionsCount,
+      total: totalQuestionsCount
+    });
+    
+    const formattedResult = {
+      resultId: `result_${rawResultId}`,
+      rawResultId: rawResultId,
+      id: rawResultId, // Additional field for frontend compatibility
+      _id: rawResultId, // Additional field for frontend compatibility
+      score: overallScore,
+      grade: grade,
+      correctAnswers: correctQuestionsCount,
+      incorrectAnswers: failedQuestionsCount,
+      totalQuestions: totalQuestionsCount,
+      timeSpent: testResult.timeSpent,
+      categoryScores: testResult.categoryScores || {},
+      interpretation: testResult.interpretation,
+      recommendations: testResult.recommendations || [],
+      percentile: testResult.percentile,
+      hasDetailedResults: isCompleteResult, // Only true for complete results
+      correctQuestions: testResult.correctQuestions || [],
+      failedQuestions: testResult.failedQuestions || [],
+      completedAt: testResult.completedAt
+    };
+
+    console.log('📝 Sending detailed test result response with IDs:', {
+      resultId: formattedResult.resultId,
+      rawResultId: formattedResult.rawResultId,
+      id: formattedResult.id,
+      _id: formattedResult._id
+    });
+
+    res.status(200).json({
+      success: true,
+      data: formattedResult,
+      message: 'Test result retrieved successfully'
+    });
+  } catch (error: any) {
+    console.error('Error getting detailed test result:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get test result',
+      message: error.message
+    });
+  }
 };
 
+export const getUserTestResults = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    console.log('📝 Fetching user test results for user ID:', userId);
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+    
+    // Fetch user's test results from database, sorted by completedAt (newest first)
+    const testResults = await PsychometricTestResult.find({ user: userId })
+      .sort({ completedAt: -1 }); // -1 for descending (newest first)
+    
+    console.log('✅ Found', testResults.length, 'test results for user, sorted by date (newest first)');
+    
+    // Log the IDs and dates of all results found
+    testResults.forEach((result, index) => {
+      console.log(`📝 Result ${index + 1}: ID=${(result._id as mongoose.Types.ObjectId).toString()}, CompletedAt=${result.completedAt}`);
+    });
+    
+    const formattedResults = testResults.map(result => {
+      console.log('📝 Processing result in user results:', {
+        id: (result._id as mongoose.Types.ObjectId).toString(),
+        overallScore: result.overallScore,
+        grade: result.grade,
+        correctQuestionsLength: result.correctQuestions?.length,
+        failedQuestionsLength: result.failedQuestions?.length
+      });
+      
+      // Verify that the retrieved data contains grades
+      console.log('📝 Verifying database grades for user result:', {
+        id: (result._id as mongoose.Types.ObjectId).toString(),
+        hasOverallScore: result.overallScore !== undefined,
+        hasGrade: result.grade !== undefined,
+        overallScore: result.overallScore,
+        grade: result.grade
+      });
+      
+      const rawResultId = (result._id as mongoose.Types.ObjectId).toString();
+      const correctQuestionsCount = result.correctQuestions?.length || 0;
+      const failedQuestionsCount = result.failedQuestions?.length || 0;
+      const totalQuestionsCount = correctQuestionsCount + failedQuestionsCount;
+      
+      // Ensure we have valid data from database
+      const overallScore = result.overallScore || 0;
+      const grade = result.grade || 'F'; // Default to 'F' if no grade
+      
+      return {
+        resultId: `result_${rawResultId}`,
+        rawResultId: rawResultId,
+        id: rawResultId, // Additional field for frontend compatibility
+        _id: rawResultId, // Additional field for frontend compatibility
+        score: overallScore,
+        grade: grade,
+        correctAnswers: correctQuestionsCount,
+        incorrectAnswers: failedQuestionsCount,
+        totalQuestions: totalQuestionsCount,
+        timeSpent: result.timeSpent,
+        categoryScores: result.categoryScores || {},
+        interpretation: result.interpretation,
+        recommendations: result.recommendations || [],
+        percentile: result.percentile,
+        hasDetailedResults: true,
+        completedAt: result.completedAt
+      };
+    });
+    
+    console.log('📝 Sending user test results response with', formattedResults.length, 'results');
+    
+    // Also log the IDs of all results being sent to help with debugging
+    console.log('📝 All result IDs being sent:', formattedResults.map(r => r.id));
+
+    res.status(200).json({
+      success: true,
+      data: formattedResults,
+      message: 'Test results retrieved successfully'
+    });
+  } catch (error: any) {
+    console.error('Error getting user test results:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get test results',
+      message: error.message
+    });
+  }
+};

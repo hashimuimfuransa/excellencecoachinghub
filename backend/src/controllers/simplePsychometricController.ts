@@ -662,6 +662,7 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
       categoryScores: validAiGradingResult.categoryScores,
       failedQuestions: validAiGradingResult.failedQuestions,
       correctQuestions: validAiGradingResult.correctQuestions,
+      attempt: 1, // Explicitly set attempt number
       testMetadata: {
         testId: sessionId,
         title: `Psychometric Test for ${jobTitle}`,
@@ -712,6 +713,7 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
         id: rawResultId, // Additional field for frontend compatibility
         _id: rawResultId, // Additional field for frontend compatibility
         score: validAiGradingResult.overallScore,
+        percentage: Math.round((validAiGradingResult.correctQuestions.length / totalQuestionsInTest) * 100), // Calculate percentage
         grade: validAiGradingResult.grade,
         correctAnswers: validAiGradingResult.correctQuestions.length,
         incorrectAnswers: validAiGradingResult.failedQuestions.length,
@@ -879,7 +881,9 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
       grade: testResult.grade,
       correctQuestionsLength: testResult.correctQuestions?.length,
       failedQuestionsLength: testResult.failedQuestions?.length,
-      timeSpent: testResult.timeSpent
+      timeSpent: testResult.timeSpent,
+      correctQuestions: testResult.correctQuestions,
+      failedQuestions: testResult.failedQuestions
     });
     
     // Verify that the retrieved data contains grades
@@ -913,6 +917,15 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
     const failedQuestionsCount = testResult.failedQuestions?.length || 0;
     const totalQuestionsCount = correctQuestionsCount + failedQuestionsCount;
     
+    // Calculate percentage based on correct answers
+    console.log('📝 Calculating percentage with values:', {
+      correctQuestionsCount,
+      totalQuestionsCount,
+      calculation: totalQuestionsCount > 0 ? `${correctQuestionsCount} / ${totalQuestionsCount} * 100` : 'N/A'
+    });
+    const percentage = totalQuestionsCount > 0 ? Math.round((correctQuestionsCount / totalQuestionsCount) * 100) : 0;
+    console.log('📝 Calculated percentage:', percentage);
+    
     // Ensure we have valid data from database, with special handling for incomplete results
     const overallScore = testResult.overallScore !== undefined ? testResult.overallScore : 0;
     const grade = testResult.grade || (isCompleteResult ? 'F' : 'Incomplete'); // Different default for incomplete results
@@ -920,7 +933,8 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
     console.log('📝 Calculating question counts for response:', {
       correct: correctQuestionsCount,
       failed: failedQuestionsCount,
-      total: totalQuestionsCount
+      total: totalQuestionsCount,
+      percentage: percentage
     });
     
     const formattedResult = {
@@ -929,6 +943,7 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
       id: rawResultId, // Additional field for frontend compatibility
       _id: rawResultId, // Additional field for frontend compatibility
       score: overallScore,
+      percentage: percentage, // Add explicit percentage field
       grade: grade,
       correctAnswers: correctQuestionsCount,
       incorrectAnswers: failedQuestionsCount,
@@ -941,7 +956,7 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
       hasDetailedResults: isCompleteResult, // Only true for complete results
       correctQuestions: testResult.correctQuestions || [],
       failedQuestions: testResult.failedQuestions || [],
-      completedAt: testResult.completedAt
+      completedAt: testResult.completedAt ? testResult.completedAt.toISOString() : null // Format date for frontend
     };
 
     console.log('📝 Sending detailed test result response with IDs:', {
@@ -996,7 +1011,9 @@ export const getUserTestResults = async (req: AuthRequest, res: Response) => {
         overallScore: result.overallScore,
         grade: result.grade,
         correctQuestionsLength: result.correctQuestions?.length,
-        failedQuestionsLength: result.failedQuestions?.length
+        failedQuestionsLength: result.failedQuestions?.length,
+        correctQuestions: result.correctQuestions,
+        failedQuestions: result.failedQuestions
       });
       
       // Verify that the retrieved data contains grades
@@ -1013,6 +1030,15 @@ export const getUserTestResults = async (req: AuthRequest, res: Response) => {
       const failedQuestionsCount = result.failedQuestions?.length || 0;
       const totalQuestionsCount = correctQuestionsCount + failedQuestionsCount;
       
+      // Calculate percentage based on correct answers
+      console.log('📝 Calculating percentage with values:', {
+        correctQuestionsCount,
+        totalQuestionsCount,
+        calculation: totalQuestionsCount > 0 ? `${correctQuestionsCount} / ${totalQuestionsCount} * 100` : 'N/A'
+      });
+      const percentage = totalQuestionsCount > 0 ? Math.round((correctQuestionsCount / totalQuestionsCount) * 100) : 0;
+      console.log('📝 Calculated percentage:', percentage);
+      
       // Ensure we have valid data from database
       const overallScore = result.overallScore || 0;
       const grade = result.grade || 'F'; // Default to 'F' if no grade
@@ -1023,6 +1049,7 @@ export const getUserTestResults = async (req: AuthRequest, res: Response) => {
         id: rawResultId, // Additional field for frontend compatibility
         _id: rawResultId, // Additional field for frontend compatibility
         score: overallScore,
+        percentage: percentage, // Add explicit percentage field
         grade: grade,
         correctAnswers: correctQuestionsCount,
         incorrectAnswers: failedQuestionsCount,
@@ -1033,7 +1060,7 @@ export const getUserTestResults = async (req: AuthRequest, res: Response) => {
         recommendations: result.recommendations || [],
         percentile: result.percentile,
         hasDetailedResults: true,
-        completedAt: result.completedAt
+        completedAt: result.completedAt ? result.completedAt.toISOString() : null // Format date for frontend
       };
     });
     

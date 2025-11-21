@@ -43,9 +43,7 @@ import {
   AccessTime as TimeIcon,
   Timer
 } from '@mui/icons-material';
-
-// Use require instead of import for qrcode.react to avoid import issues
-const QRCode = require('qrcode.react').default || require('qrcode.react');
+import { QRCodeCanvas as QRCode } from 'qrcode.react';
 
 // Styled components for better UI
 const StyledCard = styled(Card)(({ theme }) => ({

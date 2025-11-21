@@ -285,7 +285,11 @@ class NotificationServiceClass {
       title: isApproved ? '🎉 Teacher Profile Approved!' : '📋 Teacher Profile Update',
       message: isApproved 
         ? `Congratulations! Your teacher profile has been approved. You can now access all teacher features.${feedback ? `\n\nAdmin Feedback: ${feedback}` : ''}`
-        : `Your teacher profile needs some updates before approval.${reason ? `\n\nReason: ${reason}` : ''}${feedback ? `\n\nAdmin Feedback: ${feedback}` : ''}`,
+        : `Your teacher profile needs some updates before approval.${reason ? `
+
+Reason: ${reason}` : ''}${feedback ? `
+
+Admin Feedback: ${feedback}` : ''}`,
       data: {
         adminId,
         feedback,
@@ -335,33 +339,84 @@ class NotificationServiceClass {
   ): Promise<void> {
     let title: string;
     let message: string;
-    let icon: string;
+    // let icon: string; // Unused variable, commenting out
 
     switch (status) {
       case 'shortlisted':
         title = 'Application Shortlisted! 🎉';
         message = `Great news! You have been shortlisted for ${jobTitle} at ${company}`;
-        icon = '🎉';
+        // icon = '🎉';
         break;
       case 'rejected':
         title = 'Application Update';
         message = `Thank you for your interest in ${jobTitle} at ${company}. Unfortunately, we have decided to move forward with other candidates.`;
-        icon = '📧';
+        // icon = '📧';
         break;
       case 'interview_scheduled':
         title = 'Interview Scheduled! 📅';
         message = `Your interview for ${jobTitle} at ${company} has been scheduled. ${additionalInfo || ''}`;
-        icon = '📅';
+        // icon = '📅';
         break;
       case 'offered':
         title = 'Job Offer Received! 🎊';
         message = `Congratulations! You have received a job offer for ${jobTitle} at ${company}`;
-        icon = '🎊';
+        // icon = '🎊';
         break;
       default:
         title = 'Application Update';
         message = `Your application for ${jobTitle} at ${company} has been updated`;
-        icon = '📧';
+        // icon = '📧';
+    }
+
+    await this.sendRealTimeNotification({
+      recipient: userId,
+      type: 'application_update',
+      title,
+      message,
+      data: {
+        applicationId,
+        url: '/app/applications'
+      }
+    });
+  }
+
+  async sendJobApplicationUpdate(
+    userId: string,
+    jobTitle: string,
+    company: string,
+    status: string,
+    applicationId: string,
+    additionalInfo?: string
+  ): Promise<void> {
+    let title: string;
+    let message: string;
+    // let icon: string; // Unused variable, commenting out
+
+    switch (status) {
+      case 'shortlisted':
+        title = 'Application Shortlisted! 🎉';
+        message = `Great news! You have been shortlisted for ${jobTitle} at ${company}`;
+        // icon = '🎉';
+        break;
+      case 'rejected':
+        title = 'Application Update';
+        message = `Thank you for your interest in ${jobTitle} at ${company}. Unfortunately, we have decided to move forward with other candidates.`;
+        // icon = '📧';
+        break;
+      case 'interview_scheduled':
+        title = 'Interview Scheduled! 📅';
+        message = `Your interview for ${jobTitle} at ${company} has been scheduled. ${additionalInfo || ''}`;
+        // icon = '📅';
+        break;
+      case 'offered':
+        title = 'Job Offer Received! 🎊';
+        message = `Congratulations! You have received a job offer for ${jobTitle} at ${company}`;
+        // icon = '🎊';
+        break;
+      default:
+        title = 'Application Update';
+        message = `Your application for ${jobTitle} at ${company} has been updated`;
+        // icon = '📧';
     }
 
     await this.sendRealTimeNotification({

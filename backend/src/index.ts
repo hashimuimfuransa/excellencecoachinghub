@@ -1112,60 +1112,10 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 // Always bind to 0.0.0.0 for cloud deployment compatibility (Render, Heroku, etc.)
 const HOST = '0.0.0.0';
 
-// Start server
-const startServer = async () => {
-  try {
-    // Connect to database
-    await connectDatabase();
-
-    // Initialize video provider service
-    await videoProviderService.initialize();
-
-    // Validate Cloudinary configuration
-    const cloudinaryConfigured = validateCloudinaryConfig();
-    const uploadcareConfigured = !!(process.env.UPLOADCARE_PUBLIC_KEY && process.env.UPLOADCARE_SECRET_KEY);
-
-    // Configure server timeouts for slow networks
-    server.timeout = 0; // Disable server timeout
-    server.keepAliveTimeout = 0; // Disable keep-alive timeout
-    server.headersTimeout = 0; // Disable headers timeout
-
-    server.listen(PORT, HOST, () => {
-      console.log(`🚀 Server running on ${HOST}:${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 API URL: http://${HOST}:${PORT}/api`);
-      console.log(`💾 Database: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
-      console.log(`☁️ Cloudinary: ${cloudinaryConfigured ? 'Configured' : 'Not configured (avatar upload disabled)'}`);
-      console.log(`📦 Uploadcare: ${uploadcareConfigured ? 'Configured' : 'Not configured'}`);
-      console.log(`⏱️ Server timeouts: Disabled for slow networks`);
-      console.log(`🌐 Binding to all interfaces (0.0.0.0) for cloud deployment`);
-
-      // Start the live session scheduler
-      liveSessionScheduler.start();
-      
-      // Initialize continuous job scraping service (replaces scheduled scraping)
-      ContinuousJobScrapingService.init();
-      
-      // Start the enhanced job scraping scheduler (includes internship.rw)
-      JobScrapingScheduler.start();
-      
-      // Start the job recommendation email scheduler
-      JobRecommendationEmailService.start();
-      
-      // Start the job cleanup scheduler
-      jobCleanupScheduler.start();
-    }).on('error', (error: Error) => {
-      console.error('❌ Failed to bind to port:', error);
-      if (error.message.includes('EADDRINUSE')) {
-        console.error(`Port ${PORT} is already in use. Please use a different port.`);
-      }
-      process.exit(1);
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
-};
+// Log startup information
+console.log(`🔧 Starting server with PORT: ${PORT}`);
+console.log(`🔧 Starting server with HOST: ${HOST}`);
+console.log(`🔧 NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 
 // Handle unhandled promise rejections - Don't exit in development
 process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
@@ -1185,7 +1135,7 @@ process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
 
 // Handle uncaught exceptions - Don't exit in development
 process.on('uncaughtException', (err: Error) => {
-  console.error('❌ Uncaught Exception:', err);
+  console.error('❌ Unhandled Exception:', err);
   console.error('Stack trace:', err.stack);
 
   // In development, log the error but don't exit to maintain server stability
@@ -1206,6 +1156,26 @@ process.on('SIGTERM', () => {
   });
 });
 
-startServer();
+// Start server immediately
+console.log('🔧 Attempting to start server...');
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on ${HOST}:${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 API URL: http://${HOST}:${PORT}/api`);
+  console.log(`💾 Database: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
+  
+  // Connect to database after server starts
+  connectDatabase().then(() => {
+    console.log('✅ Database connected');
+  }).catch((error) => {
+    console.error('❌ Database connection error:', error);
+  });
+}).on('error', (error: Error) => {
+  console.error('❌ Failed to bind to port:', error);
+  if (error.message.includes('EADDRINUSE')) {
+    console.error(`Port ${PORT} is already in use. Please use a different port.`);
+  }
+  process.exit(1);
+});
 
 export { app, io };

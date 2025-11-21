@@ -573,16 +573,18 @@ const userSchema = new Schema<IUserDocument>({
 }, {
   timestamps: true,
   toJSON: {
+    virtuals: true,
     transform: function(doc, ret) {
+      // Remove sensitive fields
       delete ret.password;
       delete ret.emailVerificationToken;
       delete ret.emailVerificationExpires;
       delete ret.passwordResetToken;
       delete ret.passwordResetExpires;
       // Check if fields exist before deleting them
-      if ('loginAttempts' in ret) delete ret.loginAttempts;
-      if ('lockUntil' in ret) delete ret.lockUntil;
-      if ('__v' in ret) delete ret.__v;
+      if (ret.hasOwnProperty('loginAttempts')) delete ret.loginAttempts;
+      if (ret.hasOwnProperty('lockUntil')) delete ret.lockUntil;
+      if (ret.hasOwnProperty('__v')) delete ret.__v;
       return ret;
     }
   }
@@ -668,7 +670,7 @@ userSchema.methods.isLocked = function(): boolean {
 // Instance method to increment login attempts (disabled for development)
 userSchema.methods.incLoginAttempts = function(): Promise<IUserDocument> {
   // Login attempt tracking disabled - return resolved promise
-  return Promise.resolve(this);
+  return Promise.resolve(this as unknown as IUserDocument);
 };
 
 // Static method to find user by email

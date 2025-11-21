@@ -74,7 +74,7 @@ export const uploadAvatar = multer({
   limits: {
     fileSize: 100 * 1024 * 1024, // 100MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req: any, file: any, cb: any) => {
     // Check file type
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -343,7 +343,9 @@ export const deleteOldAvatar = async (avatarUrl: string): Promise<void> => {
     // Extract public_id from Cloudinary URL
     const urlParts = avatarUrl.split('/');
     const fileWithExtension = urlParts[urlParts.length - 1];
-    const publicId = `excellence-coaching-hub/avatars/${fileWithExtension.split('.')[0]}`;
+    const publicId = fileWithExtension 
+      ? `excellence-coaching-hub/avatars/${fileWithExtension.split('.')[0]}`
+      : `excellence-coaching-hub/avatars/${Date.now()}`;
 
     await cloudinary.uploader.destroy(publicId);
     console.log(`Old avatar deleted: ${publicId}`);
@@ -689,7 +691,7 @@ export const uploadDocument = multer({
   limits: {
     fileSize: 10 * 1024 * 1024 * 1024, // 10GB limit for documents
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req: any, file: any, cb: any) => {
     // Check file type
     const allowedTypes = [
       'application/pdf',
@@ -717,7 +719,7 @@ export const uploadSmartTestFile = multer({
   limits: {
     fileSize: 10 * 1024 * 1024 * 1024, // 10GB limit for smart test files
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req: any, file: any, cb: any) => {
     // Check file type for smart test uploads
     const allowedTypes = [
       'application/json',

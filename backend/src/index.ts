@@ -20,14 +20,14 @@ import { notFound } from '@/middleware/notFound';
 import { globalAsyncErrorCatcher } from '@/middleware/asyncHandler';
 import { setupSocketIO } from '@/services/socketService';
 import { setSocketIO } from '@/services/notificationService';
-import { liveSessionScheduler } from '@/services/liveSessionScheduler';
+// import { liveSessionScheduler } from '@/services/liveSessionScheduler';
 import { proctoringService } from '@/services/proctoringService';
-import { validateCloudinaryConfig } from '@/config/cloudinary';
-import videoProviderService from '@/services/videoProviderService';
-import { JobScrapingScheduler } from '@/services/jobScrapingScheduler';
-import { ContinuousJobScrapingService } from '@/services/continuousJobScrapingService';
-import { JobRecommendationEmailService } from '@/services/jobRecommendationEmailService';
-import { jobCleanupScheduler } from '@/services/jobCleanupScheduler';
+// import { validateCloudinaryConfig } from '@/config/cloudinary';
+// import videoProviderService from '@/services/videoProviderService';
+// import { JobScrapingScheduler } from '@/services/jobScrapingScheduler';
+// import { ContinuousJobScrapingService } from '@/services/continuousJobScrapingService';
+// import { JobRecommendationEmailService } from '@/services/jobRecommendationEmailService';
+// import { jobCleanupScheduler } from '@/services/jobCleanupScheduler';
 
 // Import routes
 import authRoutes from '@/routes/authRoutes';
@@ -272,25 +272,25 @@ app.use(helmet({
 }));
 
 // Additional custom security headers
-app.use((req, res, next) => {
+app.use((_req, _res, next) => {
   // Prevent caching of sensitive data
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.setHeader('Surrogate-Control', 'no-store');
+  _res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  _res.setHeader('Pragma', 'no-cache');
+  _res.setHeader('Expires', '0');
+  _res.setHeader('Surrogate-Control', 'no-store');
   
   // Security headers
-  res.setHeader('X-Robots-Tag', 'noindex, nofollow, nosnippet, noarchive');
-  res.setHeader('X-Powered-By', 'Excellence Coaching Hub');
-  res.setHeader('Server', 'ECH-Server');
+  _res.setHeader('X-Robots-Tag', 'noindex, nofollow, nosnippet, noarchive');
+  _res.setHeader('X-Powered-By', 'Excellence Coaching Hub');
+  _res.setHeader('Server', 'ECH-Server');
   
   // Cross-Origin headers for enhanced security (but not interfering with CORS)
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  _res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   // Removed Cross-Origin-Embedder-Policy to avoid CORS conflicts
   
   // Content Security headers
-  res.setHeader('X-Download-Options', 'noopen');
-  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  _res.setHeader('X-Download-Options', 'noopen');
+  _res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
   
   next();
 });
@@ -299,8 +299,8 @@ app.use((req, res, next) => {
 // CORS middleware already applied earlier
 
 // Additional CORS headers middleware to ensure proper headers are set
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+app.use((_req, _res, next) => {
+  const origin = _req.headers.origin;
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
@@ -320,17 +320,17 @@ app.use((req, res, next) => {
   ];
   
   if (allowedOrigins.includes(origin as string) || !origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    _res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
   
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma');
-  res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count, Authorization');
+  _res.setHeader('Access-Control-Allow-Credentials', 'true');
+  _res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  _res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma');
+  _res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count, Authorization');
   
   // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
+  if (_req.method === 'OPTIONS') {
+    _res.status(204).end();
     return;
   }
   
@@ -610,14 +610,14 @@ app.use((_req, _res, next) => {
     return obj;
   };
 
-  // if (req.body) {
-  //   req.body = sanitizeObject(req.body);
+  // if (_req.body) {
+  //   _req.body = sanitizeObject(_req.body);
   // }
-  // if (req.query) {
-  //   req.query = sanitizeObject(req.query);
+  // if (_req.query) {
+  //   _req.query = sanitizeObject(_req.query);
   // }
-  // if (req.params) {
-  //   req.params = sanitizeObject(req.params);
+  // if (_req.params) {
+  //   _req.params = sanitizeObject(_req.params);
   // }
 
   next();
@@ -1087,7 +1087,7 @@ setSocketIO(io);
 proctoringService.setSocketIO(io);
 
 // Catch-all handler for frontend routes (SPA support)
-app.get('*', (req, res, next) => {
+app.get('*', (req, _res, next) => {
   // Skip API routes and let them go to 404 handler
   if (req.path.startsWith('/api/')) {
     return next();
@@ -1095,7 +1095,7 @@ app.get('*', (req, res, next) => {
   
   // For frontend routes, return a simple message instead of trying to serve index.html
   // This prevents the 404 error for frontend routes like /assignment/:id/work
-  res.status(200).json({
+  _res.status(200).json({
     success: true,
     message: 'Frontend route - should be handled by React Router',
     path: req.path,

@@ -43,7 +43,7 @@ import {
   AccessTime as TimeIcon,
   Timer
 } from '@mui/icons-material';
-import { QRCodeCanvas as QRCode } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 // Styled components for better UI
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -82,7 +82,7 @@ const TeacherAttendancePage: React.FC = () => {
   const fetchAttendanceRecords = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/teacher-attendance');
+      const response = await fetch('https://excellencecoachinghubbackend.onrender.com/api/teacher-attendance');
       const records = await response.json();
       setAttendanceRecords(records);
     } catch (error) {
@@ -98,7 +98,7 @@ const TeacherAttendancePage: React.FC = () => {
   }, []);
 
   const generateQRCodeValue = () => {
-    return `http://localhost:3001?redirected=true`;
+    return `https://echattendance.onrender.com`;
   };
 
   const handleDownloadQR = () => {
@@ -118,7 +118,7 @@ const TeacherAttendancePage: React.FC = () => {
     
     // Fetch specific teacher's attendance records
     try {
-      const response = await fetch(`http://localhost:5000/api/teacher-attendance/teacher/${teacher.name}`);
+      const response = await fetch(`https://excellencecoachinghubbackend.onrender.com/api/teacher-attendance/teacher/${teacher.name}`);
       const records = await response.json();
       // Update attendance records for this teacher
       setAttendanceRecords(records);
@@ -202,7 +202,7 @@ const TeacherAttendancePage: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <AccessTime sx={{ mr: 1, color: 'primary.main' }} />
             <Typography variant="body2">
-              Teachers access: <Link href="http://localhost:3001" target="_blank" sx={{ fontWeight: 600 }}>http://localhost:3001</Link>
+              Teachers access: <Link href="https://echattendance.onrender.com" target="_blank" sx={{ fontWeight: 600 }}>https://echattendance.onrender.com</Link>
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -349,7 +349,7 @@ const TeacherAttendancePage: React.FC = () => {
                     boxShadow: 2,
                     display: 'inline-block'
                   }}>
-                    <QRCode
+                    <QRCodeCanvas
                       id="qr-code"
                       value={generateQRCodeValue()}
                       size={200}

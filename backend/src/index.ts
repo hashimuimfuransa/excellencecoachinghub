@@ -145,7 +145,8 @@ const io = new Server(server, {
       'https://elearning.excellencecoachinghub.com',
       'https://ecoaching.onrender.com',
       'https://ecoaching.excellencecoachinghub.com',
-      'https://exjobnet.excellencecoachinghub.com',
+      'https://excellencecoachinghubbackend.onrender.com',
+      'https://echattendance.onrender.com', // Add the teacher attendance frontend URL
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ],
     methods: ['GET', 'POST'],
@@ -183,6 +184,7 @@ const corsOptions = {
       'https://ecoaching.onrender.com',
       'https://ecoaching.excellencecoachinghub.com',      // Add root domain too
       'https://excellencecoachinghubbackend.onrender.com',
+      'https://echattendance.onrender.com', // Add the teacher attendance frontend URL
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ];
     
@@ -314,7 +316,8 @@ app.use((req, res, next) => {
     'https://excellencecoachinghub.com',
     'https://ecoaching.onrender.com',
     'https://ecoaching.excellencecoachinghub.com',
-    'https://excellencecoachinghubbackend.onrender.com'
+    'https://excellencecoachinghubbackend.onrender.com',
+    'https://echattendance.onrender.com' // Add the teacher attendance frontend URL
   ];
   
   if (allowedOrigins.includes(origin as string) || !origin) {

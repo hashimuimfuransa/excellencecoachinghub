@@ -5,6 +5,17 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3001
+    port: 3001,
+    proxy: {
+      '/api': {
+        target: 'https://excellencecoachinghubbackend.onrender.com',
+        changeOrigin: true,
+        secure: true
+      }
+    }
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true
   }
 })

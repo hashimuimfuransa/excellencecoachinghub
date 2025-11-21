@@ -73,6 +73,7 @@ import homeworkRoutesNew from '@/routes/homeworkRoutesNew';
 import parentRoutes from '@/routes/parentRoutes';
 import teacherRoutes from '@/routes/teacherRoutes';
 import leaderboardRoutes from '@/routes/leaderboardRoutes';
+import teacherAttendanceRoutes from '@/routes/teacherAttendanceRoutes';
 
 // Job Portal routes
 import jobRoutes from '@/routes/jobRoutes';
@@ -879,6 +880,7 @@ app.use('/api/homework-new', homeworkRoutesNew);
 app.use('/api/parent', parentRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/teacher-attendance', teacherAttendanceRoutes);
 
 // Job Portal routes
 app.use('/api/jobs', jobRoutes);

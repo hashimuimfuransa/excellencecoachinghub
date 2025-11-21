@@ -28,6 +28,7 @@ import UsageStatisticsPage from './pages/SuperAdmin/UsageStatisticsPage';
 import CompanyProfileApprovalPage from './pages/SuperAdmin/CompanyProfileApprovalPage';
 import EmailEventsPage from './pages/SuperAdmin/EmailEventsPage';
 import VideoManagementPage from './pages/SuperAdmin/VideoManagementPage';
+import TeacherAttendancePage from './pages/SuperAdmin/TeacherAttendancePage';
 
 function App() {
   // EmailJS removed - now using backend SendGrid service
@@ -74,6 +75,9 @@ function App() {
               {/* Analytics */}
               <Route path="performance" element={<PerformanceReportsPage />} />
               <Route path="usage-stats" element={<UsageStatisticsPage />} />
+              
+              {/* Teacher Attendance */}
+              <Route path="teacher-attendance" element={<TeacherAttendancePage />} />
             </Route>
             
             {/* Catch all route */}

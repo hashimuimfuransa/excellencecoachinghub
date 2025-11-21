@@ -50,7 +50,8 @@ import {
   QuestionAnswer,
   Business,
   Email,
-  VideoLibrary
+  VideoLibrary,
+  QrCode
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
@@ -90,6 +91,7 @@ const navigationItems: NavigationItem[] = [
   { text: 'System Settings', icon: <Settings />, path: '/system-settings', category: 'System Management' },
   { text: 'System Health', icon: <HealthAndSafety />, path: '/system-health', category: 'System Management' },
   { text: 'Email Events', icon: <Email />, path: '/email-events', category: 'System Management' },
+  { text: 'Teacher Attendance', icon: <QrCode />, path: '/teacher-attendance', category: 'System Management' },
   
   // Analytics
   { text: 'Performance Reports', icon: <Timeline />, path: '/performance', category: 'Analytics' },

@@ -25,6 +25,10 @@ export interface NotificationData {
     reason?: string;
     courseId?: string;
     courseTitle?: string;
+    jobTitle?: string;
+    applicantName?: string;
+    applicantEmail?: string;
+    status?: string;
   };
 }
 
@@ -126,12 +130,12 @@ class NotificationServiceClass {
           applicantName: data.data.applicantName,
           applicantEmail: data.data.applicantEmail,
           status: data.data.status,
-        adminId: data.data.adminId ? new mongoose.Types.ObjectId(data.data.adminId) : undefined,
-        adminName: data.data.adminName,
-        feedback: data.data.feedback,
-        reason: data.data.reason,
-        courseId: data.data.courseId ? new mongoose.Types.ObjectId(data.data.courseId) : undefined,
-        courseTitle: data.data.courseTitle
+          adminId: data.data.adminId ? new mongoose.Types.ObjectId(data.data.adminId) : undefined,
+          adminName: data.data.adminName,
+          feedback: data.data.feedback,
+          reason: data.data.reason,
+          courseId: data.data.courseId ? new mongoose.Types.ObjectId(data.data.courseId) : undefined,
+          courseTitle: data.data.courseTitle
         } : undefined
       });
 
